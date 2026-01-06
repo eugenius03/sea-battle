@@ -19,6 +19,11 @@ services:
       - postgres
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sea_battle_db
+      SPRING_PROFILES_ACTIVE: prod
+      PORT: 8080
+      DB_URL: jdbc:postgresql://localhost:5432/sea_battle_db
+      DB_USERNAME: user
+      DB_PASSWORD: password
 
 volumes:
   postgres_data:

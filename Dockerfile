@@ -11,6 +11,8 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=builder /usr/src/app/target/*.jar app.jar
 
+# Default profile inside container (can be overridden at runtime)
+
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
