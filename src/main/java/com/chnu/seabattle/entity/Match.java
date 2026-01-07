@@ -24,8 +24,10 @@ public class Match {
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private MatchStatus status;
 
+    @Column(nullable = false, unique = true, updatable = false)
     private String inviteToken;
 
     private UUID currentPlayerTurnId;

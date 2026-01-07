@@ -24,6 +24,7 @@ public class Ship {
     private MatchPlayer matchPlayer;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false)
     private ShipType shipType;
 
     @Column(nullable = false, updatable = false)

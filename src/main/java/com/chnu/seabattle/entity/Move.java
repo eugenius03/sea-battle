@@ -13,7 +13,8 @@ import java.util.UUID;
 @Table(name = "moves",
         uniqueConstraints = @UniqueConstraint(columnNames = {
                 "match_id", "targetX", "targetY"
-        })
+        }),
+        indexes = @Index(name = "idx_shooter_id", columnList = "shooterId")
 )
 @AllArgsConstructor
 @NoArgsConstructor
@@ -38,6 +39,7 @@ public class Move {
     private int targetY;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false)
     private MoveResult moveResult;
 
     @CreationTimestamp
