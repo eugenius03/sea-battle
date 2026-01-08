@@ -39,4 +39,7 @@ public class MatchPlayer {
 
     private Instant lastSeenAt;
 
+    @Column(nullable = false)
+    private boolean connected;
+
 }
