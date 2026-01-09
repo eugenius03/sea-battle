@@ -32,5 +32,6 @@ public interface GameService {
 
     void handleReconnect(Long matchId, UUID playerId);
 
-
+    UUID getOpponentId(Long matchId, UUID playerId);
+    
 }
