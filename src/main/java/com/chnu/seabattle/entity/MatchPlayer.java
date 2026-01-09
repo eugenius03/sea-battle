@@ -26,15 +26,15 @@ public class MatchPlayer {
     @JoinColumn(name = "match_id", nullable = false)
     private Match match;
 
+    @JoinColumn(name = "user_id", nullable = false)
     private UUID userId;
-    private UUID guestId;
 
     @Column(nullable = false)
     private String reconnectToken;
 
     private boolean isReady;
 
-    @OneToMany(mappedBy = "matchPlayer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "matchPlayer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Ship> ships;
 
     private Instant lastSeenAt;
