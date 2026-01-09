@@ -12,8 +12,6 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
 
     Optional<Match> findByPlayers_UserId(UUID userId);
 
-    Optional<Match> findByPlayers_GuestId(UUID guestId);
-
     Optional<Match> findByInviteToken(String inviteToken);
 
 }

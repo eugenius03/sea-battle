@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,7 +36,7 @@ public class Match {
     private UUID winnerId;
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL)
-    private List<MatchPlayer> players;
+    private List<MatchPlayer> players = new ArrayList<>();
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL)
     private List<Move> moves;

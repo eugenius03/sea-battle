@@ -90,7 +90,7 @@ class GameServiceImplValidatePlacementTest {
         }
     }
 
-    private MatchPlayer createMatchPlayer(UUID playerId, boolean isGuest) {
+    private MatchPlayer createMatchPlayer(UUID playerId) {
         Match match = new Match();
         match.setId(1L);
         match.setStatus(MatchStatus.PLANNING);
@@ -100,11 +100,11 @@ class GameServiceImplValidatePlacementTest {
         player.setId(1L);
         player.setMatch(match);
 
-        if (isGuest) {
-            player.setGuestId(playerId);
-        } else {
-            player.setUserId(playerId);
-        }
+        player.setUserId(playerId);
+//        if (isGuest) {
+//            player.setGuestId(playerId);
+//        } else {
+//        }
 
         player.setShips(new ArrayList<>());
         player.setReady(false);
@@ -128,30 +128,30 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should pass validation when placing first ship")
     void shouldPassValidationForFirstShip() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         assertDoesNotThrow(() ->
                 invokeValidatePlacement(player, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL)
         );
     }
 
-    @Test
-    @DisplayName("Should pass validation for guest player")
-    void shouldPassValidationForGuestPlayer() {
-        UUID guestId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(guestId, true);
-
-        assertDoesNotThrow(() ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 5, 5, Orientation.HORIZONTAL)
-        );
-    }
+//    @Test
+//    @DisplayName("Should pass validation for guest player")
+//    void shouldPassValidationForGuestPlayer() {
+//        UUID guestId = UUID.randomUUID();
+//        MatchPlayer player = createMatchPlayer(guestId, true);
+//
+//        assertDoesNotThrow(() ->
+//                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 5, 5, Orientation.HORIZONTAL)
+//        );
+//    }
 
 
     @Test
     @DisplayName("Should throw exception when maximum ships of type already placed")
     void shouldThrowExceptionWhenMaxShipsOfTypeReached() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Add maximum allowed SINGLE_DECK ships (4)
         for (int i = 0; i < 4; i++) {
@@ -169,7 +169,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when maximum DOUBLE_DECK ships already placed")
     void shouldThrowExceptionWhenMaxDoubleDeckShipsReached() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Add maximum allowed DOUBLE_DECK ships (3)
         for (int i = 0; i < 3; i++) {
@@ -187,7 +187,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when maximum TRIPLE_DECK ships already placed")
     void shouldThrowExceptionWhenMaxTripleDeckShipsReached() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Add maximum allowed TRIPLE_DECK ships (2)
         for (int i = 0; i < 2; i++) {
@@ -205,7 +205,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when maximum QUADRO_DECK ships already placed")
     void shouldThrowExceptionWhenMaxQuadroDeckShipsReached() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Add maximum allowed QUADRO_DECK ships (1)
         player.getShips().add(createShip(player, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL));
@@ -221,7 +221,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when ship overlaps another ship - horizontal overlap")
     void shouldThrowExceptionWhenShipOverlapsHorizontal() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a horizontal ship at (0,0)
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.HORIZONTAL));
@@ -238,7 +238,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when ship overlaps another ship - vertical overlap")
     void shouldThrowExceptionWhenShipOverlapsVertical() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a vertical ship at (0,0)
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.VERTICAL));
@@ -255,7 +255,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when ship touches another ship diagonally")
     void shouldThrowExceptionWhenShipTouchesDiagonally() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a horizontal ship at (0,0)
         player.getShips().add(createShip(player, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL));
@@ -272,7 +272,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when ship touches another ship horizontally")
     void shouldThrowExceptionWhenShipTouchesHorizontally() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a horizontal ship at (0,0) - occupies (0,0), (1,0), (2,0)
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.HORIZONTAL));
@@ -289,7 +289,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when ship touches another ship vertically")
     void shouldThrowExceptionWhenShipTouchesVertically() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a vertical ship at (0,0) - occupies (0,0), (0,1), (0,2)
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.VERTICAL));
@@ -306,7 +306,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when ship touches another ship below")
     void shouldThrowExceptionWhenShipTouchesBelow() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a vertical ship at (0,0) - occupies (0,0), (0,1), (0,2)
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.VERTICAL));
@@ -323,7 +323,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should pass validation when ships are properly spaced")
     void shouldPassValidationWhenShipsAreProperlySpaced() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a ship at (0,0)
         player.getShips().add(createShip(player, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL));
@@ -338,7 +338,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should pass validation when placing multiple ships with proper spacing")
     void shouldPassValidationForMultipleShipsWithProperSpacing() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place first ship
         player.getShips().add(createShip(player, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL));
@@ -359,7 +359,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should allow placing ships of different types up to their limits")
     void shouldAllowPlacingDifferentShipTypesUpToLimits() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place 1 QUADRO_DECK ship (limit is 1)
         player.getShips().add(createShip(player, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL));
@@ -374,7 +374,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should pass validation when placing ships in corners with proper spacing")
     void shouldPassValidationForCornerPlacements() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a ship at (0,0)
         player.getShips().add(createShip(player, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL));
@@ -389,7 +389,7 @@ class GameServiceImplValidatePlacementTest {
     @DisplayName("Should throw exception when horizontal ship touches vertical ship")
     void shouldThrowExceptionWhenHorizontalShipTouchesVerticalShip() {
         UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId, false);
+        MatchPlayer player = createMatchPlayer(playerId);
 
         // Place a vertical ship at (3,0) - occupies (3,0), (3,1), (3,2), (3,3)
         player.getShips().add(createShip(player, ShipType.QUADRO_DECK, 3, 0, Orientation.VERTICAL));

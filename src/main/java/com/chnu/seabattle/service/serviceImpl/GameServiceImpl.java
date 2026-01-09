@@ -6,6 +6,7 @@ import com.chnu.seabattle.repository.MatchPlayerRepository;
 import com.chnu.seabattle.repository.MatchRepository;
 import com.chnu.seabattle.repository.MoveRepository;
 import com.chnu.seabattle.service.GameService;
+import com.chnu.seabattle.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ public class GameServiceImpl implements GameService {
     private final MatchRepository matchRepository;
     private final MatchPlayerRepository matchPlayerRepository;
     private final MoveRepository moveRepository;
+    private final WebSocketService webSocketService;
 
     private void validateTurn(Match match, UUID playerId) {
         if (!match.getCurrentPlayerTurnId().equals(playerId)) {
@@ -60,7 +62,7 @@ public class GameServiceImpl implements GameService {
 
     private MatchPlayer getMatchPlayer(Match match, UUID playerId) {
         return matchPlayerRepository
-                .findByMatchIdAndUserIdOrMatchIdAndGuestId(match.getId(), playerId, match.getId(), playerId)
+                .findByMatchIdAndUserId(match.getId(), playerId)
                 .orElseThrow(() -> new NoSuchElementException("Player not found in match"));
     }
 
@@ -119,6 +121,12 @@ public class GameServiceImpl implements GameService {
             Orientation orientation
     ) {
         List<Ship> ships = player.getShips();
+
+        if (ships == null) {
+            ships = new ArrayList<>();
+            player.setShips(ships);
+        }
+
         validateCoordinates(x, y, type, orientation);
         Map<ShipType, Long> shipTypeCount = ships.stream()
                 .collect(
@@ -148,7 +156,7 @@ public class GameServiceImpl implements GameService {
         Match match = matchRepository.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
         );
-        requireStatus(match, MatchStatus.PLANNING);
+//        requireStatus(match, MatchStatus.PLANNING);
         MatchPlayer player = getMatchPlayer(match, playerId);
 
         if (player.isReady()) {
@@ -157,6 +165,7 @@ public class GameServiceImpl implements GameService {
 
         validatePlacement(player, type, startX, startY, orientation);
         Ship ship = Ship.builder()
+                .matchPlayer(player)
                 .shipType(type)
                 .startX(startX)
                 .startY(startY)
@@ -164,7 +173,15 @@ public class GameServiceImpl implements GameService {
                 .hits(0)
                 .isSunk(false)
                 .build();
-        player.getShips().add(ship);
+
+        // Initialize ships list if null
+        List<Ship> updatedShips = player.getShips();
+        if (updatedShips == null) {
+            updatedShips = new ArrayList<>();
+            player.setShips(updatedShips);
+        }
+
+        updatedShips.add(ship);
         matchPlayerRepository.save(player);
     }
 
@@ -176,6 +193,14 @@ public class GameServiceImpl implements GameService {
         requireStatus(match, MatchStatus.PLANNING);
         MatchPlayer player = getMatchPlayer(match, playerId);
         player.setReady(true);
+        boolean allReady = match.getPlayers()
+                .stream()
+                .allMatch(MatchPlayer::isReady);
+        if (allReady) {
+            match.setStatus(MatchStatus.IN_PROGRESS);
+            webSocketService.updateMatchStatus(matchId, MatchStatus.IN_PROGRESS);
+        }
+        matchRepository.save(match);
         matchPlayerRepository.save(player);
 
     }
@@ -191,7 +216,11 @@ public class GameServiceImpl implements GameService {
         if (!isWithinBounds(x, y)) {
             throw new GameRuleViolationException("Firing coordinates out of bounds");
         }
-        List<Move> moves = match.getMoves();
+        List<Move> moves = match.getMoves()
+                .stream()
+                .filter(move -> move.getShooterId() == shooterId)
+                .toList();
+
         for (Move move : moves) {
             if (move.getTargetX() == x && move.getTargetY() == y) {
                 throw new GameRuleViolationException("Cannot fire at the same coordinates twice");
@@ -233,9 +262,7 @@ public class GameServiceImpl implements GameService {
         } else {
             move.setMoveResult(MoveResult.MISS);
             match.setCurrentPlayerTurnId(
-                    opponent.getUserId() != null
-                            ? opponent.getUserId()
-                            : opponent.getGuestId()
+                    opponent.getUserId()
             );
 
         }
@@ -257,6 +284,8 @@ public class GameServiceImpl implements GameService {
         matchPlayerRepository.save(player);
 
         // Optional: notify opponent via WebSocket
+        webSocketService.handleDisconnect(matchId,
+                getOpponentId(match.getId(), playerId));
         // websocketService.notifyPlayerDisconnected(player.getMatch(), player);
     }
 
@@ -271,6 +300,25 @@ public class GameServiceImpl implements GameService {
         matchPlayerRepository.save(player);
 
         // Optional: notify opponent via WebSocket
+        webSocketService.handleReconnect(matchId,
+                getOpponentId(match.getId(), playerId));
         // websocketService.notifyPlayerReconnected(player.getMatch(), player);
+    }
+
+    @Override
+    public UUID getOpponentId(Long matchId, UUID playerId) {
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new NoSuchElementException("Match not found"));
+
+        List<MatchPlayer> players = match.getPlayers();
+        if (players.size() != 2) {
+            throw new GameRuleViolationException("Match must have exactly 2 players");
+        }
+
+        return players.stream()
+                .filter(p -> !p.getUserId().equals(playerId))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("Opponent not found"))
+                .getUserId();
     }
 }

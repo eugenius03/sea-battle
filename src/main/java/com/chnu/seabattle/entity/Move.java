@@ -9,7 +9,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "moves",
         uniqueConstraints = @UniqueConstraint(columnNames = {
-                "match_id", "targetX", "targetY"
+                "match_id", "shooter_id", "targetX", "targetY"
         }),
         indexes = @Index(name = "idx_shooter_id", columnList = "shooterId")
 )
