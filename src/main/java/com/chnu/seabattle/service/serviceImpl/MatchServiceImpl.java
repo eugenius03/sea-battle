@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Random;
 import java.util.UUID;
 
 @Service
@@ -24,7 +23,7 @@ public class MatchServiceImpl implements MatchService {
     private final MatchPlayerRepository matchPlayerRepository;
 
     private MatchPlayer createMatchPlayer(Long matchId, UUID playerId) {
-        if (matchPlayerRepository.findByMatchIdAndUserId(matchId, playerId).isPresent()) {
+        if (matchPlayerRepository.findByMatchIdAndId(matchId, playerId).isPresent()) {
             throw new GameRuleViolationException("Player is already in the match");
         }
         MatchPlayer matchPlayer = new MatchPlayer();
@@ -77,10 +76,6 @@ public class MatchServiceImpl implements MatchService {
 
         match.getPlayers().add(matchPlayer);
 
-        Random random = new Random();
-
-        MatchPlayer firstPlayer = match.getPlayers().get(random.nextInt(match.getPlayers().size()));
-        match.setCurrentPlayerTurnId(firstPlayer.getUserId());
         match.setStatus(MatchStatus.PLANNING);
         matchRepository.save(match);
 
@@ -88,11 +83,11 @@ public class MatchServiceImpl implements MatchService {
 
     }
 
-//    @Override
-//    public Match getMatchById(Long matchId) {
-//        return matchRepository.findById(matchId)
-//                .orElseThrow(() -> new IllegalArgumentException("Match not found"));
-//    }
+    @Override
+    public Match getMatchById(Long matchId) {
+        return matchRepository.findById(matchId)
+                .orElseThrow(() -> new IllegalArgumentException("Match not found"));
+    }
 
     @Override
     public Match getMatchByInviteToken(String inviteToken) {
