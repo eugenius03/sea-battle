@@ -1,5 +1,6 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MoveResult;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.ShipType;
@@ -19,7 +20,7 @@ public interface GameService {
             Orientation orientation
     );
 
-    void markReady(Long matchId, UUID playerId);
+    Match markReady(Long matchId, UUID playerId);
 
     MoveResult fire(
             Long matchId,
@@ -32,6 +33,6 @@ public interface GameService {
 
     void handleReconnect(Long matchId, UUID playerId);
 
-    UUID getOpponentId(Long matchId, UUID playerId);
-    
+    UUID getOpponentPlayerId(Match match, UUID playerId);
+
 }

@@ -5,6 +5,8 @@ import com.chnu.seabattle.repository.UserRepository;
 import com.chnu.seabattle.service.BaseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,16 @@ public class UserServiceImpl extends BaseService<User, UUID> {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    public Optional<User> findUserFromAuth() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Optional.empty();
+        }
+        String username = authentication.getName();
+        return this.findByUsername(username);
+    }
 
     @Override
     protected JpaRepository<User, UUID> getRepository() {

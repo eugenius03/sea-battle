@@ -2,15 +2,11 @@ package com.chnu.seabattle.service.serviceImpl;
 
 import com.chnu.seabattle.entity.*;
 import com.chnu.seabattle.exception.GameRuleViolationException;
-import com.chnu.seabattle.repository.MatchPlayerRepository;
-import com.chnu.seabattle.repository.MatchRepository;
-import com.chnu.seabattle.repository.MoveRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.InvocationTargetException;
@@ -23,15 +19,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GameServiceImpl - validatePlacement Tests")
 class GameServiceImplValidatePlacementTest {
-
-    @Mock
-    private MatchRepository matchRepository;
-
-    @Mock
-    private MatchPlayerRepository matchPlayerRepository;
-
-    @Mock
-    private MoveRepository moveRepository;
 
     @InjectMocks
     private GameServiceImpl gameService;
@@ -97,7 +84,7 @@ class GameServiceImplValidatePlacementTest {
         match.setCurrentPlayerTurnId(playerId);
 
         MatchPlayer player = new MatchPlayer();
-        player.setId(1L);
+        player.setId(UUID.randomUUID());
         player.setMatch(match);
 
         player.setUserId(playerId);
