@@ -16,7 +16,7 @@ public interface MatchService {
 
     Match joinMatch(UUID playerId, String inviteToken);
 
-//    Match getMatchById(Long matchId);
+    Match getMatchById(Long matchId);
 
     Match getMatchByInviteToken(String inviteToken);
 }

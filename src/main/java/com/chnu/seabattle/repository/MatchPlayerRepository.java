@@ -9,8 +9,12 @@ import java.util.UUID;
 
 @Repository
 public interface MatchPlayerRepository extends JpaRepository<MatchPlayer, Long> {
-    Optional<MatchPlayer> findByMatchIdAndUserId(
-            Long matchId, UUID userId
+    Optional<MatchPlayer> findByMatchIdAndId(
+            Long matchId, UUID MatchPlayerId
+    );
+
+    Optional<MatchPlayer> findByMatchIdAndReconnectToken(
+            Long matchId, String reconnectToken
     );
 
 }
