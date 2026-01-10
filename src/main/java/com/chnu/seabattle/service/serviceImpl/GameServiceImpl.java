@@ -6,7 +6,6 @@ import com.chnu.seabattle.repository.MatchPlayerRepository;
 import com.chnu.seabattle.repository.MatchRepository;
 import com.chnu.seabattle.repository.MoveRepository;
 import com.chnu.seabattle.service.GameService;
-import com.chnu.seabattle.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +23,6 @@ public class GameServiceImpl implements GameService {
     private final MatchRepository matchRepository;
     private final MatchPlayerRepository matchPlayerRepository;
     private final MoveRepository moveRepository;
-    private final WebSocketService webSocketService;
 
     private void validateTurn(Match match, UUID playerId) {
         if (!match.getCurrentPlayerTurnId().equals(playerId)) {
@@ -61,8 +59,10 @@ public class GameServiceImpl implements GameService {
     }
 
     private MatchPlayer getMatchPlayer(Match match, UUID playerId) {
-        return matchPlayerRepository
-                .findByMatchIdAndUserId(match.getId(), playerId)
+        return match.getPlayers()
+                .stream()
+                .filter(mp -> mp.getId().equals(playerId))
+                .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("Player not found in match"));
     }
 
@@ -186,7 +186,7 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public void markReady(Long matchId, UUID playerId) {
+    public Match markReady(Long matchId, UUID playerId) {
         Match match = matchRepository.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
         );
@@ -198,11 +198,15 @@ public class GameServiceImpl implements GameService {
                 .allMatch(MatchPlayer::isReady);
         if (allReady) {
             match.setStatus(MatchStatus.IN_PROGRESS);
-            webSocketService.updateMatchStatus(matchId, MatchStatus.IN_PROGRESS);
+
+            Random random = new Random();
+            MatchPlayer randomPlayer = match.getPlayers().get(random.nextInt(match.getPlayers().size()));
+            match.setCurrentPlayerTurnId(randomPlayer.getId());
         }
         matchRepository.save(match);
         matchPlayerRepository.save(player);
 
+        return match;
     }
 
     @Override
@@ -218,7 +222,7 @@ public class GameServiceImpl implements GameService {
         }
         List<Move> moves = match.getMoves()
                 .stream()
-                .filter(move -> move.getShooterId() == shooterId)
+                .filter(move -> move.getShooterId().equals(shooterId))
                 .toList();
 
         for (Move move : moves) {
@@ -255,6 +259,7 @@ public class GameServiceImpl implements GameService {
                     match.setStatus(MatchStatus.FINISHED);
                     match.setWinnerId(shooterId);
                     match.setFinishedAt(Instant.now());
+                    move.setMoveResult(MoveResult.FINISHED);
                 }
             } else {
                 move.setMoveResult(MoveResult.HIT);
@@ -262,7 +267,7 @@ public class GameServiceImpl implements GameService {
         } else {
             move.setMoveResult(MoveResult.MISS);
             match.setCurrentPlayerTurnId(
-                    opponent.getUserId()
+                    opponent.getId()
             );
 
         }
@@ -283,10 +288,10 @@ public class GameServiceImpl implements GameService {
         player.setLastSeenAt(Instant.now());
         matchPlayerRepository.save(player);
 
+//        UUID opponentId = getOpponentPlayerId(match, playerId);
+
         // Optional: notify opponent via WebSocket
-        webSocketService.handleDisconnect(matchId,
-                getOpponentId(match.getId(), playerId));
-        // websocketService.notifyPlayerDisconnected(player.getMatch(), player);
+//        webSocketService.handleDisconnect(matchId, opponentId);
     }
 
     @Override
@@ -299,26 +304,23 @@ public class GameServiceImpl implements GameService {
         player.setLastSeenAt(Instant.now());
         matchPlayerRepository.save(player);
 
+//        UUID opponentId = getOpponentPlayerId(match, playerId);
+
         // Optional: notify opponent via WebSocket
-        webSocketService.handleReconnect(matchId,
-                getOpponentId(match.getId(), playerId));
         // websocketService.notifyPlayerReconnected(player.getMatch(), player);
     }
 
     @Override
-    public UUID getOpponentId(Long matchId, UUID playerId) {
-        Match match = matchRepository.findById(matchId)
-                .orElseThrow(() -> new NoSuchElementException("Match not found"));
-
+    public UUID getOpponentPlayerId(Match match, UUID playerId) {
         List<MatchPlayer> players = match.getPlayers();
         if (players.size() != 2) {
             throw new GameRuleViolationException("Match must have exactly 2 players");
         }
 
         return players.stream()
-                .filter(p -> !p.getUserId().equals(playerId))
+                .filter(p -> !p.getId().equals(playerId))
                 .findFirst()
                 .orElseThrow(() -> new NoSuchElementException("Opponent not found"))
-                .getUserId();
+                .getId();
     }
 }

@@ -5,7 +5,6 @@ import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.repository.MatchPlayerRepository;
 import com.chnu.seabattle.repository.MatchRepository;
 import com.chnu.seabattle.repository.MoveRepository;
-import com.chnu.seabattle.service.WebSocketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -40,9 +39,6 @@ class GameServiceImplTest {
     @Mock
     private MoveRepository moveRepository;
 
-    @Mock
-    private WebSocketService webSocketService;
-
     @InjectMocks
     private GameServiceImpl gameService;
 
@@ -65,7 +61,7 @@ class GameServiceImplTest {
         match.setMoves(new ArrayList<>());
 
         player1 = new MatchPlayer();
-        player1.setId(1L);
+        player1.setId(UUID.randomUUID());
         player1.setMatch(match);
         player1.setUserId(playerId1);
         player1.setShips(new ArrayList<>());
@@ -73,7 +69,7 @@ class GameServiceImplTest {
         player1.setConnected(true);
 
         player2 = new MatchPlayer();
-        player2.setId(2L);
+        player2.setId(UUID.randomUUID());
         player2.setMatch(match);
         player2.setUserId(playerId2);
         player2.setShips(new ArrayList<>());
@@ -94,7 +90,7 @@ class GameServiceImplTest {
         @DisplayName("Should successfully place a ship")
         void shouldSuccessfullyPlaceShip() {
             when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-            when(matchPlayerRepository.findByMatchIdAndUserId(
+            when(matchPlayerRepository.findByMatchIdAndId(
                     anyLong(), any(UUID.class)))
                     .thenReturn(Optional.of(player1));
 
@@ -125,7 +121,7 @@ class GameServiceImplTest {
         @DisplayName("Should throw exception when player not found")
         void shouldThrowExceptionWhenPlayerNotFound() {
             when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-            when(matchPlayerRepository.findByMatchIdAndUserId(
+            when(matchPlayerRepository.findByMatchIdAndId(
                     anyLong(), any(UUID.class)))
                     .thenReturn(Optional.empty());
 
@@ -152,7 +148,7 @@ class GameServiceImplTest {
         void shouldThrowExceptionWhenPlayerAlreadyReady() {
             player1.setReady(true);
             when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-            when(matchPlayerRepository.findByMatchIdAndUserId(
+            when(matchPlayerRepository.findByMatchIdAndId(
                     anyLong(), any(UUID.class)))
                     .thenReturn(Optional.of(player1));
 
@@ -173,7 +169,7 @@ class GameServiceImplTest {
             @DisplayName("Should successfully mark player as ready")
             void shouldSuccessfullyMarkPlayerAsReady() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -236,7 +232,7 @@ class GameServiceImplTest {
             @DisplayName("Should successfully fire and hit a ship")
             void shouldSuccessfullyFireAndHitShip() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -253,7 +249,7 @@ class GameServiceImplTest {
             @DisplayName("Should successfully fire and miss")
             void shouldSuccessfullyFireAndMiss() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -271,7 +267,7 @@ class GameServiceImplTest {
                 player2.getShips().getFirst().setHits(2); // Already hit twice
 
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -290,7 +286,7 @@ class GameServiceImplTest {
                 player2.getShips().getFirst().setHits(2); // Already hit twice
 
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -317,7 +313,7 @@ class GameServiceImplTest {
             void shouldThrowExceptionWhenNotPlayersTurn() {
                 match.setCurrentPlayerTurnId(playerId2);
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -333,7 +329,7 @@ class GameServiceImplTest {
             void shouldThrowExceptionWhenNotInProgressStatus() {
                 match.setStatus(MatchStatus.PLANNING);
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -348,7 +344,7 @@ class GameServiceImplTest {
             @DisplayName("Should throw exception when firing coordinates are out of bounds")
             void shouldThrowExceptionWhenFiringOutOfBounds() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -372,7 +368,7 @@ class GameServiceImplTest {
                 match.getMoves().add(existingMove);
 
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -400,7 +396,7 @@ class GameServiceImplTest {
                 player2.getShips().add(verticalShip);
 
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -421,7 +417,7 @@ class GameServiceImplTest {
             @DisplayName("Should successfully handle player disconnect")
             void shouldSuccessfullyHandleDisconnect() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -449,7 +445,7 @@ class GameServiceImplTest {
             @DisplayName("Should throw exception when player not found")
             void shouldThrowExceptionWhenPlayerNotFound() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.empty());
 
@@ -470,7 +466,7 @@ class GameServiceImplTest {
             void shouldSuccessfullyHandleReconnect() {
                 player1.setConnected(false);
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.of(player1));
 
@@ -498,7 +494,7 @@ class GameServiceImplTest {
             @DisplayName("Should throw exception when player not found")
             void shouldThrowExceptionWhenPlayerNotFound() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndUserId(
+                when(matchPlayerRepository.findByMatchIdAndId(
                         anyLong(), any(UUID.class)))
                         .thenReturn(Optional.empty());
 
