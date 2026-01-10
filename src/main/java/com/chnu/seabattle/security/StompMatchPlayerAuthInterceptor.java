@@ -14,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.stereotype.Component;
 
 import java.security.Principal;
+import java.util.UUID;
 
 
 @Component
@@ -21,7 +22,7 @@ import java.security.Principal;
 public class StompMatchPlayerAuthInterceptor implements ChannelInterceptor {
 
     private static final String H_MATCH_ID = "X-Match-Id";
-    private static final String H_RECONNECT_TOKEN = "X-Reconnect-Token";
+    private static final String H_MATCH_PLAYER_ID = "X-Match-Player-Id";
 
     private final MatchPlayerRepository matchPlayerRepository;
 
@@ -36,14 +37,14 @@ public class StompMatchPlayerAuthInterceptor implements ChannelInterceptor {
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             Long matchId = parseLongHeader(accessor, H_MATCH_ID);
-            String reconnectToken = firstNativeHeader(accessor, H_RECONNECT_TOKEN);
+            UUID matchPlayerId = UUID.fromString(firstNativeHeader(accessor, H_MATCH_PLAYER_ID));
 
-            if (matchId == null || reconnectToken == null || reconnectToken.isBlank()) {
-                throw new IllegalArgumentException("Missing X-Match-Id / X-Reconnect-Token");
+            if (matchId == null || matchPlayerId == null) {
+                throw new IllegalArgumentException("Missing X-Match-Id / X-Match-Player-Id");
             }
             MatchPlayer mp = matchPlayerRepository
-                    .findByMatchIdAndReconnectToken(matchId, reconnectToken)
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid X-Match-Id / X-Reconnect-Token"));
+                    .findByMatchIdAndId(matchId, matchPlayerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid X-Match-Id / X-Match-Player-Id"));
 
             Principal principal = new UsernamePasswordAuthenticationToken(
                     mp.getId().toString(), null, null
