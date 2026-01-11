@@ -36,8 +36,10 @@ public class MatchApiController {
 
             return ResponseEntity.ok(Map.of(
                     "inviteToken", match.getInviteToken(),
+                    "matchId", match.getId(),
                     "playerId", playerId.toString()
             ));
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body(
                     String.format("Failed to create match: %s", e.getMessage())
@@ -56,12 +58,14 @@ public class MatchApiController {
                     .getId();
             Match match = matchService.joinMatch(playerId, inviteToken);
             UUID opponentId = gameService.getOpponentPlayerId(match, playerId);
+            UUID matchPlayerId = gameService.getOpponentPlayerId(match, opponentId);
             webSocketService.handleOpponentConnected(matchId,
                     opponentId
             );
 
             return ResponseEntity.ok(Map.of(
-                    "inviteToken", match.getInviteToken()
+                    "matchId", match.getId(),
+                    "playerId", matchPlayerId.toString()
             ));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(401).body(e.getMessage());

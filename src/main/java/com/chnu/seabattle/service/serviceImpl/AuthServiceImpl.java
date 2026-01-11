@@ -31,6 +31,7 @@ public class AuthServiceImpl {
         return userServiceImpl.create(user);
     }
 
+    @Transactional(readOnly = true)
     public User login(@Valid UserLoginRequest loginRequest) {
 
         if (userServiceImpl.existsByUsername(loginRequest.getUsername())) {
@@ -45,11 +46,25 @@ public class AuthServiceImpl {
         }
     }
 
+
     public ResponseCookie createRefreshCookie(User user) {
         String token = jwtServiceImpl.generateRefreshToken(
                 userDetailsService.loadUserByUsername(user.getUsername())
         );
         return ResponseCookie.from("refreshToken", token)
+                .httpOnly(true)
+                .secure(false)    // For development
+                .sameSite("Lax")    // CSRF protection
+                .path("/")
+                .maxAge(Duration.ofDays(7))
+                .build();
+    }
+
+    public ResponseCookie createAccessCookie(User user) {
+        String token = jwtServiceImpl.generateAccessToken(
+                userDetailsService.loadUserByUsername(user.getUsername())
+        );
+        return ResponseCookie.from("accessToken", token)
                 .httpOnly(true)
                 .secure(false)    // For development
                 .sameSite("Lax")    // CSRF protection

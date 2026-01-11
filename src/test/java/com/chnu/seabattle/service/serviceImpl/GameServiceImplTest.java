@@ -90,9 +90,6 @@ class GameServiceImplTest {
         @DisplayName("Should successfully place a ship")
         void shouldSuccessfullyPlaceShip() {
             when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-            when(matchPlayerRepository.findByMatchIdAndId(
-                    anyLong(), any(UUID.class)))
-                    .thenReturn(Optional.of(player1));
 
             gameService.placeShip(1L, playerId1, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL);
 
@@ -120,13 +117,11 @@ class GameServiceImplTest {
         @Test
         @DisplayName("Should throw exception when player not found")
         void shouldThrowExceptionWhenPlayerNotFound() {
+            UUID unknownPlayerId = UUID.randomUUID();
             when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-            when(matchPlayerRepository.findByMatchIdAndId(
-                    anyLong(), any(UUID.class)))
-                    .thenReturn(Optional.empty());
 
             assertThrows(NoSuchElementException.class, () ->
-                    gameService.placeShip(1L, playerId1, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL)
+                    gameService.placeShip(1L, unknownPlayerId, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL)
             );
         }
 
@@ -148,9 +143,6 @@ class GameServiceImplTest {
         void shouldThrowExceptionWhenPlayerAlreadyReady() {
             player1.setReady(true);
             when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-            when(matchPlayerRepository.findByMatchIdAndId(
-                    anyLong(), any(UUID.class)))
-                    .thenReturn(Optional.of(player1));
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
                     gameService.placeShip(1L, playerId1, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL)
@@ -169,9 +161,6 @@ class GameServiceImplTest {
             @DisplayName("Should successfully mark player as ready")
             void shouldSuccessfullyMarkPlayerAsReady() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 gameService.markReady(1L, playerId1);
 
@@ -232,9 +221,6 @@ class GameServiceImplTest {
             @DisplayName("Should successfully fire and hit a ship")
             void shouldSuccessfullyFireAndHitShip() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 MoveResult result = gameService.fire(1L, playerId1, 5, 5);
 
@@ -249,16 +235,13 @@ class GameServiceImplTest {
             @DisplayName("Should successfully fire and miss")
             void shouldSuccessfullyFireAndMiss() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 MoveResult result = gameService.fire(1L, playerId1, 0, 0);
 
                 assertEquals(MoveResult.MISS, result);
                 verify(moveRepository).save(any(Move.class));
                 verify(matchRepository).save(match);
-                assertEquals(playerId2, match.getCurrentPlayerTurnId());
+                assertEquals(player2.getId(), match.getCurrentPlayerTurnId());
             }
 
             @Test
@@ -267,13 +250,10 @@ class GameServiceImplTest {
                 player2.getShips().getFirst().setHits(2); // Already hit twice
 
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 MoveResult result = gameService.fire(1L, playerId1, 5, 5);
 
-                assertEquals(MoveResult.SUNK, result);
+                assertEquals(MoveResult.FINISHED, result);
                 verify(moveRepository).save(any(Move.class));
                 verify(matchRepository).save(match);
                 assertEquals(3, player2.getShips().getFirst().getHits());
@@ -286,13 +266,10 @@ class GameServiceImplTest {
                 player2.getShips().getFirst().setHits(2); // Already hit twice
 
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 MoveResult result = gameService.fire(1L, playerId1, 5, 5);
 
-                assertEquals(MoveResult.SUNK, result);
+                assertEquals(MoveResult.FINISHED, result);
                 assertEquals(MatchStatus.FINISHED, match.getStatus());
                 assertEquals(playerId1, match.getWinnerId());
                 assertNotNull(match.getFinishedAt());
@@ -313,9 +290,6 @@ class GameServiceImplTest {
             void shouldThrowExceptionWhenNotPlayersTurn() {
                 match.setCurrentPlayerTurnId(playerId2);
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
                         gameService.fire(1L, playerId1, 5, 5)
@@ -329,9 +303,6 @@ class GameServiceImplTest {
             void shouldThrowExceptionWhenNotInProgressStatus() {
                 match.setStatus(MatchStatus.PLANNING);
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
                         gameService.fire(1L, playerId1, 5, 5)
@@ -344,9 +315,6 @@ class GameServiceImplTest {
             @DisplayName("Should throw exception when firing coordinates are out of bounds")
             void shouldThrowExceptionWhenFiringOutOfBounds() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
                         gameService.fire(1L, playerId1, 10, 5)
@@ -368,9 +336,6 @@ class GameServiceImplTest {
                 match.getMoves().add(existingMove);
 
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
                         gameService.fire(1L, playerId1, 5, 5)
@@ -396,9 +361,6 @@ class GameServiceImplTest {
                 player2.getShips().add(verticalShip);
 
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 MoveResult result = gameService.fire(1L, playerId1, 3, 4);
 
@@ -417,9 +379,6 @@ class GameServiceImplTest {
             @DisplayName("Should successfully handle player disconnect")
             void shouldSuccessfullyHandleDisconnect() {
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 gameService.handleDisconnect(1L, playerId1);
 
@@ -444,13 +403,11 @@ class GameServiceImplTest {
             @Test
             @DisplayName("Should throw exception when player not found")
             void shouldThrowExceptionWhenPlayerNotFound() {
+                UUID unknownPlayerId = UUID.randomUUID();
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.empty());
 
                 assertThrows(NoSuchElementException.class, () ->
-                        gameService.handleDisconnect(1L, playerId1)
+                        gameService.handleDisconnect(1L, unknownPlayerId)
                 );
             }
         }
@@ -466,9 +423,6 @@ class GameServiceImplTest {
             void shouldSuccessfullyHandleReconnect() {
                 player1.setConnected(false);
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.of(player1));
 
                 gameService.handleReconnect(1L, playerId1);
 
@@ -493,13 +447,11 @@ class GameServiceImplTest {
             @Test
             @DisplayName("Should throw exception when player not found")
             void shouldThrowExceptionWhenPlayerNotFound() {
+                UUID unknownPlayerId = UUID.randomUUID();
                 when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-                when(matchPlayerRepository.findByMatchIdAndId(
-                        anyLong(), any(UUID.class)))
-                        .thenReturn(Optional.empty());
 
                 assertThrows(NoSuchElementException.class, () ->
-                        gameService.handleReconnect(1L, playerId1)
+                        gameService.handleReconnect(1L, unknownPlayerId)
                 );
             }
         }

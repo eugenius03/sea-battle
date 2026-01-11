@@ -35,6 +35,7 @@ public class MatchServiceImpl implements MatchService {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 
+    @Transactional
     @Override
     public Match createMatch(UUID playerId) {
         Match match = new Match();
@@ -56,6 +57,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    @Transactional
     public Match joinMatch(UUID playerId, String inviteToken) {
         Match match = matchRepository.findByInviteToken(inviteToken)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid invite token"));
@@ -84,12 +86,14 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Match getMatchById(Long matchId) {
         return matchRepository.findById(matchId)
                 .orElseThrow(() -> new IllegalArgumentException("Match not found"));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Match getMatchByInviteToken(String inviteToken) {
         return matchRepository.findByInviteToken(inviteToken)
                 .orElseThrow(() -> new IllegalArgumentException("Match not found"));

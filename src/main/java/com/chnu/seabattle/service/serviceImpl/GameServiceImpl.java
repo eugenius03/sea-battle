@@ -151,6 +151,7 @@ public class GameServiceImpl implements GameService {
     }
 
 
+    @Transactional
     @Override
     public void placeShip(Long matchId, UUID playerId, ShipType type, int startX, int startY, Orientation orientation) {
         Match match = matchRepository.findById(matchId).orElseThrow(
@@ -186,6 +187,7 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
+    @Transactional
     public Match markReady(Long matchId, UUID playerId) {
         Match match = matchRepository.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
@@ -209,6 +211,7 @@ public class GameServiceImpl implements GameService {
         return match;
     }
 
+    @Transactional
     @Override
     public MoveResult fire(Long matchId, UUID shooterId, int x, int y) {
         Match match = matchRepository.findById(matchId).orElseThrow(
@@ -278,7 +281,6 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    @Transactional
     public void handleDisconnect(Long matchId, UUID playerId) {
         Match match = matchRepository.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
@@ -311,6 +313,7 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UUID getOpponentPlayerId(Match match, UUID playerId) {
         List<MatchPlayer> players = match.getPlayers();
         if (players.size() != 2) {
