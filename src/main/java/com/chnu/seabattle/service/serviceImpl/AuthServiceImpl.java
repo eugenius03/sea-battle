@@ -4,6 +4,8 @@ import com.chnu.seabattle.converter.UserConverter;
 import com.chnu.seabattle.dto.UserLoginRequest;
 import com.chnu.seabattle.dto.UserRegistrationRequest;
 import com.chnu.seabattle.entity.User;
+import com.chnu.seabattle.exception.UnauthorizedException;
+import com.chnu.seabattle.exception.UserAlreadyExistsException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
@@ -24,7 +26,7 @@ public class AuthServiceImpl {
     @Transactional
     public User register(@Valid UserRegistrationRequest registrationRequest) {
         if (userServiceImpl.existsByUsername(registrationRequest.getUsername())) {
-            throw new IllegalArgumentException("Username already exists!");
+            throw new UserAlreadyExistsException("Username already exists!");
         }
 
         User user = userConverter.toEntity(registrationRequest);
@@ -39,10 +41,10 @@ public class AuthServiceImpl {
             if (userServiceImpl.checkPassword(loginRequest.getPassword(), user.getPasswordHash())) {
                 return user;
             } else {
-                throw new IllegalArgumentException("Invalid password");
+                throw new UnauthorizedException("Invalid password");
             }
         } else {
-            throw new IllegalArgumentException("Invalid username");
+            throw new UnauthorizedException("Invalid username");
         }
     }
 
@@ -73,10 +75,10 @@ public class AuthServiceImpl {
                 .build();
     }
 
-    public String refresh(String refreshToken) throws Exception {
+    public String refresh(String refreshToken) {
 
         if (jwtServiceImpl.isTokenExpired(refreshToken)) {
-            throw new Exception("Refresh token expired");
+            throw new UnauthorizedException("Refresh token expired");
         }
 
         String username = jwtServiceImpl.getUsernameFromToken(refreshToken);

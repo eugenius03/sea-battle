@@ -4,12 +4,14 @@ import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.exception.GameRuleViolationException;
+import com.chnu.seabattle.exception.ResourceNotFoundException;
 import com.chnu.seabattle.repository.MatchPlayerRepository;
 import com.chnu.seabattle.repository.MatchRepository;
 import com.chnu.seabattle.service.MatchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -60,7 +62,7 @@ public class MatchServiceImpl implements MatchService {
     @Transactional
     public Match joinMatch(UUID playerId, String inviteToken) {
         Match match = matchRepository.findByInviteToken(inviteToken)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid invite token"));
+                .orElseThrow(() -> new ResourceAccessException("Invalid invite token"));
 
         if (match.getStatus() != MatchStatus.WAITING) {
             throw new GameRuleViolationException("Match is not joinable");
@@ -89,13 +91,13 @@ public class MatchServiceImpl implements MatchService {
     @Transactional(readOnly = true)
     public Match getMatchById(Long matchId) {
         return matchRepository.findById(matchId)
-                .orElseThrow(() -> new IllegalArgumentException("Match not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Match not found"));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Match getMatchByInviteToken(String inviteToken) {
         return matchRepository.findByInviteToken(inviteToken)
-                .orElseThrow(() -> new IllegalArgumentException("Match not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Match not found"));
     }
 }

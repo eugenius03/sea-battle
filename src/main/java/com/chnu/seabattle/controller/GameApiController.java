@@ -7,19 +7,16 @@ import com.chnu.seabattle.entity.MoveResult;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.entity.ShipType;
-import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.service.GameService;
 import com.chnu.seabattle.service.WebSocketService;
 import com.chnu.seabattle.service.serviceImpl.MatchServiceImpl;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
@@ -33,7 +30,7 @@ public class GameApiController {
 
 
     @PostMapping("/{matchId}/place-ship")
-    public ResponseEntity<?> placeShip(
+    public Long placeShip(
             @PathVariable Long matchId,
             @RequestParam UUID playerId,
             @RequestParam ShipType type,
@@ -41,21 +38,12 @@ public class GameApiController {
             @RequestParam int startY,
             @RequestParam Orientation orientation
     ) {
-        try {
-
-            Ship ship = gameService.placeShip(matchId, playerId, type, startX, startY, orientation);
-            System.out.println(ship.getId());
-            return ResponseEntity.ok(ship.getId());
-
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(e.getMessage());
-        } catch (GameRuleViolationException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        Ship ship = gameService.placeShip(matchId, playerId, type, startX, startY, orientation);
+        return ship.getId();
     }
 
     @PostMapping("/{matchId}/move-ship/{shipId}")
-    public ResponseEntity<?> moveShip(
+    public Long moveShip(
             @PathVariable Long matchId,
             @PathVariable Long shipId,
             @RequestParam UUID playerId,
@@ -63,71 +51,48 @@ public class GameApiController {
             @RequestParam int startY,
             @RequestParam Orientation orientation
     ) {
-        try {
-            gameService.moveShip(matchId, playerId, shipId, startX, startY, orientation);
-            return ResponseEntity.ok().body(shipId);
-
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(e.getMessage());
-        } catch (GameRuleViolationException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        gameService.moveShip(matchId, playerId, shipId, startX, startY, orientation);
+        return shipId;
     }
 
     @PostMapping("/{matchId}/mark-ready")
-    public ResponseEntity<?> markReady(
+    public void markReady(
             @PathVariable Long matchId,
             @RequestParam UUID playerId
     ) {
-        try {
-            Match match = gameService.markReady(matchId, playerId);
-            UUID opponentId = gameService.getOpponentPlayerId(match, playerId);
+        Match match = gameService.markReady(matchId, playerId);
+        UUID opponentId = gameService.getOpponentPlayerId(match, playerId);
 
-            if (match.getPlayers().stream().allMatch(MatchPlayer::isReady)) {
-                webSocketService.updateMatchStatus(matchId, MatchStatus.IN_PROGRESS, match.getCurrentPlayerTurnId());
-            }
-
-            webSocketService.sendPlayerReadyMessage(matchId, opponentId);
-
-            return ResponseEntity.ok().build();
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+        if (match.getPlayers().stream().allMatch(MatchPlayer::isReady)) {
+            webSocketService.updateMatchStatus(matchId, MatchStatus.IN_PROGRESS, match.getCurrentPlayerTurnId());
         }
+
+        webSocketService.sendPlayerReadyMessage(matchId, opponentId);
     }
 
     @PostMapping("/{matchId}/fire")
-    public ResponseEntity<?> fire(
+    public MoveResult fire(
             @PathVariable Long matchId,
             @RequestParam UUID shooterId,
             @RequestParam int x,
             @RequestParam int y
     ) {
-        try {
-            MoveResult result = gameService.fire(matchId, shooterId, x, y);
-            Match match = matchServiceImpl.getMatchById(matchId);
+        MoveResult result = gameService.fire(matchId, shooterId, x, y);
+        Match match = matchServiceImpl.getMatchById(matchId);
 
-            webSocketService.sendOpponentMoveMessage(
-                    matchId,
-                    gameService.getOpponentPlayerId(match, shooterId),
-                    x,
-                    y,
-                    result,
-                    match.getCurrentPlayerTurnId()
-            );
+        webSocketService.sendOpponentMoveMessage(
+                matchId,
+                gameService.getOpponentPlayerId(match, shooterId),
+                x,
+                y,
+                result,
+                match.getCurrentPlayerTurnId()
+        );
 
-            if (result == MoveResult.FINISHED) {
-                webSocketService.updateMatchStatus(matchId, MatchStatus.FINISHED, null);
-            }
-
-            return ResponseEntity.ok(result);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(e.getMessage());
-        } catch (GameRuleViolationException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(e.getMessage());
+        if (result == MoveResult.FINISHED) {
+            webSocketService.updateMatchStatus(matchId, MatchStatus.FINISHED, null);
         }
+
+        return result;
     }
 }
