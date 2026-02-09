@@ -3,6 +3,7 @@ package com.chnu.seabattle.service;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MoveResult;
 import com.chnu.seabattle.entity.Orientation;
+import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.entity.ShipType;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +12,7 @@ import java.util.UUID;
 @Service
 public interface GameService {
 
-    void placeShip(
+    Ship placeShip(
             Long matchId,
             UUID playerId,
             ShipType type,
@@ -19,6 +20,8 @@ public interface GameService {
             int startY,
             Orientation orientation
     );
+
+    Ship moveShip(Long matchId, UUID playerId, Long shipId, int x, int y, Orientation orientation);
 
     Match markReady(Long matchId, UUID playerId);
 

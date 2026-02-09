@@ -1,13 +1,23 @@
 package com.chnu.seabattle.controller;
 
-import com.chnu.seabattle.entity.*;
+import com.chnu.seabattle.entity.Match;
+import com.chnu.seabattle.entity.MatchPlayer;
+import com.chnu.seabattle.entity.MatchStatus;
+import com.chnu.seabattle.entity.MoveResult;
+import com.chnu.seabattle.entity.Orientation;
+import com.chnu.seabattle.entity.Ship;
+import com.chnu.seabattle.entity.ShipType;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.service.GameService;
 import com.chnu.seabattle.service.WebSocketService;
 import com.chnu.seabattle.service.serviceImpl.MatchServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -33,8 +43,29 @@ public class GameApiController {
     ) {
         try {
 
-            gameService.placeShip(matchId, playerId, type, startX, startY, orientation);
-            return ResponseEntity.ok().build();
+            Ship ship = gameService.placeShip(matchId, playerId, type, startX, startY, orientation);
+            System.out.println(ship.getId());
+            return ResponseEntity.ok(ship.getId());
+
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        } catch (GameRuleViolationException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{matchId}/move-ship/{shipId}")
+    public ResponseEntity<?> moveShip(
+            @PathVariable Long matchId,
+            @PathVariable Long shipId,
+            @RequestParam UUID playerId,
+            @RequestParam int startX,
+            @RequestParam int startY,
+            @RequestParam Orientation orientation
+    ) {
+        try {
+            gameService.moveShip(matchId, playerId, shipId, startX, startY, orientation);
+            return ResponseEntity.ok().body(shipId);
 
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(404).body(e.getMessage());
@@ -100,4 +131,3 @@ public class GameApiController {
         }
     }
 }
-

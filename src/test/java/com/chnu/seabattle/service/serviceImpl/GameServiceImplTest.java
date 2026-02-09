@@ -1,10 +1,18 @@
 package com.chnu.seabattle.service.serviceImpl;
 
-import com.chnu.seabattle.entity.*;
+import com.chnu.seabattle.entity.Match;
+import com.chnu.seabattle.entity.MatchPlayer;
+import com.chnu.seabattle.entity.MatchStatus;
+import com.chnu.seabattle.entity.Move;
+import com.chnu.seabattle.entity.MoveResult;
+import com.chnu.seabattle.entity.Orientation;
+import com.chnu.seabattle.entity.Ship;
+import com.chnu.seabattle.entity.ShipType;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.repository.MatchPlayerRepository;
 import com.chnu.seabattle.repository.MatchRepository;
 import com.chnu.seabattle.repository.MoveRepository;
+import com.chnu.seabattle.repository.ShipRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,11 +24,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
@@ -38,6 +51,9 @@ class GameServiceImplTest {
 
     @Mock
     private MoveRepository moveRepository;
+
+    @Mock
+    private ShipRepository shipRepository;
 
     @InjectMocks
     private GameServiceImpl gameService;
@@ -58,26 +74,27 @@ class GameServiceImplTest {
         match.setStatus(MatchStatus.PLANNING);
         match.setCurrentPlayerTurnId(playerId1);
         match.setPlayers(new ArrayList<>());
-        match.setMoves(new ArrayList<>());
+        match.setMoves(new HashSet<>());
 
         player1 = new MatchPlayer();
-        player1.setId(UUID.randomUUID());
+        player1.setId(playerId1);
         player1.setMatch(match);
-        player1.setUserId(playerId1);
+        player1.setUserId(UUID.randomUUID());
         player1.setShips(new ArrayList<>());
         player1.setReady(false);
         player1.setConnected(true);
 
         player2 = new MatchPlayer();
-        player2.setId(UUID.randomUUID());
+        player2.setId(playerId2);
         player2.setMatch(match);
-        player2.setUserId(playerId2);
+        player2.setUserId(UUID.randomUUID());
         player2.setShips(new ArrayList<>());
         player2.setReady(false);
         player2.setConnected(true);
 
         match.getPlayers().add(player1);
         match.getPlayers().add(player2);
+
     }
 
     // ==================== placeShip Tests ====================
@@ -90,12 +107,21 @@ class GameServiceImplTest {
         @DisplayName("Should successfully place a ship")
         void shouldSuccessfullyPlaceShip() {
             when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
+            when(shipRepository.save(any())).thenReturn(Ship.builder()
+                    .id(1L)
+                    .matchPlayer(player1)
+                    .shipType(ShipType.QUADRO_DECK)
+                    .startX(0)
+                    .startY(0)
+                    .hits(0)
+                    .isSunk(false)
+                    .orientation(Orientation.HORIZONTAL)
+                    .build());
 
-            gameService.placeShip(1L, playerId1, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL);
+            Ship placedShip = gameService.placeShip(1L, playerId1, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL);
 
             verify(matchPlayerRepository).save(player1);
             assertEquals(1, player1.getShips().size());
-            Ship placedShip = player1.getShips().getFirst();
             assertEquals(ShipType.QUADRO_DECK, placedShip.getShipType());
             assertEquals(0, placedShip.getStartX());
             assertEquals(0, placedShip.getStartY());
@@ -501,4 +527,3 @@ class GameServiceImplTest {
         }
     }
 }
-
