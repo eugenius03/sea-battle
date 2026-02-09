@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sea Battle - Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+          rel="stylesheet">
+    <style>
+        :root {
+            --bg-1: #f6f2ea;
+            --bg-2: #dff2f1;
+            --ink: #0f172a;
+            --muted: #64748b;
+            --accent: #0ea5a4;
+            --accent-strong: #0f766e;
+            --panel: #ffffff;
+            --line: #e2e8f0;
+            --shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+            --radius: 22px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
+            background: radial-gradient(circle at top left, #ffffff 0%, var(--bg-1) 40%, var(--bg-2) 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            color: var(--ink);
+        }
+
+        .container {
+            background: var(--panel);
+            border-radius: var(--radius);
+            padding: 42px;
+            box-shadow: var(--shadow);
+            max-width: 520px;
+            width: 100%;
+            border: 1px solid var(--line);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            top: -70px;
+            right: -70px;
+            background: radial-gradient(circle, rgba(14, 165, 164, 0.25), transparent 70%);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--ink);
+            margin-bottom: 10px;
+            font-family: "Space Grotesk", "Manrope", sans-serif;
+            font-size: 34px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--ink);
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: #f8fafc;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(14, 165, 164, 0.15);
+        }
+
+        input.error {
+            border-color: #f97316;
+        }
+
+        .error-message {
+            color: #c2410c;
+            font-size: 13px;
+            margin-top: 5px;
+            display: block;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(15, 118, 110, 0.25);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .register-link a {
+            color: var(--accent-strong);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        .form-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .alert {
+            padding: 14px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .alert-error {
+            background-color: #fff1e6;
+            color: #9a3412;
+            border: 1px solid #fed7aa;
+        }
+
+        .alert-success {
+            background-color: #ecfdf5;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 8px;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .remember-me label {
+            margin-bottom: 0;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--muted);
+        }
+
+        .required {
+            color: #f97316;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="form-header">
+        <h1>🚢 Sea Battle</h1>
+    </div>
+    <div class="subtitle">Login to your account</div>
+
+    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+    <div th:if="${success}" class="alert alert-success">
+        You have successfully logged out!
+    </div>
+
+    <form th:action="@{/api/auth/login}" method="post" id="loginForm">
+        <div class="form-group">
+            <label for="username">Username <span class="required">*</span></label>
+            <input type="text"
+                   id="username"
+                   name="username"
+                   placeholder="Enter your username"
+                   required
+                   autofocus>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password <span class="required">*</span></label>
+            <input type="password"
+                   id="password"
+                   name="password"
+                   placeholder="Enter your password"
+                   required>
+        </div>
+
+        <div class="remember-me">
+            <input type="checkbox" id="remember" name="remember">
+            <label for="remember">Remember me</label>
+        </div>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <div class="register-link">
+        Don't have an account? <a href="/register">Register here</a>
+    </div>
+</div>
+
+<script>
+    // Form validation and submission
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('loginForm');
+        const inputs = form.querySelectorAll('input[required]');
+
+        inputs.forEach(input => {
+            input.addEventListener('blur', function () {
+                if (this.value.trim() === '') {
+                    this.classList.add('error');
+                } else {
+                    this.classList.remove('error');
+                }
+            });
+
+            input.addEventListener('input', function () {
+                if (this.value.trim() !== '') {
+                    this.classList.remove('error');
+                }
+            });
+        });
+
+        // Handle form submission
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const token = data.token;
+
+                    if (token) {
+                        // Store token in cookie for 15 minutes (same as access token expiration)
+                        const expiresDate = new Date();
+                        expiresDate.setTime(expiresDate.getTime() + (15 * 60 * 1000)); // 15 minutes
+
+                        document.cookie = `accessToken=${token}; expires=${expiresDate.toUTCString()}; path=/; SameSite=Lax`;
+
+                        // Also store in localStorage as backup
+                        localStorage.setItem('accessToken', token);
+                    }
+
+                    // Redirect to game or dashboard
+                    window.location.href = '/game';
+                } else {
+                    const error = await response.text();
+                    showError('Invalid username or password');
+                }
+            } catch (error) {
+                showError('An error occurred. Please try again.');
+            }
+        });
+
+        function showError(message) {
+            // Remove existing alerts
+            const existingAlert = document.querySelector('.alert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+
+            // Create new alert
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-error';
+            alert.textContent = message;
+
+            form.parentNode.insertBefore(alert, form);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+    });
+</script>
+</body>
+</html>

@@ -55,7 +55,6 @@ public class GameController {
         MatchPlayer player = match.getPlayers().getFirst();
         model.addAttribute("matchPlayerId", player.getId());
 
-        // Redirect to game page with inviteToken and playerId
         return String.format("redirect:/game/%s", match.getInviteToken());
     }
 

@@ -1,5 +1,6 @@
 package com.chnu.seabattle.controller;
 
+import com.chnu.seabattle.dto.AuthResponse;
 import com.chnu.seabattle.dto.UserLoginRequest;
 import com.chnu.seabattle.dto.UserRegistrationRequest;
 import com.chnu.seabattle.entity.User;
@@ -19,8 +20,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -31,39 +30,32 @@ public class AuthController {
     private final UserDetailsServiceImpl userDetailsServiceImpl;
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody UserRegistrationRequest registrationRequest,
-                                                        HttpServletResponse response) {
-        try {
-            User user = authService.register(registrationRequest);
-            response.addHeader(HttpHeaders.SET_COOKIE,
-                    authService.createRefreshCookie(user).toString()
-            );
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                    "token", jwtServiceImpl.generateAccessToken(
-                            userDetailsServiceImpl.convertToUserDetails(user)
-                    )
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody UserRegistrationRequest registrationRequest,
+                                                 HttpServletResponse response) {
+        User user = authService.register(registrationRequest);
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                authService.createRefreshCookie(user).toString()
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                AuthResponse.builder()
+                        .token(jwtServiceImpl.generateAccessToken(
+                                userDetailsServiceImpl.convertToUserDetails(user))
+                        )
+                        .build()
+        );
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@Valid @RequestBody UserLoginRequest loginRequest,
-                                                     HttpServletResponse response) {
-        try {
-            User user = authService.login(loginRequest);
-            response.addHeader(HttpHeaders.SET_COOKIE,
-                    authService.createRefreshCookie(user).toString()
-            );
-            return ResponseEntity.ok().body(Map.of(
-                    "token", jwtServiceImpl.generateAccessToken(
-                            userDetailsServiceImpl.convertToUserDetails(user)
-                    )
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
-        }
+    public AuthResponse login(@Valid @RequestBody UserLoginRequest loginRequest,
+                              HttpServletResponse response) {
+        User user = authService.login(loginRequest);
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                authService.createRefreshCookie(user).toString()
+        );
+        return AuthResponse.builder()
+                .token(jwtServiceImpl.generateAccessToken(
+                        userDetailsServiceImpl.convertToUserDetails(user))
+                ).build();
     }
 
     @PostMapping("/logout")
@@ -84,18 +76,11 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<Map<String, String>> refresh(
+    public AuthResponse refresh(
             @CookieValue("refreshToken") String refreshToken
     ) {
-
-        try {
-            return ResponseEntity.ok().body(Map.of(
-                    "token", authService.refresh(refreshToken)
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
-        }
+        return AuthResponse.builder()
+                .token(authService.refresh(refreshToken))
+                .build();
     }
 }
