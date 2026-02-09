@@ -1,20 +1,36 @@
 package com.chnu.seabattle.service.serviceImpl;
 
-import com.chnu.seabattle.entity.*;
+import com.chnu.seabattle.entity.Match;
+import com.chnu.seabattle.entity.MatchPlayer;
+import com.chnu.seabattle.entity.MatchStatus;
+import com.chnu.seabattle.entity.Move;
+import com.chnu.seabattle.entity.MoveResult;
+import com.chnu.seabattle.entity.Orientation;
+import com.chnu.seabattle.entity.Ship;
+import com.chnu.seabattle.entity.ShipType;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.repository.MatchPlayerRepository;
 import com.chnu.seabattle.repository.MatchRepository;
 import com.chnu.seabattle.repository.MoveRepository;
+import com.chnu.seabattle.repository.ShipRepository;
 import com.chnu.seabattle.service.GameService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.*;
+import java.awt.Point;
 import java.time.Instant;
-import java.util.*;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.counting;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +39,7 @@ public class GameServiceImpl implements GameService {
     private final MatchRepository matchRepository;
     private final MatchPlayerRepository matchPlayerRepository;
     private final MoveRepository moveRepository;
+    private final ShipRepository shipRepository;
 
     private void validateTurn(Match match, UUID playerId) {
         if (!match.getCurrentPlayerTurnId().equals(playerId)) {
@@ -122,24 +139,7 @@ public class GameServiceImpl implements GameService {
     ) {
         List<Ship> ships = player.getShips();
 
-        if (ships == null) {
-            ships = new ArrayList<>();
-            player.setShips(ships);
-        }
-
         validateCoordinates(x, y, type, orientation);
-        Map<ShipType, Long> shipTypeCount = ships.stream()
-                .collect(
-                        Collectors.groupingBy(
-                                Ship::getShipType,
-                                java.util.stream.Collectors.counting()
-                        )
-                );
-        if (shipTypeCount.getOrDefault(type, 0L) >= type.AllowedCount()) {
-            throw new GameRuleViolationException(
-                    String.format("Cannot place more ships of type %s", type)
-            );
-        }
         ships.forEach(ship -> {
             if (overlapsOrTouches(ship, x, y, orientation, type.getSize())) {
                 throw new GameRuleViolationException(
@@ -153,18 +153,31 @@ public class GameServiceImpl implements GameService {
 
     @Transactional
     @Override
-    public void placeShip(Long matchId, UUID playerId, ShipType type, int startX, int startY, Orientation orientation) {
+    public Ship placeShip(Long matchId, UUID playerId, ShipType type, int startX, int startY, Orientation orientation) {
         Match match = matchRepository.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
         );
-//        requireStatus(match, MatchStatus.PLANNING);
         MatchPlayer player = getMatchPlayer(match, playerId);
 
         if (player.isReady()) {
             throw new GameRuleViolationException("Cannot place ships after marking ready");
         }
 
+        List<Ship> updatedShips = player.getShips();
+
         validatePlacement(player, type, startX, startY, orientation);
+
+        Map<ShipType, Long> shipTypeCount = player.getShips().stream()
+                .collect(
+                        Collectors.groupingBy(Ship::getShipType, counting())
+                );
+
+        if (shipTypeCount.getOrDefault(type, 0L) >= type.AllowedCount()) {
+            throw new GameRuleViolationException(
+                    String.format("Cannot place more ships of type %s", type)
+            );
+        }
+
         Ship ship = Ship.builder()
                 .matchPlayer(player)
                 .shipType(type)
@@ -174,16 +187,43 @@ public class GameServiceImpl implements GameService {
                 .hits(0)
                 .isSunk(false)
                 .build();
-
-        // Initialize ships list if null
-        List<Ship> updatedShips = player.getShips();
-        if (updatedShips == null) {
-            updatedShips = new ArrayList<>();
-            player.setShips(updatedShips);
-        }
+        ship = shipRepository.save(ship);
 
         updatedShips.add(ship);
         matchPlayerRepository.save(player);
+
+        return ship;
+    }
+
+    @Transactional
+    @Override
+    public Ship moveShip(Long matchId, UUID playerId, Long shipId, int x, int y, Orientation orientation) {
+        Match match = matchRepository.findById(matchId).orElseThrow(
+                () -> new NoSuchElementException("Match not found")
+        );
+
+        MatchPlayer player = getMatchPlayer(match, playerId);
+
+        if (player.isReady()) {
+            throw new GameRuleViolationException("Cannot move ships after marking ready");
+        }
+
+        List<Ship> ships = player.getShips();
+        Ship ship = ships.stream().filter(s -> s.getId().equals(shipId)).findFirst().orElseThrow(
+                () -> new NoSuchElementException("Ship not found")
+        );
+
+        ships.remove(ship);
+        validatePlacement(player, ship.getShipType(), x, y, orientation);
+        ship.setStartX(x);
+        ship.setStartY(y);
+        ship.setOrientation(orientation);
+
+        ships.add(ship);
+        player.setShips(ships);
+        matchPlayerRepository.save(player);
+
+        return ship;
     }
 
     @Override

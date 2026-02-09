@@ -1,6 +1,11 @@
 package com.chnu.seabattle.service.serviceImpl;
 
-import com.chnu.seabattle.entity.*;
+import com.chnu.seabattle.entity.Match;
+import com.chnu.seabattle.entity.MatchPlayer;
+import com.chnu.seabattle.entity.MatchStatus;
+import com.chnu.seabattle.entity.Orientation;
+import com.chnu.seabattle.entity.Ship;
+import com.chnu.seabattle.entity.ShipType;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,7 +19,9 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GameServiceImpl - validatePlacement Tests")
@@ -132,77 +139,6 @@ class GameServiceImplValidatePlacementTest {
 //                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 5, 5, Orientation.HORIZONTAL)
 //        );
 //    }
-
-
-    @Test
-    @DisplayName("Should throw exception when maximum ships of type already placed")
-    void shouldThrowExceptionWhenMaxShipsOfTypeReached() {
-        UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId);
-
-        // Add maximum allowed SINGLE_DECK ships (4)
-        for (int i = 0; i < 4; i++) {
-            player.getShips().add(createShip(player, ShipType.SINGLE_DECK, i * 2, 0, Orientation.HORIZONTAL));
-        }
-
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 8, 0, Orientation.HORIZONTAL)
-        );
-
-        assertEquals("Cannot place more ships of type SINGLE_DECK", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when maximum DOUBLE_DECK ships already placed")
-    void shouldThrowExceptionWhenMaxDoubleDeckShipsReached() {
-        UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId);
-
-        // Add maximum allowed DOUBLE_DECK ships (3)
-        for (int i = 0; i < 3; i++) {
-            player.getShips().add(createShip(player, ShipType.DOUBLE_DECK, 0, i * 2, Orientation.VERTICAL));
-        }
-
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.DOUBLE_DECK, 0, 6, Orientation.VERTICAL)
-        );
-
-        assertEquals("Cannot place more ships of type DOUBLE_DECK", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when maximum TRIPLE_DECK ships already placed")
-    void shouldThrowExceptionWhenMaxTripleDeckShipsReached() {
-        UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId);
-
-        // Add maximum allowed TRIPLE_DECK ships (2)
-        for (int i = 0; i < 2; i++) {
-            player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, i * 4, 0, Orientation.HORIZONTAL));
-        }
-
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.TRIPLE_DECK, 0, 5, Orientation.VERTICAL)
-        );
-
-        assertEquals("Cannot place more ships of type TRIPLE_DECK", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when maximum QUADRO_DECK ships already placed")
-    void shouldThrowExceptionWhenMaxQuadroDeckShipsReached() {
-        UUID playerId = UUID.randomUUID();
-        MatchPlayer player = createMatchPlayer(playerId);
-
-        // Add maximum allowed QUADRO_DECK ships (1)
-        player.getShips().add(createShip(player, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL));
-
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.QUADRO_DECK, 0, 5, Orientation.VERTICAL)
-        );
-
-        assertEquals("Cannot place more ships of type QUADRO_DECK", exception.getMessage());
-    }
 
     @Test
     @DisplayName("Should throw exception when ship overlaps another ship - horizontal overlap")

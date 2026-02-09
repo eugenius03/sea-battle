@@ -13,7 +13,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
@@ -27,8 +31,8 @@ public class AuthController {
     private final UserDetailsServiceImpl userDetailsServiceImpl;
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody UserRegistrationRequest registrationRequest,
-                                           HttpServletResponse response) {
+    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody UserRegistrationRequest registrationRequest,
+                                                        HttpServletResponse response) {
         try {
             User user = authService.register(registrationRequest);
             response.addHeader(HttpHeaders.SET_COOKIE,
@@ -38,15 +42,15 @@ public class AuthController {
                     "token", jwtServiceImpl.generateAccessToken(
                             userDetailsServiceImpl.convertToUserDetails(user)
                     )
-            ).toString());
+            ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@Valid @RequestBody UserLoginRequest loginRequest,
-                                        HttpServletResponse response) {
+    public ResponseEntity<Map<String, String>> login(@Valid @RequestBody UserLoginRequest loginRequest,
+                                                     HttpServletResponse response) {
         try {
             User user = authService.login(loginRequest);
             response.addHeader(HttpHeaders.SET_COOKIE,
@@ -56,9 +60,9 @@ public class AuthController {
                     "token", jwtServiceImpl.generateAccessToken(
                             userDetailsServiceImpl.convertToUserDetails(user)
                     )
-            ).toString());
+            ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -80,18 +84,18 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<String> refresh(
+    public ResponseEntity<Map<String, String>> refresh(
             @CookieValue("refreshToken") String refreshToken
     ) {
 
         try {
             return ResponseEntity.ok().body(Map.of(
                     "token", authService.refresh(refreshToken)
-            ).toString());
+            ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         }
     }
 }
