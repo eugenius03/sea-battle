@@ -15,7 +15,7 @@ public enum ShipType {
         this.size = size;
     }
 
-    public int AllowedCount() {
+    public int allowedCount() {
         return switch (this) {
             case SINGLE_DECK -> 4;
             case DOUBLE_DECK -> 3;

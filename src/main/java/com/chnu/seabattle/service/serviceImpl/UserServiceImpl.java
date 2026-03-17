@@ -2,6 +2,7 @@ package com.chnu.seabattle.service.serviceImpl;
 
 import com.chnu.seabattle.entity.User;
 import com.chnu.seabattle.repository.UserRepository;
+import com.chnu.seabattle.service.AbstractBaseService;
 import com.chnu.seabattle.service.BaseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,7 +16,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UserServiceImpl extends BaseService<User, UUID> {
+public class UserServiceImpl extends AbstractBaseService<User, UUID> implements BaseService<User, UUID> {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
