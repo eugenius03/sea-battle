@@ -7,9 +7,10 @@ import com.chnu.seabattle.entity.MoveResult;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.entity.ShipType;
+import com.chnu.seabattle.exception.ResourceNotFoundException;
 import com.chnu.seabattle.service.GameService;
+import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.WebSocketService;
-import com.chnu.seabattle.service.serviceImpl.MatchServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,8 +27,7 @@ public class GameApiController {
 
     private final GameService gameService;
     private final WebSocketService webSocketService;
-    private final MatchServiceImpl matchServiceImpl;
-
+    private final MatchService matchService;
 
     @PostMapping("/{matchId}/place-ship")
     public Long placeShip(
@@ -78,7 +78,9 @@ public class GameApiController {
             @RequestParam int y
     ) {
         MoveResult result = gameService.fire(matchId, shooterId, x, y);
-        Match match = matchServiceImpl.getMatchById(matchId);
+        Match match = matchService.findById(matchId).orElseThrow(
+                () -> new ResourceNotFoundException("Match not found")
+        );
 
         webSocketService.sendOpponentMoveMessage(
                 matchId,

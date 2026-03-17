@@ -5,8 +5,9 @@ import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
-import com.chnu.seabattle.repository.MatchPlayerRepository;
 import com.chnu.seabattle.repository.MatchRepository;
+import com.chnu.seabattle.service.AbstractBaseService;
+import com.chnu.seabattle.service.MatchPlayerService;
 import com.chnu.seabattle.service.MatchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,18 +20,14 @@ import java.util.UUID;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class MatchServiceImpl implements MatchService {
+public class MatchServiceImpl extends AbstractBaseService<Match, Long> implements MatchService {
 
     private final MatchRepository matchRepository;
-    private final MatchPlayerRepository matchPlayerRepository;
+    private final MatchPlayerService matchPlayerService;
 
-    private MatchPlayer createMatchPlayer(Long matchId, UUID playerId) {
-        if (matchPlayerRepository.findByMatchIdAndId(matchId, playerId).isPresent()) {
-            throw new GameRuleViolationException("Player is already in the match");
-        }
-        MatchPlayer matchPlayer = new MatchPlayer();
-        matchPlayer.setUserId(playerId);
-        return matchPlayer;
+    @Override
+    protected MatchRepository getRepository() {
+        return matchRepository;
     }
 
     private String generateInviteToken() {
@@ -44,18 +41,19 @@ public class MatchServiceImpl implements MatchService {
         match.setStatus(MatchStatus.WAITING);
         match.setInviteToken(generateInviteToken());
 
-        match = matchRepository.save(match);
+        match = create(match);
 
-        MatchPlayer matchPlayer = createMatchPlayer(match.getId(), playerId);
+        MatchPlayer matchPlayer = new MatchPlayer();
+        matchPlayer.setUserId(playerId);
         matchPlayer.setMatch(match);
         matchPlayer.setLastSeenAt(Instant.now());
         matchPlayer.setReconnectToken(generateInviteToken());
         matchPlayer.setConnected(true);
 
-        match.getPlayers().add(matchPlayer);
-        matchRepository.save(match);
+        matchPlayer = matchPlayerService.create(matchPlayer);
 
-        return match;
+        match.getPlayers().add(matchPlayer);
+        return update(match);
     }
 
     @Override
@@ -72,26 +70,20 @@ public class MatchServiceImpl implements MatchService {
             throw new GameRuleViolationException("Match is already full");
         }
 
-        MatchPlayer matchPlayer = createMatchPlayer(match.getId(), playerId);
+        MatchPlayer matchPlayer = new MatchPlayer();
+        matchPlayer.setUserId(playerId);
         matchPlayer.setReconnectToken(generateInviteToken());
         matchPlayer.setMatch(match);
         matchPlayer.setLastSeenAt(Instant.now());
         matchPlayer.setConnected(true);
 
-        match.getPlayers().add(matchPlayer);
+        matchPlayer = matchPlayerService.create(matchPlayer);
 
+        match.getPlayers().add(matchPlayer);
         match.setStatus(MatchStatus.PLANNING);
-        matchRepository.save(match);
 
         return match;
 
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Match getMatchById(Long matchId) {
-        return matchRepository.findById(matchId)
-                .orElseThrow(() -> new ResourceNotFoundException("Match not found"));
     }
 
     @Override
@@ -100,4 +92,5 @@ public class MatchServiceImpl implements MatchService {
         return matchRepository.findByInviteToken(inviteToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Match not found"));
     }
+
 }

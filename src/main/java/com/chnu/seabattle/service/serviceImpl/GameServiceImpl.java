@@ -9,11 +9,11 @@ import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.entity.ShipType;
 import com.chnu.seabattle.exception.GameRuleViolationException;
-import com.chnu.seabattle.repository.MatchPlayerRepository;
-import com.chnu.seabattle.repository.MatchRepository;
-import com.chnu.seabattle.repository.MoveRepository;
 import com.chnu.seabattle.repository.ShipRepository;
 import com.chnu.seabattle.service.GameService;
+import com.chnu.seabattle.service.MatchPlayerService;
+import com.chnu.seabattle.service.MatchService;
+import com.chnu.seabattle.service.MoveService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,10 +36,10 @@ import static java.util.stream.Collectors.counting;
 @RequiredArgsConstructor
 public class GameServiceImpl implements GameService {
 
-    private final MatchRepository matchRepository;
-    private final MatchPlayerRepository matchPlayerRepository;
-    private final MoveRepository moveRepository;
+    private final MatchService matchService;
+    private final MoveService moveService;
     private final ShipRepository shipRepository;
+    private final MatchPlayerService matchPlayerService;
 
     private void validateTurn(Match match, UUID playerId) {
         if (!match.getCurrentPlayerTurnId().equals(playerId)) {
@@ -154,10 +154,9 @@ public class GameServiceImpl implements GameService {
     @Transactional
     @Override
     public Ship placeShip(Long matchId, UUID playerId, ShipType type, int startX, int startY, Orientation orientation) {
-        Match match = matchRepository.findById(matchId).orElseThrow(
-                () -> new NoSuchElementException("Match not found")
+        MatchPlayer player = matchPlayerService.findById(playerId).orElseThrow(
+                () -> new NoSuchElementException("Player not found")
         );
-        MatchPlayer player = getMatchPlayer(match, playerId);
 
         if (player.isReady()) {
             throw new GameRuleViolationException("Cannot place ships after marking ready");
@@ -172,7 +171,7 @@ public class GameServiceImpl implements GameService {
                         Collectors.groupingBy(Ship::getShipType, counting())
                 );
 
-        if (shipTypeCount.getOrDefault(type, 0L) >= type.AllowedCount()) {
+        if (shipTypeCount.getOrDefault(type, 0L) >= type.allowedCount()) {
             throw new GameRuleViolationException(
                     String.format("Cannot place more ships of type %s", type)
             );
@@ -190,7 +189,6 @@ public class GameServiceImpl implements GameService {
         ship = shipRepository.save(ship);
 
         updatedShips.add(ship);
-        matchPlayerRepository.save(player);
 
         return ship;
     }
@@ -198,7 +196,7 @@ public class GameServiceImpl implements GameService {
     @Transactional
     @Override
     public Ship moveShip(Long matchId, UUID playerId, Long shipId, int x, int y, Orientation orientation) {
-        Match match = matchRepository.findById(matchId).orElseThrow(
+        Match match = matchService.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
         );
 
@@ -220,33 +218,26 @@ public class GameServiceImpl implements GameService {
         ship.setOrientation(orientation);
 
         ships.add(ship);
-        player.setShips(ships);
-        matchPlayerRepository.save(player);
-
         return ship;
+
     }
 
     @Override
     @Transactional
     public Match markReady(Long matchId, UUID playerId) {
-        Match match = matchRepository.findById(matchId).orElseThrow(
+        Match match = matchService.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
         );
         requireStatus(match, MatchStatus.PLANNING);
         MatchPlayer player = getMatchPlayer(match, playerId);
         player.setReady(true);
-        boolean allReady = match.getPlayers()
-                .stream()
-                .allMatch(MatchPlayer::isReady);
-        if (allReady) {
+        if (matchPlayerService.areAllPlayersReady(matchId)) {
             match.setStatus(MatchStatus.IN_PROGRESS);
 
             Random random = new Random();
             MatchPlayer randomPlayer = match.getPlayers().get(random.nextInt(match.getPlayers().size()));
             match.setCurrentPlayerTurnId(randomPlayer.getId());
         }
-        matchRepository.save(match);
-        matchPlayerRepository.save(player);
 
         return match;
     }
@@ -254,7 +245,7 @@ public class GameServiceImpl implements GameService {
     @Transactional
     @Override
     public MoveResult fire(Long matchId, UUID shooterId, int x, int y) {
-        Match match = matchRepository.findById(matchId).orElseThrow(
+        Match match = matchService.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
         );
         MatchPlayer player = getMatchPlayer(match, shooterId);
@@ -263,16 +254,11 @@ public class GameServiceImpl implements GameService {
         if (!isWithinBounds(x, y)) {
             throw new GameRuleViolationException("Firing coordinates out of bounds");
         }
-        List<Move> moves = match.getMoves()
-                .stream()
-                .filter(move -> move.getShooterId().equals(shooterId))
-                .toList();
 
-        for (Move move : moves) {
-            if (move.getTargetX() == x && move.getTargetY() == y) {
-                throw new GameRuleViolationException("Cannot fire at the same coordinates twice");
-            }
+        if (moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetY(matchId, shooterId, x, y)) {
+            throw new GameRuleViolationException("Cannot fire at the same coordinates twice");
         }
+
         Move move = Move.builder()
                 .match(match)
                 .shooterId(shooterId)
@@ -314,21 +300,19 @@ public class GameServiceImpl implements GameService {
             );
 
         }
-        moveRepository.save(move);
-        matchRepository.save(match);
+        moveService.create(move);
         return move.getMoveResult();
 
     }
 
     @Override
     public void handleDisconnect(Long matchId, UUID playerId) {
-        Match match = matchRepository.findById(matchId).orElseThrow(
+        Match match = matchService.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
         );
         MatchPlayer player = getMatchPlayer(match, playerId);
         player.setConnected(false);
         player.setLastSeenAt(Instant.now());
-        matchPlayerRepository.save(player);
 
 //        UUID opponentId = getOpponentPlayerId(match, playerId);
 
@@ -338,13 +322,12 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public void handleReconnect(Long matchId, UUID playerId) {
-        Match match = matchRepository.findById(matchId).orElseThrow(
+        Match match = matchService.findById(matchId).orElseThrow(
                 () -> new NoSuchElementException("Match not found")
         );
         MatchPlayer player = getMatchPlayer(match, playerId);
         player.setConnected(true);
         player.setLastSeenAt(Instant.now());
-        matchPlayerRepository.save(player);
 
 //        UUID opponentId = getOpponentPlayerId(match, playerId);
 

@@ -47,7 +47,6 @@ public class MatchApiController {
                 .getId();
         Match match = matchService.joinMatch(playerId, inviteToken);
         UUID opponentId = gameService.getOpponentPlayerId(match, playerId);
-        UUID matchPlayerId = gameService.getOpponentPlayerId(match, opponentId);
         webSocketService.handleOpponentConnected(matchId,
                 opponentId
         );

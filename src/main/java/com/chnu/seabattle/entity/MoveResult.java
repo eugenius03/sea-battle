@@ -5,4 +5,5 @@ public enum MoveResult {
     HIT,
     SUNK,
     FINISHED
+
 }
