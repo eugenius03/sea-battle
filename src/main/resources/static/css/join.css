@@ -1,0 +1,20 @@
+/* Join page specific styles */
+
+#guestForm h3 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #555;
+}
+
+.login-section {
+    text-align: center;
+}
+
+.login-section p {
+    margin-bottom: 15px;
+    color: #666;
+}
+
+.login-section form {
+    display: inline;
+}

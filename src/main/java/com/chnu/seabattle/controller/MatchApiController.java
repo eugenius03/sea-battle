@@ -4,8 +4,8 @@ import com.chnu.seabattle.dto.MatchResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.service.GameService;
 import com.chnu.seabattle.service.MatchService;
+import com.chnu.seabattle.service.UserService;
 import com.chnu.seabattle.service.WebSocketService;
-import com.chnu.seabattle.service.serviceImpl.UserServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,21 +20,19 @@ import java.util.UUID;
 public class MatchApiController {
 
     private final MatchService matchService;
-    private final UserServiceImpl userServiceImpl;
+    private final UserService userService;
     private final WebSocketService webSocketService;
     private final GameService gameService;
 
     @PostMapping("/create")
     public MatchResponse createMatch() {
-        UUID playerId = userServiceImpl.findUserFromAuth()
-                .orElseThrow(() -> new IllegalStateException("User not authenticated"))
-                .getId();
-        Match match = matchService.createMatch(playerId);
+        UUID userId = userService.getAuthenticatedUser().getId();
+        Match match = matchService.createMatch(userId);
 
         return MatchResponse.builder()
                 .inviteToken(match.getInviteToken())
                 .matchId(match.getId())
-                .playerId(playerId)
+                .playerId(userId)
                 .build();
     }
 
@@ -42,9 +40,7 @@ public class MatchApiController {
     public MatchResponse joinMatch(
             @RequestParam String inviteToken) {
         Long matchId = matchService.getMatchByInviteToken(inviteToken).getId();
-        UUID playerId = userServiceImpl.findUserFromAuth()
-                .orElseThrow(() -> new IllegalStateException("User not authenticated"))
-                .getId();
+        UUID playerId = userService.getAuthenticatedUser().getId();
         Match match = matchService.joinMatch(playerId, inviteToken);
         UUID opponentId = gameService.getOpponentPlayerId(match, playerId);
         webSocketService.handleOpponentConnected(matchId,

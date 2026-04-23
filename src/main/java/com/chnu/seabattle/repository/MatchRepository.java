@@ -3,23 +3,20 @@ package com.chnu.seabattle.repository;
 import com.chnu.seabattle.entity.Match;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
 public interface MatchRepository extends JpaRepository<Match, Long> {
 
-    @EntityGraph(attributePaths = {
-            "players",
-            "players.ships",
-            "moves"
-    })
-    Optional<Match> findById(Long id);
+    @EntityGraph(attributePaths = {"players"})
+    @Query("SELECT m FROM Match m WHERE m.id = :id")
+    Optional<Match> findByIdForGame(@Param("id") Long id);
 
-    Optional<Match> findByPlayers_UserId(UUID userId);
-
+    @EntityGraph(attributePaths = {"players"})
     Optional<Match> findByInviteToken(String inviteToken);
 
 }

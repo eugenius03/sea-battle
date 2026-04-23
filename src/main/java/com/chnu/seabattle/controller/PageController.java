@@ -1,7 +1,7 @@
 package com.chnu.seabattle.controller;
 
 import com.chnu.seabattle.dto.UserRegistrationRequest;
-import com.chnu.seabattle.service.serviceImpl.AuthServiceImpl;
+import com.chnu.seabattle.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RequiredArgsConstructor
 public class PageController {
 
-    private final AuthServiceImpl authService;
+    private final AuthService authService;
 
     @GetMapping("/register")
     public String showRegisterForm(Model model) {

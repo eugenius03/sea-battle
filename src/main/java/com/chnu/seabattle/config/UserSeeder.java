@@ -1,7 +1,7 @@
 package com.chnu.seabattle.config;
 
 import com.chnu.seabattle.entity.User;
-import com.chnu.seabattle.service.serviceImpl.UserServiceImpl;
+import com.chnu.seabattle.service.UserService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class UserSeeder {
 
-    private final UserServiceImpl userService;
+    private final UserService userService;
 
     @PostConstruct
     public void seedAuthorities() {

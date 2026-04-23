@@ -1,11 +1,15 @@
-package com.chnu.seabattle.service.serviceImpl;
+package com.chnu.seabattle.service.impl;
 
+import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.User;
+import com.chnu.seabattle.exception.ResourceNotFoundException;
+import com.chnu.seabattle.exception.UnauthorizedException;
 import com.chnu.seabattle.repository.UserRepository;
 import com.chnu.seabattle.service.AbstractBaseService;
-import com.chnu.seabattle.service.BaseService;
+import com.chnu.seabattle.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,20 +20,10 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UserServiceImpl extends AbstractBaseService<User, UUID> implements BaseService<User, UUID> {
+public class UserServiceImpl extends AbstractBaseService<User, UUID> implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
-    public Optional<User> findUserFromAuth() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Optional.empty();
-        }
-        String username = authentication.getName();
-        return this.findByUsername(username);
-    }
 
     @Override
     protected JpaRepository<User, UUID> getRepository() {
@@ -41,6 +35,7 @@ public class UserServiceImpl extends AbstractBaseService<User, UUID> implements 
         entity.setPasswordHash(passwordEncoder.encode(entity.getPasswordHash()));
     }
 
+    @Override
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
@@ -49,8 +44,25 @@ public class UserServiceImpl extends AbstractBaseService<User, UUID> implements 
         return passwordEncoder.matches(rawPassword, encodedPassword);
     }
 
+    @Override
     public boolean existsByUsername(String username) {
         return userRepository.findByUsername(username).isPresent();
+    }
+
+    @Override
+    public User getAuthenticatedUser() {
+        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            throw new UnauthorizedException(ErrorConstants.USER_NOT_AUTHENTICATED);
+        }
+
+        String username = authentication.getName();
+        return this.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorConstants.AUTHENTICATED_USER_NOT_FOUND
+                ));
+
     }
 }
 

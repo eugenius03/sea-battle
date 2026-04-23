@@ -1,5 +1,6 @@
-package com.chnu.seabattle.service.serviceImpl;
+package com.chnu.seabattle.service.impl;
 
+import com.chnu.seabattle.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -7,17 +8,19 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
 @Service
-public class JwtServiceImpl {
+public class JwtServiceImpl implements JwtService {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -28,8 +31,35 @@ public class JwtServiceImpl {
     @Value("${access.token.expiration}")
     private long accessTokenExpirationInMs;
 
+    @Value("${app.cookie.secure:true}")
+    private boolean cookieSecure;
+
     public String getUsernameFromToken(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    @Override
+    public ResponseCookie createRefreshCookie(UserDetails user) {
+        String token = generateRefreshToken(user);
+        return ResponseCookie.from("refreshToken", token)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(Duration.ofMillis(refreshTokenExpirationInMs))
+                .build();
+    }
+
+    @Override
+    public ResponseCookie createAccessCookie(UserDetails user) {
+        String token = generateAccessToken(user);
+        return ResponseCookie.from("accessToken", token)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(Duration.ofMillis(accessTokenExpirationInMs))
+                .build();
     }
 
     public String generateGuestToken(String username) {
@@ -63,12 +93,12 @@ public class JwtServiceImpl {
         return generateToken(claims, userDetails, expirationMs);
     }
 
-    private String generateToken(Map<String, Object> extraClaims, UserDetails user, long ExpirationMs) {
+    private String generateToken(Map<String, Object> extraClaims, UserDetails user, long expirationMs) {
         return Jwts.builder()
                 .setClaims(extraClaims)
                 .setSubject(user.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + ExpirationMs))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

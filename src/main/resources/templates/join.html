@@ -8,196 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap"
           rel="stylesheet">
-    <style>
-        :root {
-            --bg-1: #f6f2ea;
-            --bg-2: #dff2f1;
-            --ink: #0f172a;
-            --muted: #64748b;
-            --accent: #0ea5a4;
-            --accent-strong: #0f766e;
-            --panel: #ffffff;
-            --line: #e2e8f0;
-            --shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
-            --radius: 22px;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
-            background: radial-gradient(circle at top left, #ffffff 0%, var(--bg-1) 40%, var(--bg-2) 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 24px;
-            color: var(--ink);
-        }
-
-        .container {
-            background: var(--panel);
-            border-radius: var(--radius);
-            padding: 42px;
-            box-shadow: var(--shadow);
-            max-width: 520px;
-            width: 100%;
-            border: 1px solid var(--line);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .container::before {
-            content: '';
-            position: absolute;
-            width: 180px;
-            height: 180px;
-            top: -70px;
-            right: -70px;
-            background: radial-gradient(circle, rgba(14, 165, 164, 0.25), transparent 70%);
-        }
-
-        h1 {
-            text-align: center;
-            color: var(--ink);
-            margin-bottom: 10px;
-            font-family: "Space Grotesk", "Manrope", sans-serif;
-            font-size: 32px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: var(--muted);
-            margin-bottom: 24px;
-            font-size: 14px;
-        }
-
-        .info {
-            background-color: #f0fdfa;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            color: #0f766e;
-            font-size: 14px;
-            border: 1px solid #ccfbf1;
-        }
-
-        .divider {
-            text-align: center;
-            margin: 26px 0;
-            color: var(--muted);
-            font-weight: 700;
-            position: relative;
-        }
-
-        .divider::before,
-        .divider::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 38%;
-            height: 1px;
-            background-color: var(--line);
-        }
-
-        .divider::before {
-            left: 0;
-        }
-
-        .divider::after {
-            right: 0;
-        }
-
-        .form-group {
-            margin-bottom: 18px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--ink);
-            font-weight: 600;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            font-size: 16px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            background: #f8fafc;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px rgba(14, 165, 164, 0.15);
-        }
-
-        input.error {
-            border-color: #f97316;
-        }
-
-        .error-message {
-            color: #c2410c;
-            font-size: 13px;
-            margin-top: 5px;
-        }
-
-        button {
-            width: 100%;
-            padding: 14px 18px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-            color: white;
-            border: none;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(15, 118, 110, 0.25);
-        }
-
-        .secondary-btn {
-            background: #e2e8f0;
-            color: #0f172a;
-        }
-
-        .secondary-btn:hover {
-            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
-        }
-
-        .login-link {
-            text-align: center;
-            margin-top: 20px;
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .login-link a {
-            color: var(--accent-strong);
-            text-decoration: none;
-            font-weight: 700;
-        }
-
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-
-        .required {
-            color: #f97316;
-        }
-    </style>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/join.css">
 </head>
 <body>
 <div class="container">
@@ -210,7 +22,7 @@
 
     <!-- Guest Join Form -->
     <form id="guestForm">
-        <h3 style="text-align: center; margin-bottom: 15px; color: #555;">Join as Guest</h3>
+        <h3>Join as Guest</h3>
 
         <div class="form-group">
             <label for="guestUsername">Choose a Username <span class="required">*</span></label>
@@ -229,15 +41,15 @@
     <div class="divider">OR</div>
 
     <!-- Login Form -->
-    <div style="text-align: center;">
-        <p style="margin-bottom: 15px; color: #666;">Already have an account?</p>
+    <div class="login-section">
+        <p>Already have an account?</p>
         <form th:action="@{/login}" method="get" style="display: inline;">
             <input type="hidden" name="redirect" th:value="${'/join/' + inviteToken}">
             <button type="submit" class="secondary-btn">Login to Join</button>
         </form>
     </div>
 
-    <div class="login-link">
+    <div class="auth-link">
         Don't have an account? <a href="/register">Register here</a>
     </div>
 </div>
@@ -246,127 +58,8 @@
     /*<![CDATA[*/
     const inviteToken = /*[[${inviteToken}]]*/ 'token123';
     /*]]>*/
-
-    // Check if user is logged in by looking for accessToken cookie
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-    }
-
-    // Parse JWT token to get username
-    function parseJwt(token) {
-        try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // Check if user is already logged in
-    const accessToken = getCookie('accessToken');
-    if (accessToken) {
-        const payload = parseJwt(accessToken);
-        if (payload && payload.sub) {
-            // User is logged in, automatically join with their username
-            const username = payload.sub;
-
-            // Hide guest form and show loading message
-            document.querySelector('.container').innerHTML = `
-                <h1>🚢 Join Sea Battle</h1>
-                <div style="text-align: center; padding: 40px;">
-                    <p style="font-size: 18px; margin-bottom: 20px;">Joining game as ${username}...</p>
-                    <div style="color: #667eea; font-size: 40px;">⏳</div>
-                </div>
-            `;
-
-            // Automatically join the match
-            joinMatchWithUsername(username);
-        }
-    }
-
-    async function joinMatchWithUsername(username) {
-        try {
-            const response = await fetch(`/api/match/join?inviteToken=${inviteToken}&username=${encodeURIComponent(username)}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Redirect to game page using inviteToken and playerId
-                window.location.href = `/game/${inviteToken}/${data.playerId}`;
-            } else {
-                const error = await response.text();
-                showError(`Failed to join: ${error}`);
-            }
-        } catch (error) {
-            showError('An error occurred. Please try again.');
-        }
-    }
-
-    function showError(message) {
-        document.querySelector('.container').innerHTML = `
-            <h1>🚢 Join Sea Battle</h1>
-            <div style="text-align: center; padding: 40px;">
-                <div style="background-color: #ffebee; color: #c62828; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                    ${message}
-                </div>
-                <button onclick="location.reload()" style="padding: 12px 30px; background-color: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    Try Again
-                </button>
-            </div>
-        `;
-    }
-
-    // Guest form submission (only for non-logged-in users)
-    document.getElementById('guestForm')?.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const username = document.getElementById('guestUsername').value.trim();
-        const errorDiv = document.getElementById('guestError');
-
-        if (username.length < 3) {
-            errorDiv.textContent = 'Username must be at least 3 characters';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/match/join?inviteToken=${inviteToken}&username=${encodeURIComponent(username)}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Redirect to game page using inviteToken and playerId
-                window.location.href = `/game/${inviteToken}/${data.playerId}`;
-            } else {
-                const error = await response.text();
-                errorDiv.textContent = error || 'Failed to join game';
-                errorDiv.style.display = 'block';
-            }
-        } catch (error) {
-            errorDiv.textContent = 'An error occurred. Please try again.';
-            errorDiv.style.display = 'block';
-        }
-    });
-
-    // Clear error on input
-    document.getElementById('guestUsername')?.addEventListener('input', function () {
-        document.getElementById('guestError').style.display = 'none';
-    });
 </script>
+<script src="/js/common.js"></script>
+<script src="/js/join.js"></script>
 </body>
 </html>

@@ -1,16 +1,18 @@
 package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.entity.Match;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface MatchService extends BaseService<Match, Long> {
 
-//    UUID generateGuestId();
+    Match createMatch(UUID userId);
 
-    Match createMatch(UUID playerId);
+    Optional<Match> findByIdForGame(@Param("id") Long id);
 
-    Match joinMatch(UUID playerId, String inviteToken);
-    
+    Match joinMatch(UUID userId, String inviteToken);
+
     Match getMatchByInviteToken(String inviteToken);
 }

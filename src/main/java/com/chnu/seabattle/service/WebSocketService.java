@@ -1,5 +1,6 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.dto.GameInfoResponse;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.entity.MoveResult;
 
@@ -23,6 +24,12 @@ public interface WebSocketService {
             int x,
             int y,
             MoveResult moveResult,
-            UUID nextTurnPlayerId
+            boolean isItMyTurn
+    );
+
+    void sendReconnectData(
+            Long matchId,
+            UUID recipientMatchPlayerId,
+            GameInfoResponse gameInfoResponse
     );
 }

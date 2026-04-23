@@ -1,14 +1,15 @@
 package com.chnu.seabattle.security;
 
-import com.chnu.seabattle.service.serviceImpl.JwtServiceImpl;
+import com.chnu.seabattle.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.constraints.NotNull;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,50 +28,40 @@ import java.util.Arrays;
 @Log4j2
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-
     private final HandlerExceptionResolver handlerExceptionResolver;
-
-    private final JwtServiceImpl jwtServiceImpl;
-
     private final UserDetailsService userDetailsService;
+    private final JwtService jwtService;
 
     @Override
     protected void doFilterInternal(
-            @NotNull HttpServletRequest request,
-            @NotNull HttpServletResponse response,
-            @NotNull FilterChain filterChain
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // Try to extract JWT from Authorization header first
-        String jwt = extractJwtFromHeader(request);
-
-        // If not found in header, try to extract from cookies
+        String jwt = extractCookie(request, "accessToken");
         if (jwt == null) {
-            jwt = extractJwtFromCookies(request);
-        }
-
-        // If no JWT found in either location, continue without authentication
-        if (jwt == null) {
+            tryRefresh(request, response);
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            if (jwtServiceImpl.isTokenExpired(jwt)) {
-                log.warn("JWT token is expired");
-                response.sendError(401);
+            if (jwtService.isTokenExpired(jwt)) {
+                log.warn("Access token expired, attempting silent refresh");
+                tryRefresh(request, response);
+                filterChain.doFilter(request, response);
                 return;
             }
-            final String userLogin = jwtServiceImpl.getUsernameFromToken(jwt);
+            final String userLogin = jwtService.getUsernameFromToken(jwt);
 
             log.debug("Processing JWT authentication for user: {}", userLogin);
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
             if (userLogin != null && authentication == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userLogin);
 
-                if (jwtServiceImpl.isTokenValid(jwt, userDetails)) {
+                if (jwtService.isTokenValid(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -79,7 +70,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     authToken.setDetails(new WebAuthenticationDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.debug("Successfully authenticated user: {}", userLogin);
+                    log.info("Successfully authenticated user: {}", userLogin);
                 } else {
                     log.warn("Invalid JWT token for user: {}", userLogin);
                 }
@@ -92,23 +83,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-    /**
-     * Extract JWT token from Authorization header
-     */
-    private String extractJwtFromHeader(HttpServletRequest request) {
-        final String authHeader = request.getHeader("Authorization");
-
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
+    private void tryRefresh(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = extractCookie(request, "refreshToken");
+        if (refreshToken == null || jwtService.isTokenExpired(refreshToken)) {
+            log.warn("Refresh token missing or expired, user must re-login");
+            return;
         }
 
-        return null;
+        String username = jwtService.getUsernameFromToken(refreshToken);
+        if (username == null) {
+            log.warn("Could not extract username from refresh token");
+            return;
+        }
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        if (jwtService.isTokenValid(refreshToken, userDetails)) {
+
+            response.addHeader(HttpHeaders.SET_COOKIE,
+                    jwtService.generateAccessToken(userDetails)
+            );
+
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities()
+            );
+            authToken.setDetails(new WebAuthenticationDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+            log.info("Silently refreshed access token for user: {}", username);
+        }
     }
 
-    /**
-     * Extract JWT token from cookies (looks for 'accessToken' cookie)
-     */
-    private String extractJwtFromCookies(HttpServletRequest request) {
+    private String extractCookie(HttpServletRequest request, String cookieName) {
         Cookie[] cookies = request.getCookies();
 
         if (cookies == null) {
@@ -116,7 +119,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return Arrays.stream(cookies)
-                .filter(cookie -> "accessToken".equals(cookie.getName()))
+                .filter(c -> cookieName.equals(c.getName()))
                 .map(Cookie::getValue)
                 .findFirst()
                 .orElse(null);

@@ -1,5 +1,6 @@
-package com.chnu.seabattle.service.serviceImpl;
+package com.chnu.seabattle.service.impl;
 
+import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
@@ -12,9 +13,9 @@ import com.chnu.seabattle.service.MatchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.ResourceAccessException;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -34,50 +35,55 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
         return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 
+    private MatchPlayer createMatchPlayer(Match match, UUID userId) {
+        MatchPlayer matchPlayer = new MatchPlayer();
+        matchPlayer.setUserId(userId);
+        matchPlayer.setMatch(match);
+        matchPlayer.setLastSeenAt(Instant.now());
+        matchPlayer.setConnected(true);
+
+        return matchPlayerService.create(matchPlayer);
+    }
+
     @Transactional
     @Override
-    public Match createMatch(UUID playerId) {
+    public Match createMatch(UUID userId) {
         Match match = new Match();
         match.setStatus(MatchStatus.WAITING);
         match.setInviteToken(generateInviteToken());
 
         match = create(match);
 
-        MatchPlayer matchPlayer = new MatchPlayer();
-        matchPlayer.setUserId(playerId);
-        matchPlayer.setMatch(match);
-        matchPlayer.setLastSeenAt(Instant.now());
-        matchPlayer.setReconnectToken(generateInviteToken());
-        matchPlayer.setConnected(true);
-
-        matchPlayer = matchPlayerService.create(matchPlayer);
+        MatchPlayer matchPlayer = createMatchPlayer(match, userId);
 
         match.getPlayers().add(matchPlayer);
         return update(match);
     }
 
     @Override
+    public Optional<Match> findByIdForGame(Long id) {
+        return matchRepository.findByIdForGame(id);
+    }
+
+    @Override
     @Transactional
-    public Match joinMatch(UUID playerId, String inviteToken) {
+    public Match joinMatch(UUID userId, String inviteToken) {
         Match match = matchRepository.findByInviteToken(inviteToken)
-                .orElseThrow(() -> new ResourceAccessException("Invalid invite token"));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
 
         if (match.getStatus() != MatchStatus.WAITING) {
-            throw new GameRuleViolationException("Match is not joinable");
+            throw new GameRuleViolationException(ErrorConstants.MATCH_NOT_JOINABLE);
         }
 
-        if (match.getPlayers().size() >= 2) {
-            throw new GameRuleViolationException("Match is already full");
+        if (match.getPlayers().getFirst().getUserId().equals(userId)) {
+            throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_IN_MATCH);
         }
 
-        MatchPlayer matchPlayer = new MatchPlayer();
-        matchPlayer.setUserId(playerId);
-        matchPlayer.setReconnectToken(generateInviteToken());
-        matchPlayer.setMatch(match);
-        matchPlayer.setLastSeenAt(Instant.now());
-        matchPlayer.setConnected(true);
+        if (match.getPlayers().size() == 2) {
+            throw new GameRuleViolationException(ErrorConstants.MATCH_NOT_JOINABLE);
+        }
 
-        matchPlayer = matchPlayerService.create(matchPlayer);
+        MatchPlayer matchPlayer = createMatchPlayer(match, userId);
 
         match.getPlayers().add(matchPlayer);
         match.setStatus(MatchStatus.PLANNING);
@@ -90,7 +96,7 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
     @Transactional(readOnly = true)
     public Match getMatchByInviteToken(String inviteToken) {
         return matchRepository.findByInviteToken(inviteToken)
-                .orElseThrow(() -> new ResourceNotFoundException("Match not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND));
     }
 
 }

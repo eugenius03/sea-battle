@@ -1,5 +1,6 @@
-package com.chnu.seabattle.service.serviceImpl;
+package com.chnu.seabattle.service.impl;
 
+import com.chnu.seabattle.dto.GameInfoResponse;
 import com.chnu.seabattle.dto.MatchStatusMessage;
 import com.chnu.seabattle.dto.MoveMessage;
 import com.chnu.seabattle.dto.PresenceMessage;
@@ -8,6 +9,7 @@ import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.entity.MoveResult;
 import com.chnu.seabattle.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WebSocketServiceImpl implements WebSocketService {
 
     private final SimpMessagingTemplate messagingTemplate;
@@ -104,7 +107,7 @@ public class WebSocketServiceImpl implements WebSocketService {
             int x,
             int y,
             MoveResult moveResult,
-            UUID nextTurnPlayerId
+            boolean isItMyTurn
     ) {
         MoveMessage payload = MoveMessage.builder()
                 .matchId(matchId)
@@ -113,7 +116,7 @@ public class WebSocketServiceImpl implements WebSocketService {
                 .y(y)
                 .result(moveResult)
                 .at(Instant.now())
-                .nextTurnPlayerId(nextTurnPlayerId)
+                .isItMyTurn(isItMyTurn)
                 .build();
 
         messagingTemplate.convertAndSendToUser(
@@ -122,5 +125,18 @@ public class WebSocketServiceImpl implements WebSocketService {
                 payload
         );
 
+    }
+
+    @Override
+    public void sendReconnectData(
+            Long matchId,
+            UUID recipientMatchPlayerId,
+            GameInfoResponse gameInfoResponse
+    ) {
+        messagingTemplate.convertAndSendToUser(
+                recipientMatchPlayerId.toString(),
+                privateQueue(matchId),
+                gameInfoResponse
+        );
     }
 }

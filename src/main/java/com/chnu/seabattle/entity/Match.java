@@ -20,7 +20,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -50,7 +49,7 @@ public class Match {
     private List<MatchPlayer> players = new ArrayList<>();
 
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private Set<Move> moves;
+    private List<Move> moves = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

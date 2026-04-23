@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -37,14 +38,12 @@ public class MatchPlayer {
     @JoinColumn(name = "match_id", nullable = false)
     private Match match;
 
-    @Column(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private UUID userId;
-
-    @Column(nullable = false)
-    private String reconnectToken;
 
     private boolean isReady;
 
+    @BatchSize(size = 4)
     @OneToMany(mappedBy = "matchPlayer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Ship> ships = new ArrayList<>();
     private Instant lastSeenAt;

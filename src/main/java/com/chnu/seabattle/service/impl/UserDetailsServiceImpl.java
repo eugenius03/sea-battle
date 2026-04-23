@@ -1,4 +1,4 @@
-package com.chnu.seabattle.service.serviceImpl;
+package com.chnu.seabattle.service.impl;
 
 import com.chnu.seabattle.entity.User;
 import com.chnu.seabattle.repository.UserRepository;

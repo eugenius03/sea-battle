@@ -1,4 +1,4 @@
-package com.chnu.seabattle.service.serviceImpl;
+package com.chnu.seabattle.service.impl;
 
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
@@ -6,7 +6,6 @@ import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.entity.ShipType;
-import com.chnu.seabattle.exception.GameRuleViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,9 +18,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GameServiceImpl - validatePlacement Tests")
@@ -30,55 +27,55 @@ class GameServiceImplValidatePlacementTest {
     @InjectMocks
     private GameServiceImpl gameService;
 
-    private Method validatePlacementMethod;
-    private Method validateCoordinatesMethod;
+    private Method isValidPlacementMethod;
+    private Method isValidCoordinatesMethod;
 
     @BeforeEach
     void setUp() throws NoSuchMethodException {
 
         // Use reflection to access the private methods
-        validatePlacementMethod = GameServiceImpl.class.getDeclaredMethod(
-                "validatePlacement",
-                MatchPlayer.class,
+        isValidPlacementMethod = GameServiceImpl.class.getDeclaredMethod(
+                "isValidPlacement",
+                java.util.List.class,
                 ShipType.class,
                 int.class,
                 int.class,
                 Orientation.class
         );
-        validatePlacementMethod.setAccessible(true);
+        isValidPlacementMethod.setAccessible(true);
 
-        validateCoordinatesMethod = GameServiceImpl.class.getDeclaredMethod(
-                "validateCoordinates",
+        isValidCoordinatesMethod = GameServiceImpl.class.getDeclaredMethod(
+                "isValidCoordinates",
                 int.class,
                 int.class,
                 ShipType.class,
                 Orientation.class
         );
-        validateCoordinatesMethod.setAccessible(true);
+        isValidCoordinatesMethod.setAccessible(true);
     }
 
-    private void invokeValidatePlacement(
-            MatchPlayer player,
+    private boolean invokeIsValidPlacement(
+            java.util.List<Ship> ships,
             ShipType type,
             int x,
             int y,
             Orientation orientation
     ) throws Throwable {
         try {
-            validatePlacementMethod.invoke(gameService, player, type, x, y, orientation);
+            return (boolean) isValidPlacementMethod.invoke(gameService, ships, type, x, y, orientation);
         } catch (InvocationTargetException e) {
             throw e.getCause();
         }
     }
 
-    private void invokeValidateCoordinates(
+    private boolean invokeIsValidCoordinates(
             int x,
             int y,
             ShipType shipType,
             Orientation orientation
     ) throws Throwable {
         try {
-            validateCoordinatesMethod.invoke(gameService, x, y, shipType, orientation);
+            return (boolean) isValidCoordinatesMethod.invoke(gameService, x, y, shipType, orientation);
         } catch (InvocationTargetException e) {
             throw e.getCause();
         }
@@ -120,13 +117,12 @@ class GameServiceImplValidatePlacementTest {
 
     @Test
     @DisplayName("Should pass validation when placing first ship")
-    void shouldPassValidationForFirstShip() {
+    void shouldPassValidationForFirstShip() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
-        assertDoesNotThrow(() ->
-                invokeValidatePlacement(player, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL);
+        assertEquals(true, result);
     }
 
 //    @Test
@@ -142,7 +138,7 @@ class GameServiceImplValidatePlacementTest {
 
     @Test
     @DisplayName("Should throw exception when ship overlaps another ship - horizontal overlap")
-    void shouldThrowExceptionWhenShipOverlapsHorizontal() {
+    void shouldThrowExceptionWhenShipOverlapsHorizontal() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -150,16 +146,14 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.HORIZONTAL));
 
         // Try to place another ship overlapping at (1,0)
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.DOUBLE_DECK, 1, 0, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.DOUBLE_DECK, 1, 0, Orientation.HORIZONTAL);
 
-        assertEquals("Ship placement overlaps or touches another ship", exception.getMessage());
+        assertEquals(false, result);
     }
 
     @Test
     @DisplayName("Should throw exception when ship overlaps another ship - vertical overlap")
-    void shouldThrowExceptionWhenShipOverlapsVertical() {
+    void shouldThrowExceptionWhenShipOverlapsVertical() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -167,16 +161,14 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.VERTICAL));
 
         // Try to place another ship overlapping at (0,1)
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.DOUBLE_DECK, 0, 1, Orientation.VERTICAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.DOUBLE_DECK, 0, 1, Orientation.VERTICAL);
 
-        assertEquals("Ship placement overlaps or touches another ship", exception.getMessage());
+        assertEquals(false, result);
     }
 
     @Test
     @DisplayName("Should throw exception when ship touches another ship diagonally")
-    void shouldThrowExceptionWhenShipTouchesDiagonally() {
+    void shouldThrowExceptionWhenShipTouchesDiagonally() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -184,16 +176,14 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL));
 
         // Try to place another ship diagonally adjacent at (1,1)
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 1, 1, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.SINGLE_DECK, 1, 1, Orientation.HORIZONTAL);
 
-        assertEquals("Ship placement overlaps or touches another ship", exception.getMessage());
+        assertEquals(false, result);
     }
 
     @Test
     @DisplayName("Should throw exception when ship touches another ship horizontally")
-    void shouldThrowExceptionWhenShipTouchesHorizontally() {
+    void shouldThrowExceptionWhenShipTouchesHorizontally() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -201,16 +191,14 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.HORIZONTAL));
 
         // Try to place another ship right next to it at (3,0)
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 3, 0, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.SINGLE_DECK, 3, 0, Orientation.HORIZONTAL);
 
-        assertEquals("Ship placement overlaps or touches another ship", exception.getMessage());
+        assertEquals(false, result);
     }
 
     @Test
     @DisplayName("Should throw exception when ship touches another ship vertically")
-    void shouldThrowExceptionWhenShipTouchesVertically() {
+    void shouldThrowExceptionWhenShipTouchesVertically() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -218,16 +206,14 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.VERTICAL));
 
         // Try to place another ship right next to it at (1,0)
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 1, 0, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.SINGLE_DECK, 1, 0, Orientation.HORIZONTAL);
 
-        assertEquals("Ship placement overlaps or touches another ship", exception.getMessage());
+        assertEquals(false, result);
     }
 
     @Test
     @DisplayName("Should throw exception when ship touches another ship below")
-    void shouldThrowExceptionWhenShipTouchesBelow() {
+    void shouldThrowExceptionWhenShipTouchesBelow() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -235,16 +221,14 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.TRIPLE_DECK, 0, 0, Orientation.VERTICAL));
 
         // Try to place another ship right below it at (0,3)
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 0, 3, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.SINGLE_DECK, 0, 3, Orientation.HORIZONTAL);
 
-        assertEquals("Ship placement overlaps or touches another ship", exception.getMessage());
+        assertEquals(false, result);
     }
 
     @Test
     @DisplayName("Should pass validation when ships are properly spaced")
-    void shouldPassValidationWhenShipsAreProperlySpaced() {
+    void shouldPassValidationWhenShipsAreProperlySpaced() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -252,14 +236,13 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL));
 
         // Place another ship with proper spacing at (2,2) - at least 1 cell gap
-        assertDoesNotThrow(() ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 2, 2, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.SINGLE_DECK, 2, 2, Orientation.HORIZONTAL);
+        assertEquals(true, result);
     }
 
     @Test
     @DisplayName("Should pass validation when placing multiple ships with proper spacing")
-    void shouldPassValidationForMultipleShipsWithProperSpacing() {
+    void shouldPassValidationForMultipleShipsWithProperSpacing() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -273,14 +256,13 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.DOUBLE_DECK, 0, 4, Orientation.HORIZONTAL));
 
         // Try to place fourth ship with proper spacing
-        assertDoesNotThrow(() ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 0, 6, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.SINGLE_DECK, 0, 6, Orientation.HORIZONTAL);
+        assertEquals(true, result);
     }
 
     @Test
     @DisplayName("Should allow placing ships of different types up to their limits")
-    void shouldAllowPlacingDifferentShipTypesUpToLimits() {
+    void shouldAllowPlacingDifferentShipTypesUpToLimits() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -288,14 +270,13 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL));
 
         // Should allow placing another type
-        assertDoesNotThrow(() ->
-                invokeValidatePlacement(player, ShipType.TRIPLE_DECK, 0, 2, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.TRIPLE_DECK, 0, 2, Orientation.HORIZONTAL);
+        assertEquals(true, result);
     }
 
     @Test
     @DisplayName("Should pass validation when placing ships in corners with proper spacing")
-    void shouldPassValidationForCornerPlacements() {
+    void shouldPassValidationForCornerPlacements() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -303,14 +284,13 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL));
 
         // Place another ship at opposite corner (9,9) - assuming 10x10 grid
-        assertDoesNotThrow(() ->
-                invokeValidatePlacement(player, ShipType.SINGLE_DECK, 9, 9, Orientation.HORIZONTAL)
-        );
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.SINGLE_DECK, 9, 9, Orientation.HORIZONTAL);
+        assertEquals(true, result);
     }
 
     @Test
     @DisplayName("Should throw exception when horizontal ship touches vertical ship")
-    void shouldThrowExceptionWhenHorizontalShipTouchesVerticalShip() {
+    void shouldThrowExceptionWhenHorizontalShipTouchesVerticalShip() throws Throwable {
         UUID playerId = UUID.randomUUID();
         MatchPlayer player = createMatchPlayer(playerId);
 
@@ -318,108 +298,71 @@ class GameServiceImplValidatePlacementTest {
         player.getShips().add(createShip(player, ShipType.QUADRO_DECK, 3, 0, Orientation.VERTICAL));
 
         // Try to place horizontal ship at (2,1) - would touch the vertical ship
-        GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidatePlacement(player, ShipType.DOUBLE_DECK, 2, 1, Orientation.HORIZONTAL)
-        );
-
-        assertEquals("Ship placement overlaps or touches another ship", exception.getMessage());
+        boolean result = invokeIsValidPlacement(player.getShips(), ShipType.DOUBLE_DECK, 2, 1, Orientation.HORIZONTAL);
+        assertEquals(false, result);
     }
 
     // ==================== validateCoordinates Tests ====================
 
     @Test
     @DisplayName("validateCoordinates: Should pass for valid coordinates")
-    void shouldPassValidationForValidCoordinates() {
+    void shouldPassValidationForValidCoordinates() throws Throwable {
         // Test valid positions for different ship types and orientations
-        assertDoesNotThrow(() -> invokeValidateCoordinates(0, 0, ShipType.SINGLE_DECK, Orientation.HORIZONTAL));
-        assertDoesNotThrow(() -> invokeValidateCoordinates(5, 5, ShipType.TRIPLE_DECK, Orientation.VERTICAL));
-        assertDoesNotThrow(() -> invokeValidateCoordinates(9, 9, ShipType.SINGLE_DECK, Orientation.HORIZONTAL));
-        assertDoesNotThrow(() -> invokeValidateCoordinates(6, 0, ShipType.QUADRO_DECK, Orientation.HORIZONTAL));
-        assertDoesNotThrow(() -> invokeValidateCoordinates(0, 6, ShipType.QUADRO_DECK, Orientation.VERTICAL));
+        assertEquals(true, invokeIsValidCoordinates(0, 0, ShipType.SINGLE_DECK, Orientation.HORIZONTAL));
+        assertEquals(true, invokeIsValidCoordinates(5, 5, ShipType.TRIPLE_DECK, Orientation.VERTICAL));
+        assertEquals(true, invokeIsValidCoordinates(9, 9, ShipType.SINGLE_DECK, Orientation.HORIZONTAL));
+        assertEquals(true, invokeIsValidCoordinates(6, 0, ShipType.QUADRO_DECK, Orientation.HORIZONTAL));
+        assertEquals(true, invokeIsValidCoordinates(0, 6, ShipType.QUADRO_DECK, Orientation.VERTICAL));
     }
 
     @Test
     @DisplayName("validateCoordinates: Should throw exception for negative coordinates")
-    void shouldThrowExceptionForNegativeCoordinates() {
-        GameRuleViolationException exception1 = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidateCoordinates(-1, 5, ShipType.SINGLE_DECK, Orientation.HORIZONTAL)
-        );
-        assertEquals("Coordinates out of bounds", exception1.getMessage());
-
-        GameRuleViolationException exception2 = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidateCoordinates(5, -1, ShipType.SINGLE_DECK, Orientation.VERTICAL)
-        );
-        assertEquals("Coordinates out of bounds", exception2.getMessage());
+    void shouldThrowExceptionForNegativeCoordinates() throws Throwable {
+        assertEquals(false, invokeIsValidCoordinates(-1, 5, ShipType.SINGLE_DECK, Orientation.HORIZONTAL));
+        assertEquals(false, invokeIsValidCoordinates(5, -1, ShipType.SINGLE_DECK, Orientation.VERTICAL));
     }
 
     @Test
     @DisplayName("validateCoordinates: Should throw exception for coordinates >= 10")
-    void shouldThrowExceptionForCoordinatesOutOfBounds() {
-        GameRuleViolationException exception1 = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidateCoordinates(10, 5, ShipType.SINGLE_DECK, Orientation.HORIZONTAL)
-        );
-        assertEquals("Coordinates out of bounds", exception1.getMessage());
-
-        GameRuleViolationException exception2 = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidateCoordinates(5, 10, ShipType.SINGLE_DECK, Orientation.VERTICAL)
-        );
-        assertEquals("Coordinates out of bounds", exception2.getMessage());
+    void shouldThrowExceptionForCoordinatesOutOfBounds() throws Throwable {
+        assertEquals(false, invokeIsValidCoordinates(10, 5, ShipType.SINGLE_DECK, Orientation.HORIZONTAL));
+        assertEquals(false, invokeIsValidCoordinates(5, 10, ShipType.SINGLE_DECK, Orientation.VERTICAL));
     }
 
     @Test
     @DisplayName("validateCoordinates: Should throw exception when horizontal ship exceeds board width")
-    void shouldThrowExceptionWhenHorizontalShipExceedsBounds() {
+    void shouldThrowExceptionWhenHorizontalShipExceedsBounds() throws Throwable {
         // DOUBLE_DECK (size 2) at x=9 would occupy 9,10 (invalid)
-        GameRuleViolationException exception1 = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidateCoordinates(9, 5, ShipType.DOUBLE_DECK, Orientation.HORIZONTAL)
-        );
-        assertEquals("Ship exceeds board boundaries horizontally", exception1.getMessage());
+        assertEquals(false, invokeIsValidCoordinates(9, 5, ShipType.DOUBLE_DECK, Orientation.HORIZONTAL));
 
         // QUADRO_DECK (size 4) at x=7 would occupy 7,8,9,10 (invalid)
-        GameRuleViolationException exception2 = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidateCoordinates(7, 0, ShipType.QUADRO_DECK, Orientation.HORIZONTAL)
-        );
-        assertEquals("Ship exceeds board boundaries horizontally", exception2.getMessage());
+        assertEquals(false, invokeIsValidCoordinates(7, 0, ShipType.QUADRO_DECK, Orientation.HORIZONTAL));
     }
 
     @Test
     @DisplayName("validateCoordinates: Should throw exception when vertical ship exceeds board height")
-    void shouldThrowExceptionWhenVerticalShipExceedsBounds() {
+    void shouldThrowExceptionWhenVerticalShipExceedsBounds() throws Throwable {
         // TRIPLE_DECK (size 3) at y=8 would occupy 8,9,10 (invalid)
-        GameRuleViolationException exception1 = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidateCoordinates(5, 8, ShipType.TRIPLE_DECK, Orientation.VERTICAL)
-        );
-        assertEquals("Ship exceeds board boundaries vertically", exception1.getMessage());
+        assertEquals(false, invokeIsValidCoordinates(5, 8, ShipType.TRIPLE_DECK, Orientation.VERTICAL));
 
         // QUADRO_DECK (size 4) at y=7 would occupy 7,8,9,10 (invalid)
-        GameRuleViolationException exception2 = assertThrows(GameRuleViolationException.class, () ->
-                invokeValidateCoordinates(0, 7, ShipType.QUADRO_DECK, Orientation.VERTICAL)
-        );
-        assertEquals("Ship exceeds board boundaries vertically", exception2.getMessage());
+        assertEquals(false, invokeIsValidCoordinates(0, 7, ShipType.QUADRO_DECK, Orientation.VERTICAL));
     }
 
     @Test
     @DisplayName("validateCoordinates: Should pass for ships at edge positions with valid orientations")
-    void shouldPassValidationForShipsAtEdge() {
+    void shouldPassValidationForShipsAtEdge() throws Throwable {
         // QUADRO_DECK horizontal at x=6 occupies 6,7,8,9 (valid)
-        assertDoesNotThrow(() ->
-                invokeValidateCoordinates(6, 0, ShipType.QUADRO_DECK, Orientation.HORIZONTAL)
-        );
+        assertEquals(true, invokeIsValidCoordinates(6, 0, ShipType.QUADRO_DECK, Orientation.HORIZONTAL));
 
         // QUADRO_DECK vertical at y=6 occupies 6,7,8,9 (valid)
-        assertDoesNotThrow(() ->
-                invokeValidateCoordinates(0, 6, ShipType.QUADRO_DECK, Orientation.VERTICAL)
-        );
+        assertEquals(true, invokeIsValidCoordinates(0, 6, ShipType.QUADRO_DECK, Orientation.VERTICAL));
 
         // TRIPLE_DECK horizontal at x=7 occupies 7,8,9 (valid)
-        assertDoesNotThrow(() ->
-                invokeValidateCoordinates(7, 5, ShipType.TRIPLE_DECK, Orientation.HORIZONTAL)
-        );
+        assertEquals(true, invokeIsValidCoordinates(7, 5, ShipType.TRIPLE_DECK, Orientation.HORIZONTAL));
 
         // TRIPLE_DECK vertical at y=7 occupies 7,8,9 (valid)
-        assertDoesNotThrow(() ->
-                invokeValidateCoordinates(5, 7, ShipType.TRIPLE_DECK, Orientation.VERTICAL)
-        );
+        assertEquals(true, invokeIsValidCoordinates(5, 7, ShipType.TRIPLE_DECK, Orientation.VERTICAL));
     }
 }
 

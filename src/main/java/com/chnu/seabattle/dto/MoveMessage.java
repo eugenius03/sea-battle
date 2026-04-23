@@ -1,6 +1,7 @@
 package com.chnu.seabattle.dto;
 
 import com.chnu.seabattle.entity.MoveResult;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
@@ -17,5 +18,7 @@ public class MoveMessage {
     int y;
     MoveResult result;
     Instant at;
-    UUID nextTurnPlayerId;
+
+    @JsonProperty("isItMyTurn")
+    boolean isItMyTurn;
 }

@@ -1,5 +1,6 @@
 package com.chnu.seabattle.security;
 
+import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.repository.MatchPlayerRepository;
 import lombok.RequiredArgsConstructor;
@@ -40,11 +41,11 @@ public class StompMatchPlayerAuthInterceptor implements ChannelInterceptor {
             UUID matchPlayerId = UUID.fromString(firstNativeHeader(accessor, H_MATCH_PLAYER_ID));
 
             if (matchId == null || matchPlayerId == null) {
-                throw new IllegalArgumentException("Missing X-Match-Id / X-Match-Player-Id");
+                throw new IllegalArgumentException(ErrorConstants.MISSING_MATCH_HEADERS);
             }
             MatchPlayer mp = matchPlayerRepository
                     .findByMatchIdAndId(matchId, matchPlayerId)
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid X-Match-Id / X-Match-Player-Id"));
+                    .orElseThrow(() -> new IllegalArgumentException(ErrorConstants.INVALID_MATCH_HEADERS));
 
             Principal principal = new UsernamePasswordAuthenticationToken(
                     mp.getId().toString(), null, null
@@ -68,7 +69,7 @@ public class StompMatchPlayerAuthInterceptor implements ChannelInterceptor {
         try {
             return Long.parseLong(v);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException(String.format("Invalid %s", name));
+            throw new IllegalArgumentException(String.format(ErrorConstants.INVALID_HEADER_VALUE, name));
         }
     }
 }

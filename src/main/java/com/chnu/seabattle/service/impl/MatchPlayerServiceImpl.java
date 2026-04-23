@@ -1,5 +1,6 @@
-package com.chnu.seabattle.service.serviceImpl;
+package com.chnu.seabattle.service.impl;
 
+import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.repository.MatchPlayerRepository;
@@ -8,6 +9,7 @@ import com.chnu.seabattle.service.MatchPlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -22,14 +24,14 @@ public class MatchPlayerServiceImpl extends AbstractBaseService<MatchPlayer, UUI
     }
 
     @Override
-    public boolean areAllPlayersReady(Long matchId) {
-        return matchPlayerRepository.areAllPlayersReady(matchId);
+    public Optional<MatchPlayer> findByMatchIdAndUserId(Long matchId, UUID userId) {
+        return matchPlayerRepository.findByMatchIdAndUserId(matchId, userId);
     }
 
     @Override
     protected void beforeCreate(MatchPlayer matchPlayer) {
         if (matchPlayerRepository.existsByMatchIdAndUserId(matchPlayer.getMatch().getId(), matchPlayer.getUserId())) {
-            throw new GameRuleViolationException("Player is already in the match");
+            throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_IN_MATCH);
         }
     }
 }
