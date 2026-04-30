@@ -72,7 +72,10 @@ function setWsState(state, ok) {
 }
 
 function lockEnemyBoard() {
-    document.querySelectorAll('#enemyBoard .cell').forEach(c => c.classList.add('inactive'));
+    document.querySelectorAll('#enemyBoard .cell').forEach(c => {
+        c.classList.remove('drone-preview');
+        c.classList.add('inactive');
+    });
 }
 
 function unlockEnemyBoard() {
@@ -100,6 +103,9 @@ let placedShips = new Set();
 let selectedShip = null;
 let firedCells = new Set();
 let shipRegistry = new Map();
+let draggedDroneType = null;
+let surveillanceDroneUsesLeft = 1;
+let attackDroneUsesLeft = 2;
 
 const shipTypes = [
     {type: 'QUADRO_DECK', size: 4, count: 1, label: 'Battleship'},
@@ -141,8 +147,118 @@ function createCell(x, y, isPlayerBoard) {
         cell.addEventListener('dblclick', handleBoardShipDoubleClick);
     } else {
         cell.addEventListener('click', handleEnemyCellClick);
+        cell.addEventListener('dragover', (e) => {
+            if (!draggedDroneType) return;
+            e.preventDefault();
+            showDronePreview(Number.parseInt(e.target.dataset.x), Number.parseInt(e.target.dataset.y));
+        });
+        cell.addEventListener('drop', (e) => {
+            if (!draggedDroneType) return;
+            e.preventDefault();
+            clearDronePreview();
+            const x = Number.parseInt(e.target.dataset.x);
+            const y = Number.parseInt(e.target.dataset.y);
+            if (draggedDroneType === 'ATTACK_DRONE') {
+                fireAttackDrone(x, y);
+            } else {
+                fireSurveillanceDrone(x, y);
+            }
+        });
     }
     return cell;
+}
+
+function clearDronePreview() {
+    document.querySelectorAll('#enemyBoard .cell.drone-preview').forEach(c => c.classList.remove('drone-preview'));
+}
+
+function showDronePreview(cx, cy) {
+    clearDronePreview();
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx < 0 || nx > 9 || ny < 0 || ny > 9) continue;
+            const cell = document.querySelector(`#enemyBoard [data-x="${nx}"][data-y="${ny}"]`);
+            if (cell) cell.classList.add('drone-preview');
+        }
+    }
+}
+
+async function fireSurveillanceDrone(x, y) {
+    try {
+        const response = await fetch(`/api/game/${matchId}/fire`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({shooterId: myMatchPlayerId, x, y, moveType: 'SURVEILLANCE_DRONE'})
+        });
+
+        if (!response.ok) {
+            showMessage(`Drone error: ${await response.text()}`, 'error');
+            return;
+        }
+
+        const moves = await response.json();
+
+        surveillanceDroneUsesLeft--;
+        const badge = $('surveillanceDroneUsesLeft');
+        if (badge) badge.textContent = String(surveillanceDroneUsesLeft);
+        if (surveillanceDroneUsesLeft <= 0) {
+            const drone = $('surveillanceDrone');
+            if (drone) drone.classList.add('exhausted');
+        }
+
+        renderMoveResponses(moves, true);
+        lockEnemyBoard();
+
+        if (moves.length === 0) {
+            showMessage('Drone scan complete — no ships in area.', 'info');
+        } else {
+            showMessage(`Drone detected ${moves.length} ship cell(s)!`, 'success');
+        }
+    } catch (err) {
+        showMessage(`Drone error: ${err.message}`, 'error');
+    }
+}
+
+async function fireAttackDrone(x, y) {
+    try {
+        const response = await fetch(`/api/game/${matchId}/fire`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({shooterId: myMatchPlayerId, x, y, moveType: 'ATTACK_DRONE'})
+        });
+
+        if (!response.ok) {
+            showMessage(`Attack Drone error: ${await response.text()}`, 'error');
+            return;
+        }
+
+        const moves = await response.json();
+
+        attackDroneUsesLeft--;
+        const badge = $('attackDroneUsesLeft');
+        if (badge) badge.textContent = String(attackDroneUsesLeft);
+        if (attackDroneUsesLeft <= 0) {
+            const drone = $('attackDrone');
+            if (drone) drone.classList.add('exhausted');
+        }
+
+        const {hasFinished} = renderMoveResponses(moves, true);
+        const hitCount = moves.filter(m => m.moveResult === 'HIT' || m.moveResult === 'SUNK' || m.moveResult === 'FINISHED').length;
+
+        if (hasFinished) {
+            showMessage('Attack Drone sunk the last ship! You win!', 'success');
+            lockEnemyBoard();
+        } else if (hitCount > 0) {
+            showMessage(`Attack Drone hit ${hitCount} cell(s)!`, 'success');
+        } else {
+            showMessage('Attack Drone missed all shots!', 'info');
+        }
+        lockEnemyBoard();
+    } catch (err) {
+        showMessage(`Attack Drone error: ${err.message}`, 'error');
+    }
 }
 
 function markEnemyCell(x, y, result) {
@@ -151,9 +267,33 @@ function markEnemyCell(x, y, result) {
     if (!enemyBoard) return;
     const cell = enemyBoard.querySelector(`[data-x="${x}"][data-y="${y}"]`);
     if (!cell) return;
+    cell.classList.remove('drone-preview');
     if (result === 'MISS') cell.classList.add('miss');
-    else cell.classList.add('hit');
-    cell.classList.add('inactive');
+    else if (result === 'SURVEILLANCE') cell.classList.add('surveillance');
+    else {
+        cell.classList.remove('surveillance');
+        cell.classList.add('hit');
+    }
+    if (result !== 'SURVEILLANCE') cell.classList.add('inactive');
+}
+
+function renderMoveResponses(moves, enemyBoard) {
+    if (!Array.isArray(moves)) return {hasMiss: false, hasFinished: false};
+    let hasMiss = false;
+    let hasFinished = false;
+    for (const move of moves) {
+        if (enemyBoard) {
+            markEnemyCell(move.targetX, move.targetY, move.moveResult);
+            if (move.moveResult !== 'SURVEILLANCE') {
+                firedCells.add(`${move.targetX},${move.targetY}`);
+            }
+        } else {
+            markPlayerCell(move.targetX, move.targetY, move.moveResult);
+        }
+        if (move.moveResult === 'MISS') hasMiss = true;
+        if (move.moveResult === 'FINISHED') hasFinished = true;
+    }
+    return {hasMiss, hasFinished};
 }
 
 function markPlayerCell(x, y, result) {
@@ -162,7 +302,10 @@ function markPlayerCell(x, y, result) {
     const cell = playerBoard.querySelector(`[data-x="${x}"][data-y="${y}"]`);
     if (!cell) return;
     cell.classList.add('inactive');
-    if (result === 'HIT' || result === 'SUNK' || result === 'FINISHED') cell.classList.add('hit');
+    if (result === 'HIT' || result === 'SUNK' || result === 'FINISHED') {
+        cell.classList.remove('surveillance');
+        cell.classList.add('hit');
+    } else if (result === 'SURVEILLANCE') cell.classList.add('surveillance');
     else cell.classList.add('miss');
 }
 
@@ -442,26 +585,30 @@ async function handleEnemyCellClick(e) {
     }
 
     try {
-        const response = await fetch(`/api/game/${matchId}/fire?` + new URLSearchParams({
-            shooterId: myMatchPlayerId,
-            x,
-            y
-        }), {method: 'POST'});
+        const response = await fetch(`/api/game/${matchId}/fire`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({shooterId: myMatchPlayerId, x, y, moveType: 'STANDARD'})
+        });
 
         if (!response.ok) {
             showMessage(`Error: ${await response.text()}`, 'error');
             return;
         }
 
-        const result = await readMoveResult(response);
+        const moves = await response.json();
+        const {hasMiss, hasFinished} = renderMoveResponses(moves, true);
 
-        firedCells.add(cellKey);
-        markEnemyCell(x, y, result);
-        showMessage(
-            result.includes('MISS') ? 'Miss!' : result === 'SUNK' ? 'Sunk!' : result === 'FINISHED' ? 'Game Over!' : 'Hit!',
-            result === 'MISS' ? 'info' : 'success'
-        );
-        if (result.includes('MISS')) lockEnemyBoard();
+        if (hasFinished) {
+            showMessage('Game Over! You win!', 'success');
+            lockEnemyBoard();
+        } else if (hasMiss) {
+            showMessage('Miss!', 'info');
+            lockEnemyBoard();
+        } else {
+            const lastResult = moves[moves.length - 1]?.moveResult;
+            showMessage(lastResult === 'SUNK' ? 'Sunk!' : 'Hit!', 'success');
+        }
     } catch (e2) {
         showMessage(`Error firing: ${e2.message}`, 'error');
     }
@@ -693,8 +840,9 @@ function renderGameState(gameInfo) {
         gameInfo.playerMoves.forEach(move => {
             const x = move.targetX ?? move.x;
             const y = move.targetY ?? move.y;
-            markEnemyCell(x, y, move.moveResult || move.result);
-            firedCells.add(`${x},${y}`);
+            markEnemyCell(x, y, move.moveResult);
+            if (move.moveResult != "SURVEILLANCE")
+                firedCells.add(`${x},${y}`);
         });
     }
 
@@ -717,6 +865,8 @@ function renderGameState(gameInfo) {
             setPlayerBoardDraggable(false);
             const shipsPanel = $('shipsPanel');
             if (shipsPanel) shipsPanel.style.display = 'none';
+            const specialMovesPanel = $('specialMovesPanel');
+            if (specialMovesPanel) specialMovesPanel.style.display = matchStatus === 'IN_PROGRESS' ? '' : 'none';
             isReady = true;
         }
     }
@@ -778,6 +928,8 @@ function onStatusMessage(message) {
 
     if (s.matchStatus === 'IN_PROGRESS') {
         showMessage('Game started!', 'info');
+        const specialMovesPanel = $('specialMovesPanel');
+        if (specialMovesPanel) specialMovesPanel.style.display = '';
         if (s.currentTurnPlayerId) {
             wsLog(`Status update: currentTurnPlayerId=${s.currentTurnPlayerId}, me=${myMatchPlayerId}`);
             if (String(s.currentTurnPlayerId) === String(myMatchPlayerId)) {
@@ -808,8 +960,13 @@ function onMoveMessage(message) {
         return;
     }
 
-    markPlayerCell(m.x, m.y, m.result);
-    showMessage(m.result === 'MISS' ? 'Opponent missed!' : 'Opponent hit!', m.result === 'MISS' ? 'info' : 'error');
+    if (!Array.isArray(m.moveResponses)) return;
+
+    if (m.moveResponses.length > 0) {
+        wsLog(`presence: rendering ${m.moveResponses.length} move(s)`);
+        renderMoveResponses(m.moveResponses, false);
+    }
+
     applyTurn(m.isItMyTurn);
 }
 
@@ -874,6 +1031,38 @@ document.addEventListener('DOMContentLoaded', function () {
                 success ? 'Invite link copied to clipboard!' : 'Could not copy invite link. Please copy from the address bar.',
                 success ? 'success' : 'error'
             );
+        });
+    }
+
+    const surveillanceDrone = $('surveillanceDrone');
+    if (surveillanceDrone) {
+        surveillanceDrone.addEventListener('dragstart', (e) => {
+            if (surveillanceDroneUsesLeft <= 0) {
+                e.preventDefault();
+                return;
+            }
+            draggedDroneType = 'SURVEILLANCE_DRONE';
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        surveillanceDrone.addEventListener('dragend', () => {
+            draggedDroneType = null;
+            clearDronePreview();
+        });
+    }
+
+    const attackDrone = $('attackDrone');
+    if (attackDrone) {
+        attackDrone.addEventListener('dragstart', (e) => {
+            if (attackDroneUsesLeft <= 0) {
+                e.preventDefault();
+                return;
+            }
+            draggedDroneType = 'ATTACK_DRONE';
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        attackDrone.addEventListener('dragend', () => {
+            draggedDroneType = null;
+            clearDronePreview();
         });
     }
 

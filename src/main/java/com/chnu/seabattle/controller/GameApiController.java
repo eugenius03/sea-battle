@@ -2,6 +2,8 @@ package com.chnu.seabattle.controller;
 
 import com.chnu.seabattle.dto.FireResult;
 import com.chnu.seabattle.dto.GameInfoResponse;
+import com.chnu.seabattle.dto.move.MoveRequest;
+import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.dto.ship.ShipResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
@@ -21,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -89,31 +92,30 @@ public class GameApiController {
     }
 
     @PostMapping("/{matchId}/fire")
-    public MoveResult fire(
+    public List<MoveResponse> fire(
             @PathVariable Long matchId,
-            @RequestParam UUID shooterId,
-            @RequestParam int x,
-            @RequestParam int y
+            @RequestBody MoveRequest moveRequest
     ) {
-        FireResult result = gameService.fire(matchId, shooterId, x, y);
+        FireResult result = gameService.executeMove(matchId, moveRequest);
 
-        UUID opponentId = gameService.getOpponentPlayerId(result.match(), shooterId);
+        UUID opponentId = gameService.getOpponentPlayerId(result.match(), moveRequest.shooterId());
         boolean isItOpponentsTurn = opponentId.equals(result.match().getCurrentPlayerTurnId());
 
         webSocketService.sendOpponentMoveMessage(
                 matchId,
                 opponentId,
-                x,
-                y,
-                result.moveResult(),
+                result.moveResponses(),
                 isItOpponentsTurn
         );
 
-        if (result.moveResult() == MoveResult.FINISHED) {
+        boolean isMatchFinished = result.moveResponses().stream()
+                .anyMatch(moveResponse -> MoveResult.FINISHED.equals(moveResponse.moveResult()));
+
+        if (isMatchFinished) {
             webSocketService.updateMatchStatus(matchId, MatchStatus.FINISHED, null);
         }
 
-        return result.moveResult();
+        return result.moveResponses();
     }
 
     @GetMapping("{inviteToken}/info")

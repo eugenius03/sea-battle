@@ -5,8 +5,8 @@ import com.chnu.seabattle.dto.MatchStatusMessage;
 import com.chnu.seabattle.dto.MoveMessage;
 import com.chnu.seabattle.dto.PresenceMessage;
 import com.chnu.seabattle.dto.PresenseEventType;
+import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.entity.MatchStatus;
-import com.chnu.seabattle.entity.MoveResult;
 import com.chnu.seabattle.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +14,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -101,23 +102,16 @@ public class WebSocketServiceImpl implements WebSocketService {
     }
 
     @Override
-    public void sendOpponentMoveMessage(
-            Long matchId,
-            UUID recipientMatchPlayerId,
-            int x,
-            int y,
-            MoveResult moveResult,
-            boolean isItMyTurn
+    public void sendOpponentMoveMessage(Long matchId, UUID recipientMatchPlayerId,
+                                        List<MoveResponse> moveResponses, boolean isItMyTurn
     ) {
-        MoveMessage payload = MoveMessage.builder()
-                .matchId(matchId)
-                .recipientMatchPlayerId(recipientMatchPlayerId)
-                .x(x)
-                .y(y)
-                .result(moveResult)
-                .at(Instant.now())
-                .isItMyTurn(isItMyTurn)
-                .build();
+        MoveMessage payload = new MoveMessage(
+                matchId,
+                recipientMatchPlayerId,
+                moveResponses,
+                Instant.now(),
+                isItMyTurn
+        );
 
         messagingTemplate.convertAndSendToUser(
                 recipientMatchPlayerId.toString(),

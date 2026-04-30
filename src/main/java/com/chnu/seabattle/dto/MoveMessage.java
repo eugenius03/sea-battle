@@ -1,24 +1,21 @@
 package com.chnu.seabattle.dto;
 
-import com.chnu.seabattle.entity.MoveResult;
+import com.chnu.seabattle.dto.move.MoveResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Builder;
-import lombok.Data;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
-@Data
-@Builder
-public class MoveMessage {
+public record MoveMessage(
+        Long matchId,
+        UUID recipientMatchPlayerId,
+        List<MoveResponse> moveResponses,
+        Instant at,
 
-    Long matchId;
-    UUID recipientMatchPlayerId;
-    int x;
-    int y;
-    MoveResult result;
-    Instant at;
+        @JsonProperty("isItMyTurn")
+        boolean isItMyTurn
+) {
 
-    @JsonProperty("isItMyTurn")
-    boolean isItMyTurn;
+
 }

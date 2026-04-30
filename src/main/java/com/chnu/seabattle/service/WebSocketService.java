@@ -1,9 +1,10 @@
 package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.dto.GameInfoResponse;
+import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.entity.MatchStatus;
-import com.chnu.seabattle.entity.MoveResult;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface WebSocketService {
@@ -18,13 +19,8 @@ public interface WebSocketService {
 
     void updateMatchStatus(Long matchId, MatchStatus matchStatus, UUID currentTurnPlayerId);
 
-    void sendOpponentMoveMessage(
-            Long matchId,
-            UUID recipientMatchPlayerId,
-            int x,
-            int y,
-            MoveResult moveResult,
-            boolean isItMyTurn
+    void sendOpponentMoveMessage(Long matchId, UUID recipientMatchPlayerId,
+                                 List<MoveResponse> moveResponses, boolean isItMyTurn
     );
 
     void sendReconnectData(
