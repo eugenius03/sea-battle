@@ -1,6 +1,7 @@
 package com.chnu.seabattle.service.impl;
 
 import com.chnu.seabattle.entity.Move;
+import com.chnu.seabattle.entity.MoveType;
 import com.chnu.seabattle.repository.MoveRepository;
 import com.chnu.seabattle.service.AbstractBaseService;
 import com.chnu.seabattle.service.MoveService;
@@ -22,12 +23,22 @@ public class MoveServiceImpl extends AbstractBaseService<Move, Long> implements 
     }
 
     @Override
-    public boolean existsByMatchIdAndShooterIdAndTargetXAndTargetY(Long matchId, UUID shooterId, Integer x, Integer y) {
-        return moveRepository.existsByMatchIdAndShooterIdAndTargetXAndTargetY(matchId, shooterId, x, y);
+    public boolean existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(Long matchId, UUID shooterId, Integer x, Integer y, MoveType moveType) {
+        return moveRepository.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(matchId, shooterId, x, y, moveType);
     }
 
     @Override
     public List<Move> findByMatchIdAndShooterId(Long matchId, UUID shooterId) {
         return moveRepository.findByMatchIdAndShooterId(matchId, shooterId);
+    }
+
+    @Override
+    public long countByMatchIdAndShooterIdAndMoveType(Long matchId, UUID shooterId, MoveType moveType) {
+        return moveRepository.countByMatchIdAndShooterIdAndMoveType(matchId, shooterId, moveType);
+    }
+
+    @Override
+    public long countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(Long matchId, UUID shooterId, MoveType moveType) {
+        return moveRepository.countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(matchId, shooterId, moveType);
     }
 }

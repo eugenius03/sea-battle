@@ -46,6 +46,7 @@ public class MatchPlayer {
     @BatchSize(size = 4)
     @OneToMany(mappedBy = "matchPlayer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Ship> ships = new ArrayList<>();
+
     private Instant lastSeenAt;
 
     @Column(nullable = false)

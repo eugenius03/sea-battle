@@ -25,7 +25,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "moves",
         uniqueConstraints = @UniqueConstraint(columnNames = {
-                "match_id", "shooter_id", "targetX", "targetY"
+                "match_id", "shooter_id", "targetX", "targetY", "move_type"
         }),
         indexes = @Index(name = "idx_shooter_id", columnList = "shooterId")
 )
@@ -53,8 +53,15 @@ public class Move {
     private int targetY;
 
     @Enumerated(EnumType.STRING)
+    private MoveType moveType;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false)
     private MoveResult moveResult;
+
+    @Builder.Default
+    @Column(nullable = false, updatable = false)
+    private boolean isMoveOrigin = false;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

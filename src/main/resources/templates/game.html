@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,6 +65,23 @@
             <button class="rotate-all-btn" id="rotateAllBtn">↻ Rotate All Ships</button>
         </div>
         <div class="ships-container" id="shipsContainer"></div>
+    </div>
+
+    <div id="specialMovesPanel" class="special-moves-panel" style="display:none">
+        <div class="special-moves-title">Special Moves — drag onto enemy board</div>
+        <div class="special-moves-list">
+            <div class="drone-item" id="surveillanceDrone" draggable="true" title="Scans 3×3 area for ships">
+                <span class="drone-icon">🛸</span>
+                <span class="drone-label">Surveillance Drone</span>
+                <span class="drone-badge" id="surveillanceDroneUsesLeft">1</span>
+            </div>
+            <div class="drone-item drone-item--attack" id="attackDrone" draggable="true"
+                 title="Attacks 3-6 random cells in 3×3 area">
+                <span class="drone-icon">💥</span>
+                <span class="drone-label">Attack Drone</span>
+                <span class="drone-badge drone-badge--attack" id="attackDroneUsesLeft">2</span>
+            </div>
+        </div>
     </div>
 
     <div class="boards-container">

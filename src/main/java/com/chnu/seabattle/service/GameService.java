@@ -2,6 +2,7 @@ package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.dto.FireResult;
 import com.chnu.seabattle.dto.GameInfoResponse;
+import com.chnu.seabattle.dto.move.MoveRequest;
 import com.chnu.seabattle.dto.ship.ShipResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
@@ -16,14 +17,8 @@ import java.util.UUID;
 @Service
 public interface GameService {
 
-    Ship placeShip(
-            Long matchId,
-            UUID playerId,
-            ShipType type,
-            int startX,
-            int startY,
-            Orientation orientation
-    );
+    Ship placeShip(Long matchId, UUID playerId, ShipType type, int startX,
+                   int startY, Orientation orientation);
 
     List<ShipResponse> generateRandomShips(Long matchId, UUID playerId);
 
@@ -31,12 +26,7 @@ public interface GameService {
 
     Match markReady(Long matchId, UUID playerId);
 
-    FireResult fire(
-            Long matchId,
-            UUID shooterId,
-            int x,
-            int y
-    );
+    FireResult executeMove(Long matchId, MoveRequest moveRequest);
 
     void handleDisconnect(Match match, MatchPlayer player);
 

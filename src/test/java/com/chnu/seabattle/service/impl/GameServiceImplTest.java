@@ -3,11 +3,14 @@ package com.chnu.seabattle.service.impl;
 import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.converter.ShipConverter;
 import com.chnu.seabattle.dto.FireResult;
+import com.chnu.seabattle.dto.move.MoveRequest;
+import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.entity.Move;
 import com.chnu.seabattle.entity.MoveResult;
+import com.chnu.seabattle.entity.MoveType;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.entity.ShipType;
@@ -18,6 +21,8 @@ import com.chnu.seabattle.service.MatchPlayerService;
 import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.MoveService;
 import com.chnu.seabattle.service.WebSocketService;
+import com.chnu.seabattle.service.strategy.MoveStrategy;
+import com.chnu.seabattle.service.strategy.StandardAttackStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,6 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,6 +72,9 @@ class GameServiceImplTest {
 
     @Mock
     private WebSocketService webSocketService;
+
+    @Mock
+    private Map<MoveType, MoveStrategy> strategies;
 
     @InjectMocks
     private GameServiceImpl gameService;
@@ -230,7 +240,6 @@ class GameServiceImplTest {
                 match.setStatus(MatchStatus.IN_PROGRESS);
                 match.setCurrentPlayerTurnId(playerId1);
 
-                // Add a ship to player2's board
                 Ship ship = Ship.builder()
                         .id(1L)
                         .matchPlayer(player2)
@@ -243,6 +252,13 @@ class GameServiceImplTest {
                         .build();
                 player2.getShips().add(ship);
 
+                StandardAttackStrategy standardStrategy = new StandardAttackStrategy(moveService, moveConverter);
+                lenient().when(strategies.get(MoveType.STANDARD)).thenReturn(standardStrategy);
+                lenient().when(moveService.create(any(Move.class))).thenAnswer(inv -> inv.getArgument(0));
+                lenient().when(moveConverter.toResponse(any(Move.class))).thenAnswer(inv -> {
+                    Move m = inv.getArgument(0);
+                    return new MoveResponse(m.getTargetX(), m.getTargetY(), m.getMoveResult());
+                });
             }
 
             @Test
@@ -250,9 +266,9 @@ class GameServiceImplTest {
             void shouldSuccessfullyFireAndHitShip() {
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
 
-                FireResult result = gameService.fire(1L, playerId1, 5, 5);
+                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD));
 
-                assertEquals(MoveResult.HIT, result.moveResult());
+                assertEquals(MoveResult.HIT, result.moveResponses().getFirst().moveResult());
                 verify(moveService).create(any(Move.class));
                 assertEquals(1, player2.getShips().getFirst().getHits());
                 assertFalse(player2.getShips().getFirst().isSunk());
@@ -263,9 +279,9 @@ class GameServiceImplTest {
             void shouldSuccessfullyFireAndMiss() {
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
 
-                FireResult result = gameService.fire(1L, playerId1, 0, 0);
+                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 0, 0, MoveType.STANDARD));
 
-                assertEquals(MoveResult.MISS, result.moveResult());
+                assertEquals(MoveResult.MISS, result.moveResponses().getFirst().moveResult());
                 verify(moveService).create(any(Move.class));
                 assertEquals(player2.getId(), match.getCurrentPlayerTurnId());
             }
@@ -277,9 +293,9 @@ class GameServiceImplTest {
 
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
 
-                FireResult result = gameService.fire(1L, playerId1, 5, 5);
+                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD));
 
-                assertEquals(MoveResult.FINISHED, result.moveResult());
+                assertEquals(MoveResult.FINISHED, result.moveResponses().getFirst().moveResult());
                 verify(moveService).create(any(Move.class));
                 assertEquals(3, player2.getShips().getFirst().getHits());
                 assertTrue(player2.getShips().getFirst().isSunk());
@@ -292,9 +308,9 @@ class GameServiceImplTest {
 
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
 
-                FireResult result = gameService.fire(1L, playerId1, 5, 5);
+                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD));
 
-                assertEquals(MoveResult.FINISHED, result.moveResult());
+                assertEquals(MoveResult.FINISHED, result.moveResponses().getFirst().moveResult());
                 assertEquals(MatchStatus.FINISHED, match.getStatus());
                 assertEquals(playerId1, match.getWinnerId());
                 assertNotNull(match.getFinishedAt());
@@ -306,7 +322,7 @@ class GameServiceImplTest {
                 when(matchService.findByIdForGame(anyLong())).thenReturn(Optional.empty());
 
                 assertThrows(ResourceNotFoundException.class, () ->
-                        gameService.fire(1L, playerId1, 5, 5)
+                        gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD))
                 );
             }
 
@@ -317,7 +333,7 @@ class GameServiceImplTest {
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
 
                 GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.fire(1L, playerId1, 5, 5)
+                        gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD))
                 );
 
                 assertEquals("It's not the player's turn", exception.getMessage());
@@ -330,7 +346,7 @@ class GameServiceImplTest {
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
 
                 GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.fire(1L, playerId1, 5, 5)
+                        gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD))
                 );
 
                 assertTrue(exception.getMessage().contains("Action not allowed in match state"));
@@ -342,7 +358,7 @@ class GameServiceImplTest {
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
 
                 GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.fire(1L, playerId1, 10, 10)
+                        gameService.executeMove(1L, new MoveRequest(playerId1, 10, 10, MoveType.STANDARD))
                 );
 
                 assertEquals("Coordinates out of bounds", exception.getMessage());
@@ -352,10 +368,10 @@ class GameServiceImplTest {
             @DisplayName("Should throw exception when firing at same coordinates twice")
             void shouldThrowExceptionWhenFiringAtSameCoordinatesTwice() {
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-                when(moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetY(1L, playerId1, 5, 5)).thenReturn(true);
+                when(moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(1L, playerId1, 5, 5, MoveType.STANDARD)).thenReturn(true);
 
                 GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.fire(1L, playerId1, 5, 5)
+                        gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD))
                 );
 
                 assertEquals("Cannot fire at the same coordinates twice", exception.getMessage());
@@ -379,9 +395,9 @@ class GameServiceImplTest {
 
                 when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
 
-                FireResult result = gameService.fire(1L, playerId1, 3, 4);
+                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 3, 4, MoveType.STANDARD));
 
-                assertEquals(MoveResult.HIT, result.moveResult());
+                assertEquals(MoveResult.HIT, result.moveResponses().getFirst().moveResult());
                 assertEquals(1, player2.getShips().getFirst().getHits());
             }
         }

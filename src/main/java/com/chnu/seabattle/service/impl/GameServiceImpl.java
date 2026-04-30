@@ -3,16 +3,16 @@ package com.chnu.seabattle.service.impl;
 import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.converter.ShipConverter;
-import com.chnu.seabattle.dto.Cell;
 import com.chnu.seabattle.dto.FireResult;
 import com.chnu.seabattle.dto.GameInfoResponse;
+import com.chnu.seabattle.dto.move.MoveRequest;
 import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.dto.ship.ShipResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.entity.Move;
-import com.chnu.seabattle.entity.MoveResult;
+import com.chnu.seabattle.entity.MoveType;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.entity.ShipType;
@@ -24,6 +24,8 @@ import com.chnu.seabattle.service.MatchPlayerService;
 import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.MoveService;
 import com.chnu.seabattle.service.WebSocketService;
+import com.chnu.seabattle.service.strategy.MoveStrategy;
+import com.chnu.seabattle.util.BoardUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,12 +34,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -47,20 +46,19 @@ import static java.util.stream.Collectors.counting;
 @RequiredArgsConstructor
 public class GameServiceImpl implements GameService {
 
-    private final MatchService matchService;
-    private final MoveService moveService;
-    private final ShipRepository shipRepository;
-    private final MatchPlayerService matchPlayerService;
-    private final Random random = new Random();
     private static final int GRID_SIZE = 10;
     private static final int MAX_PLACEMENT_ATTEMPTS = 100;
+    private final Random random = new Random();
+
+    private final MatchService matchService;
+    private final ShipRepository shipRepository;
+    private final MatchPlayerService matchPlayerService;
     private final MoveConverter moveConverter;
     private final ShipConverter shipConverter;
     private final WebSocketService webSocketService;
 
-    private boolean isPlayerTurn(Match match, UUID playerId) {
-        return match.getCurrentPlayerTurnId().equals(playerId);
-    }
+    private final Map<MoveType, MoveStrategy> strategies;
+    private final MoveService moveService;
 
     private void requireStatuses(Match match, MatchStatus... expected) {
         boolean isValid = Arrays.stream(expected)
@@ -73,23 +71,6 @@ public class GameServiceImpl implements GameService {
         }
     }
 
-    private Set<Cell> getOccupiedCells(Ship ship) {
-        Set<Cell> cells = new HashSet<>();
-        int length = ship.getShipType().getSize();
-
-        for (int i = 0; i < length; i++) {
-            int cx = ship.getOrientation() == Orientation.HORIZONTAL
-                    ? ship.getStartX() + i
-                    : ship.getStartX();
-
-            int cy = ship.getOrientation() == Orientation.VERTICAL
-                    ? ship.getStartY() + i
-                    : ship.getStartY();
-
-            cells.add(new Cell(cx, cy));
-        }
-        return cells;
-    }
 
     private MatchPlayer getMatchPlayer(Match match, UUID playerId) {
         return match.getPlayers()
@@ -99,50 +80,13 @@ public class GameServiceImpl implements GameService {
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND));
     }
 
-
-    private boolean isWithinBounds(int x, int y, ShipType type, Orientation orientation) {
-        if (x < 0 || y < 0) return false;
-        return Orientation.HORIZONTAL.equals(orientation)
-                ? x + type.getSize() <= GRID_SIZE
-                : y + type.getSize() <= GRID_SIZE;
-    }
-
-    private boolean isWithinBounds(int x, int y) {
-        return x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
-    }
-
-    private boolean isValidCoordinates(int x, int y, ShipType type, Orientation orientation) {
-        return isWithinBounds(x, y, type, orientation);
-    }
-
-    private boolean isValidPlacement(List<Ship> ships, ShipType type, int x, int y, Orientation orientation) {
-        if (!isValidCoordinates(x, y, type, orientation)) {
-            return false;
-        }
-        return ships.stream().noneMatch(ship ->
-                overlapsOrTouches(ship, x, y, orientation, type.getSize())
-        );
-    }
-
-    private boolean overlapsOrTouches(Ship existing, int x, int y, Orientation orientation, int length) {
-        Set<Cell> existingCells = getOccupiedCells(existing);
-
-        for (int i = 0; i < length; i++) {
-            int cx = orientation == Orientation.HORIZONTAL ? x + i : x;
-            int cy = orientation == Orientation.VERTICAL ? y + i : y;
-
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    if (existingCells.contains(new Cell(cx + dx, cy + dy))) return true;
-                }
-            }
-        }
-        return false;
+    private boolean isPlayerTurn(Match match, UUID playerId) {
+        return match.getCurrentPlayerTurnId().equals(playerId);
     }
 
 
-    @Transactional
     @Override
+    @Transactional
     public Ship placeShip(Long matchId, UUID playerId, ShipType type, int startX, int startY, Orientation orientation) {
         MatchPlayer player = matchPlayerService.findById(playerId).orElseThrow(
                 () -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND)
@@ -160,7 +104,7 @@ public class GameServiceImpl implements GameService {
 
         List<Ship> updatedShips = player.getShips();
 
-        if (!isValidPlacement(updatedShips, type, startX, startY, orientation)) {
+        if (!BoardUtils.isValidPlacement(updatedShips, type, startX, startY, orientation)) {
             throw new GameRuleViolationException(ErrorConstants.INVALID_SHIP_PLACEMENT);
         }
 
@@ -221,7 +165,7 @@ public class GameServiceImpl implements GameService {
                     Orientation orientation = random.nextBoolean()
                             ? Orientation.HORIZONTAL : Orientation.VERTICAL;
 
-                    if (!isValidPlacement(player.getShips(), type, x, y, orientation)) continue;
+                    if (!BoardUtils.isValidPlacement(player.getShips(), type, x, y, orientation)) continue;
 
                     Ship ship = Ship.builder()
                             .matchPlayer(player)
@@ -264,7 +208,7 @@ public class GameServiceImpl implements GameService {
         );
 
         ships.remove(ship);
-        if (!isValidPlacement(ships, ship.getShipType(), x, y, orientation)) {
+        if (!BoardUtils.isValidPlacement(ships, ship.getShipType(), x, y, orientation)) {
             throw new GameRuleViolationException(ErrorConstants.INVALID_SHIP_PLACEMENT);
         }
         ship.setStartX(x);
@@ -298,68 +242,33 @@ public class GameServiceImpl implements GameService {
 
     @Transactional
     @Override
-    public FireResult fire(Long matchId, UUID shooterId, int x, int y) {
+    public FireResult executeMove(Long matchId, MoveRequest moveRequest) {
         Match match = matchService.findByIdForGame(matchId).orElseThrow(
                 () -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND)
         );
-        MatchPlayer player = getMatchPlayer(match, shooterId);
         requireStatuses(match, MatchStatus.IN_PROGRESS);
-
-        if (!isPlayerTurn(match, shooterId)) {
+        if (!isPlayerTurn(match, moveRequest.shooterId())) {
             throw new GameRuleViolationException(ErrorConstants.NOT_PLAYERS_TURN);
         }
-        if (!isWithinBounds(x, y)) {
+
+        if (!BoardUtils.isWithinBounds(moveRequest.x(), moveRequest.y())) {
             throw new GameRuleViolationException(ErrorConstants.COORDINATES_OUT_OF_BOUNDS);
         }
 
-        if (moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetY(matchId, shooterId, x, y)
+        if (moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(match.getId(), moveRequest.shooterId(),
+                moveRequest.x(), moveRequest.y(), moveRequest.moveType())
         ) {
             throw new GameRuleViolationException(ErrorConstants.DUPLICATE_FIRE);
         }
 
-        Move move = Move.builder()
-                .match(match)
-                .shooterId(shooterId)
-                .targetX(x)
-                .targetY(y)
-                .build();
 
-        MatchPlayer opponent = match.getPlayers().stream()
-                .filter(mp -> !mp.getId().equals(player.getId()))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND));
+        MoveStrategy strategy = strategies.get(moveRequest.moveType());
+        if (strategy == null) throw new GameRuleViolationException(
+                String.format(ErrorConstants.UNKNOWN_MOVE_TYPE, moveRequest.moveType()));
 
-        Optional<Ship> hitShipOpt = opponent.getShips().stream()
-                .filter(ship -> getOccupiedCells(ship).contains(new Cell(x, y)))
-                .findFirst();
+        List<MoveResponse> result = strategy.execute(match, moveRequest);
 
-        if (hitShipOpt.isPresent()) {
-            Ship hitShip = hitShipOpt.get();
-            hitShip.setHits(hitShip.getHits() + 1);
-
-            if (hitShip.getHits() == hitShip.getShipType().getSize()) {
-                hitShip.setSunk(true);
-                move.setMoveResult(MoveResult.SUNK);
-
-                boolean allSunk = opponent.getShips().stream().allMatch(Ship::isSunk);
-                if (allSunk) {
-                    match.setStatus(MatchStatus.FINISHED);
-                    match.setWinnerId(shooterId);
-                    match.setFinishedAt(Instant.now());
-                    move.setMoveResult(MoveResult.FINISHED);
-                }
-            } else {
-                move.setMoveResult(MoveResult.HIT);
-            }
-        } else {
-            move.setMoveResult(MoveResult.MISS);
-            match.setCurrentPlayerTurnId(
-                    opponent.getId()
-            );
-
-        }
-        moveService.create(move);
-        return new FireResult(move.getMoveResult(), match);
+        return new FireResult(result, match);
 
     }
 

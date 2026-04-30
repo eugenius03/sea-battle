@@ -31,10 +31,14 @@ public final class ErrorConstants {
     public static final String PLAYER_ALREADY_READY = "Action unsupported: player is already ready";
     public static final String DUPLICATE_FIRE = "Cannot fire at the same coordinates twice";
     public static final String COORDINATES_OUT_OF_BOUNDS = "Coordinates out of bounds";
+    public static final String DRONE_LIMIT_EXCEEDED = "You've hit your limit of attacking with this drone";
 
     // --- Ship placement ---
     public static final String INVALID_SHIP_PLACEMENT = "Invalid ship placement: out of bounds or overlapping";
     public static final String SHIP_TYPE_LIMIT = "Ship limit reached for type: %s";
+
+    // --- Move strategy ---
+    public static final String UNKNOWN_MOVE_TYPE = "Unknown or unimplemented move type: %s";
 
     // --- WebSocket / STOMP ---
     public static final String MISSING_MATCH_HEADERS = "Missing X-Match-Id / X-Match-Player-Id";
