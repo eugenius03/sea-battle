@@ -15,42 +15,42 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(value = {ApiRequestException.class})
     public ResponseEntity<Object> handleApiRequestException(ApiRequestException e) {
-        ApiException apiException = new ApiException(
+        ApiError apiError = new ApiError(
                 e.getMessage(),
                 HttpStatus.BAD_REQUEST.value(),
                 ZonedDateTime.now(ZoneId.of("Z"))
         );
-        return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Object> handleNotFoundException(ResourceNotFoundException e) {
-        ApiException apiException = new ApiException(
+        ApiError apiError = new ApiError(
                 e.getMessage(),
                 HttpStatus.NOT_FOUND.value(),
                 ZonedDateTime.now(ZoneId.of("Z"))
         );
-        return new ResponseEntity<>(apiException, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(apiError, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Object> handleBadRequestException(BadRequestException e) {
-        ApiException apiException = new ApiException(
+        ApiError apiError = new ApiError(
                 e.getMessage(),
                 HttpStatus.BAD_REQUEST.value(),
                 ZonedDateTime.now(ZoneId.of("Z"))
         );
-        return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<Object> handleUserAlreadyExistsException(UserAlreadyExistsException e) {
-        ApiException apiException = new ApiException(
+        ApiError apiError = new ApiError(
                 e.getMessage(),
                 HttpStatus.CONFLICT.value(),
                 ZonedDateTime.now(ZoneId.of("Z"))
         );
-        return new ResponseEntity<>(apiException, HttpStatus.CONFLICT);
+        return new ResponseEntity<>(apiError, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -61,21 +61,41 @@ public class ApiExceptionHandler {
                 .findFirst()
                 .orElse("Validation failed");
 
-        ApiException apiException = new ApiException(
+        ApiError apiError = new ApiError(
                 message,
                 HttpStatus.BAD_REQUEST.value(),
                 ZonedDateTime.now(ZoneId.of("Z"))
         );
-        return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(GameRuleViolationException.class)
     public ResponseEntity<Object> handleGameRuleViolationException(GameRuleViolationException e) {
-        ApiException apiException = new ApiException(
+        ApiError apiError = new ApiError(
                 e.getMessage(),
                 HttpStatus.BAD_REQUEST.value(),
                 ZonedDateTime.now(ZoneId.of("Z"))
         );
-        return new ResponseEntity<>(apiException, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ServerErrorException.class)
+    public ResponseEntity<Object> handleServerErrorException(ServerErrorException e) {
+        ApiError apiError = new ApiError(
+                e.getMessage(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                ZonedDateTime.now(ZoneId.of("Z"))
+        );
+        return new ResponseEntity<>(apiError, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Object> handleUnauthorizedException(UnauthorizedException e) {
+        ApiError apiError = new ApiError(
+                e.getMessage(),
+                HttpStatus.UNAUTHORIZED.value(),
+                ZonedDateTime.now(ZoneId.of("Z"))
+        );
+        return new ResponseEntity<>(apiError, HttpStatus.UNAUTHORIZED);
     }
 }

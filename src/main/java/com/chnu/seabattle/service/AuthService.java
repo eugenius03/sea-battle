@@ -1,7 +1,7 @@
 package com.chnu.seabattle.service;
 
-import com.chnu.seabattle.dto.UserLoginRequest;
-import com.chnu.seabattle.dto.UserRegistrationRequest;
+import com.chnu.seabattle.dto.auth.UserLoginRequest;
+import com.chnu.seabattle.dto.auth.UserRegistrationRequest;
 import com.chnu.seabattle.entity.User;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseCookie;
@@ -15,8 +15,5 @@ public interface AuthService {
     @Transactional(readOnly = true)
     UserDetails login(@Valid UserLoginRequest loginRequest);
 
-
     ResponseCookie refresh(String refreshToken);
-
-    User getAuthenticatedUser();
 }

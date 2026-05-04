@@ -40,13 +40,9 @@ public class UserServiceImpl extends AbstractBaseService<User, UUID> implements 
         return userRepository.findByUsername(username);
     }
 
-    public boolean checkPassword(String rawPassword, String encodedPassword) {
-        return passwordEncoder.matches(rawPassword, encodedPassword);
-    }
-
     @Override
     public boolean existsByUsername(String username) {
-        return userRepository.findByUsername(username).isPresent();
+        return userRepository.existsByUsername(username);
     }
 
     @Override

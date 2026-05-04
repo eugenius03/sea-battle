@@ -18,7 +18,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -28,7 +27,6 @@ import java.util.Arrays;
 @Log4j2
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final HandlerExceptionResolver handlerExceptionResolver;
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
 
@@ -39,48 +37,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String jwt = extractCookie(request, "accessToken");
-        if (jwt == null) {
-            tryRefresh(request, response);
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         try {
-            if (jwtService.isTokenExpired(jwt)) {
+            String jwt = extractCookie(request, "accessToken");
+
+            if (jwt == null) {
+                tryRefresh(request, response);
+            } else if (jwtService.isTokenExpired(jwt)) {
                 log.warn("Access token expired, attempting silent refresh");
                 tryRefresh(request, response);
-                filterChain.doFilter(request, response);
-                return;
-            }
-            final String userLogin = jwtService.getUsernameFromToken(jwt);
+            } else {
+                final String userLogin = jwtService.getUsernameFromToken(jwt);
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-            log.debug("Processing JWT authentication for user: {}", userLogin);
+                if (userLogin != null && authentication == null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(userLogin);
 
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (userLogin != null && authentication == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(userLogin);
-
-                if (jwtService.isTokenValid(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-
-                    authToken.setDetails(new WebAuthenticationDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.info("Successfully authenticated user: {}", userLogin);
-                } else {
-                    log.warn("Invalid JWT token for user: {}", userLogin);
+                    if (jwtService.isTokenValid(jwt, userDetails)) {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities()
+                        );
+                        authToken.setDetails(new WebAuthenticationDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    } else {
+                        jwtService.clearAuthCookies(response);
+                    }
                 }
             }
-
-            filterChain.doFilter(request, response);
         } catch (Exception e) {
-            log.error("JWT authentication failed", e);
-            handlerExceptionResolver.resolveException(request, response, null, e);
+            log.error("JWT auth failed {}", e.getMessage());
+            SecurityContextHolder.clearContext();
+            jwtService.clearAuthCookies(response);
         }
+
+        filterChain.doFilter(request, response);
     }
 
     private void tryRefresh(HttpServletRequest request, HttpServletResponse response) {
@@ -98,9 +87,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         if (jwtService.isTokenValid(refreshToken, userDetails)) {
 
-            response.addHeader(HttpHeaders.SET_COOKIE,
-                    jwtService.generateAccessToken(userDetails)
-            );
+            response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createAccessCookie(userDetails).toString());
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities()

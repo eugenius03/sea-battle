@@ -1,45 +1,9 @@
-/* Home page specific styles */
-
-.container::before {
-    width: 200px;
-    height: 200px;
-    top: -80px;
-    right: -80px;
-}
-
-h1 {
-    margin-bottom: 26px;
-    font-size: 34px;
-}
-
+/* Home page — uses kit.css. */
 #guestUsernameField {
     display: none;
     margin-bottom: 20px;
 }
 
-#usernameError {
-    color: #e74c3c;
-    font-size: 13px;
-    margin-top: 5px;
-}
-
-#createMatchForm {
-    margin-bottom: 30px;
-}
-
-#createMatchForm button {
-    background: linear-gradient(135deg, #27ae60, #1e8449);
-}
-
-.or-divider {
-    text-align: center;
-    margin: 20px 0;
-    color: #999;
-    font-weight: bold;
-}
-
-#joinForm h3 {
-    text-align: center;
-    margin-bottom: 15px;
-    color: #555;
+#guestUsernameField.show {
+    display: block;
 }

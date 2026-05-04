@@ -14,13 +14,13 @@ public interface MatchPlayerRepository extends JpaRepository<MatchPlayer, UUID> 
     @EntityGraph(attributePaths = {
             "ships"
     })
-    Optional<MatchPlayer> findByMatchIdAndId(
-            Long matchId, UUID matchPlayerId
+    Optional<MatchPlayer> findByMatchInviteTokenAndId(
+            String inviteToken, UUID matchPlayerId
     );
 
-    Optional<MatchPlayer> findByMatchIdAndUserId(
-            Long matchId, UUID userId
-    );
+    Optional<MatchPlayer> findByMatchIdAndUserId(Long matchId, UUID userId);
+
+    Optional<MatchPlayer> findByMatchInviteTokenAndUserId(String inviteToken, UUID userId);
 
     boolean existsByMatchIdAndUserId(Long matchId, UUID matchPlayerId);
 

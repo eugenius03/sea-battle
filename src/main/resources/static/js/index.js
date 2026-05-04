@@ -1,13 +1,23 @@
 document.addEventListener('DOMContentLoaded', function () {
     const createMatchForm = document.getElementById('createMatchForm');
     if (createMatchForm) {
-        createMatchForm.addEventListener('submit', function (e) {
+        createMatchForm.addEventListener('submit', async function (e) {
             e.preventDefault();
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/game';
-            document.body.appendChild(form);
-            form.submit();
+            try {
+                const response = await fetch('/api/match/create', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    globalThis.location.href = `/game/${data.inviteToken}`;
+                } else {
+                    showMessage(`Failed to create match: ${await response.text()}`, 'error');
+                }
+            } catch (err) {
+                showMessage(`Error: ${err.message}`, 'error');
+            }
         });
     }
 
@@ -15,23 +25,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (joinForm) {
         joinForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            const inviteToken = document.getElementById('inviteToken').value;
+            const inviteToken = document.getElementById('inviteToken').value.trim();
 
-            if (!isLoggedIn) {
-                const usernameInput = document.getElementById('guestUsername');
-                const errorDiv = document.getElementById('usernameError');
-                const username = usernameInput ? usernameInput.value.trim() : '';
-
-                if (username.length < 3) {
-                    if (errorDiv) {
-                        errorDiv.textContent = 'Username must be at least 3 characters';
-                        errorDiv.style.display = 'block';
-                    }
-                    return;
-                }
-
-                if (errorDiv) errorDiv.style.display = 'none';
-            }
+            if (!inviteToken) return;
 
             globalThis.location.href = `/game/join/${inviteToken}`;
         });

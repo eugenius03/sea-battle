@@ -4,106 +4,148 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sea Battle Game</title>
+    <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap"
-          rel="stylesheet">
+
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/game.css">
 </head>
 
-<body>
-<div class="game-container">
-    <h1>Sea Battle Game</h1>
+<body class="has-navbar">
 
-    <!-- WS AUTH PANEL -->
-    <div class="ws-panel">
-        <div class="ws-panel-title">
-            WebSocket Auth (MatchPlayer)
-        </div>
+<div th:replace="~{fragments/navbar :: navbar('home')}"></div>
 
-        <div class="ws-row">
-            <div class="field">
-                <label for="wsMatchId">X-Match-Id</label>
-                <input id="wsMatchId" placeholder="e.g. 1">
-            </div>
-
-            <div class="field">
-                <label for="wsMatchPlayerId">X-Match-Player-Id</label>
-                <input id="wsMatchPlayerId" placeholder="e.g. uuid-1">
-            </div>
-
-            <div class="ws-actions">
-                <button class="ws-connect-btn" id="wsConnectBtn">WS Connect</button>
-                <button class="ws-disconnect-btn" id="wsDisconnectBtn" disabled>WS Disconnect</button>
-                <button class="ws-clear-btn" id="wsClearLogBtn">Clear log</button>
+<div class="game-page">
+    <div class="game-container">
+        <div class="game-header">
+            <h1>Sea Battle</h1>
+            <div class="opponent-status" id="opponentStatus" data-state="awaiting">
+                <span class="opponent-status__dot" aria-hidden="true"></span>
+                <span class="opponent-status__label">Waiting for opponent</span>
             </div>
         </div>
 
-        <div class="ws-status">
-            <span class="pill"><span class="dot" id="wsDot"></span> WS: <span id="wsState">DISCONNECTED</span></span>
-            <span class="pill">Subs: <span id="wsSubs">0</span></span>
-            <span class="pill">matchId: <span id="wsMatchIdEcho">-</span></span>
-            <span class="pill">me(matchPlayerId): <span id="wsMeEcho">-</span></span>
-            <span class="pill">private sub: <code id="wsPrivateEcho"></code></span>
-        </div>
-
-        <div class="log" id="wsLog"></div>
-        <div class="ws-note">
-            Moves are delivered privately to <code>/user/queue/match/{matchId}</code> only.
-        </div>
-    </div>
-
-    <div class="ships-panel" id="shipsPanel">
-        <div class="ships-title">Drag ships to your board (Left). Double-click a placed ship to rotate. You can
-            reposition ships before ready.
-        </div>
-        <div class="orientation-info">
-            <button class="rotate-all-btn" id="rotateAllBtn">↻ Rotate All Ships</button>
-        </div>
-        <div class="ships-container" id="shipsContainer"></div>
-    </div>
-
-    <div id="specialMovesPanel" class="special-moves-panel" style="display:none">
-        <div class="special-moves-title">Special Moves — drag onto enemy board</div>
-        <div class="special-moves-list">
-            <div class="drone-item" id="surveillanceDrone" draggable="true" title="Scans 3×3 area for ships">
-                <span class="drone-icon">🛸</span>
-                <span class="drone-label">Surveillance Drone</span>
-                <span class="drone-badge" id="surveillanceDroneUsesLeft">1</span>
+        <div class="panel ships-panel" id="shipsPanel">
+            <div class="panel-title">Drag ships to your board (Left). Double-click a placed ship to rotate. You can
+                reposition ships before ready.
             </div>
-            <div class="drone-item drone-item--attack" id="attackDrone" draggable="true"
-                 title="Attacks 3-6 random cells in 3×3 area">
-                <span class="drone-icon">💥</span>
-                <span class="drone-label">Attack Drone</span>
-                <span class="drone-badge drone-badge--attack" id="attackDroneUsesLeft">2</span>
+            <div class="orientation-info" style="text-align:center; margin: 6px 0 12px;">
+                <button class="btn btn--inline rotate-all-btn" id="rotateAllBtn">
+                    <svg class="icon" viewBox="0 0 24 24" style="stroke:white">
+                        <use href="/img/icons.svg#rotate"/>
+                    </svg>
+                    Rotate All Ships
+                </button>
+            </div>
+            <div class="ships-tray ships-container" id="shipsContainer"></div>
+        </div>
+
+        <div id="specialMovesPanel" class="panel special-moves-panel" style="display:none">
+            <div class="panel-title">Special Moves — drag onto enemy board</div>
+            <div class="special-list special-moves-list">
+                <div class="drone-chip drone-item" id="surveillanceDrone" draggable="true"
+                     title="Scans 3×3 area for ships">
+                    <svg class="icon" viewBox="0 0 24 24" style="width:20px;height:20px;stroke:white">
+                        <use href="/img/icons.svg#radar"/>
+                    </svg>
+                    <span class="drone-label">Surveillance Drone</span>
+                    <span class="drone-badge" id="surveillanceDroneUsesLeft"></span>
+                </div>
+                <div class="drone-chip attack drone-item drone-item--attack" id="attackDrone" draggable="true"
+                     title="Attacks 3-6 random cells in 3×3 area">
+                    <svg class="icon" viewBox="0 0 24 24" style="width:20px;height:20px;stroke:white">
+                        <use href="/img/icons.svg#bomb"/>
+                    </svg>
+                    <span class="drone-label">Attack Drone</span>
+                    <span class="drone-badge attack drone-badge--attack" id="attackDroneUsesLeft"></span>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="boards-container">
-        <div class="board-section">
-            <div class="board-title">Your Board</div>
-            <div class="board" id="playerBoard"></div>
+        <div id="rematchNotification" class="rematch-banner" role="status" aria-live="polite">
+            <div class="rematch-banner__copy">
+                <svg viewBox="0 0 24 24" aria-hidden="true"
+                     style="width:20px;height:20px;stroke:var(--success);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;">
+                    <use href="/img/icons.svg#rotate"/>
+                </svg>
+                <span>Your opponent wants a rematch.</span>
+            </div>
+            <div class="rematch-banner__actions">
+                <button id="rematchYesBtn" class="btn btn--success btn--inline" type="button">
+                    <svg class="icon" viewBox="0 0 24 24" style="stroke:white; width:16px; height:16px;"
+                         aria-hidden="true">
+                        <use href="/img/icons.svg#check"/>
+                    </svg>
+                    Accept
+                </button>
+                <button id="rematchNoBtn" class="btn btn--muted btn--inline" type="button">
+                    Decline
+                </button>
+            </div>
         </div>
 
-        <div class="board-section">
-            <div class="board-title">Enemy Board</div>
-            <div class="board" id="enemyBoard"></div>
+        <div class="boards-container">
+            <div class="board-section">
+                <div class="board-title">Your Board</div>
+                <div class="board" id="playerBoard"></div>
+            </div>
+
+            <div class="board-section">
+                <div class="board-title">Enemy Board</div>
+                <div class="board" id="enemyBoard"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn--fun btn--inline random-btn" id="randomBtn">
+                <svg class="icon" viewBox="0 0 24 24" style="stroke:white">
+                    <use href="/img/icons.svg#dice"/>
+                </svg>
+                Random Ships
+            </button>
+            <button class="btn btn--success btn--inline ready-btn" id="readyBtn" disabled>
+                <svg class="icon" viewBox="0 0 24 24" style="stroke:white">
+                    <use href="/img/icons.svg#check"/>
+                </svg>
+                Mark Ready
+            </button>
+            <button class="btn btn--muted btn--inline ws-clear-btn" id="copyInviteBtn">
+                <svg class="icon" viewBox="0 0 24 24" style="stroke:white">
+                    <use href="/img/icons.svg#copy"/>
+                </svg>
+                Copy Invite Link
+            </button>
+            <button class="btn btn--fun btn--inline" id="showResultsBtn" style="display:none">
+                Game Results
+            </button>
+        </div>
+
+        <div id="messageArea"></div>
+    </div>
+</div>
+
+<div id="matchEndModal" class="modal-overlay" role="dialog" aria-modal="true"
+     aria-labelledby="matchEndTitle">
+    <div id="matchEndCard" class="modal-card">
+        <div id="matchEndEyebrow" class="modal-eyebrow">Game Over</div>
+        <h2 id="matchEndTitle" class="modal-title">You win.</h2>
+        <p id="matchEndSub" class="modal-sub">All enemy ships sunk. Nicely played.</p>
+        <div id="rematchStatus" class="caption" style="margin-bottom:14px; min-height:18px;"></div>
+        <div class="modal-actions">
+            <button id="rematchBtn" class="btn btn--success btn--inline" type="button">
+                <svg class="icon" viewBox="0 0 24 24" style="stroke:white">
+                    <use href="/img/icons.svg#rotate"/>
+                </svg>
+                Rematch
+            </button>
+            <button id="returnHomeBtn" class="btn btn--muted btn--inline" type="button">Return to main</button>
+            <button id="viewBoardBtn" class="btn btn--info btn--inline" type="button">
+                View Board
+            </button>
         </div>
     </div>
-
-    <div class="controls">
-        <button class="random-btn" id="randomBtn">🎲 Random Ships</button>
-        <button class="rotate-btn" id="rotateBtn">Rotate Ship (R)</button>
-        <button class="ready-btn" id="readyBtn" disabled>Mark Ready</button>
-        <button class="ws-clear-btn" id="copyInviteBtn">Copy Invite Link</button>
-    </div>
-
-    <div id="messageArea"></div>
 </div>
 
 <script th:inline="javascript">
@@ -111,6 +153,8 @@
     /*]]>*/
 </script>
 <script src="/js/common.js"></script>
-<script src="/js/game.js"></script>
+<script src="/js/navbar.js"></script>
+<script type="module" src="/js/game/opponentStatus.js"></script>
+<script type="module" src="/js/game/main.js"></script>
 </body>
 </html>

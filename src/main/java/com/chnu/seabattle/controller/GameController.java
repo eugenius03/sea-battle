@@ -1,75 +1,112 @@
 package com.chnu.seabattle.controller;
 
+import com.chnu.seabattle.constants.ErrorConstants;
+import com.chnu.seabattle.converter.MoveConverter;
+import com.chnu.seabattle.converter.ShipConverter;
+import com.chnu.seabattle.dto.game.GameInfoResponse;
+import com.chnu.seabattle.dto.move.MoveRequest;
+import com.chnu.seabattle.dto.move.MoveResponse;
+import com.chnu.seabattle.dto.ship.ShipRequest;
+import com.chnu.seabattle.dto.ship.ShipResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
-import com.chnu.seabattle.exception.GameRuleViolationException;
-import com.chnu.seabattle.service.AuthService;
+import com.chnu.seabattle.entity.MatchStatus;
+import com.chnu.seabattle.entity.Orientation;
+import com.chnu.seabattle.entity.Ship;
+import com.chnu.seabattle.exception.ResourceNotFoundException;
 import com.chnu.seabattle.service.GameService;
+import com.chnu.seabattle.service.MatchPlayerService;
 import com.chnu.seabattle.service.MatchService;
+import com.chnu.seabattle.service.UserService;
 import com.chnu.seabattle.service.WebSocketService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
-@Controller
-@RequestMapping("/game")
+@RestController
+@RequestMapping("/api/game")
 @RequiredArgsConstructor
 public class GameController {
 
-    private final MatchService matchService;
-    private final WebSocketService webSocketService;
     private final GameService gameService;
-    private final AuthService authService;
+    private final WebSocketService webSocketService;
+    private final MatchService matchService;
+    private final MatchPlayerService matchPlayerService;
+    private final UserService userService;
+    private final MoveConverter moveConverter;
+    private final ShipConverter shipConverter;
 
-    @GetMapping
-    public String index() {
-        return "index";
+    private MatchPlayer resolveMatchPlayer(String inviteToken) {
+        UUID userId = userService.getAuthenticatedUser().getId();
+        return matchPlayerService.findByMatchInviteTokenAndUserId(inviteToken, userId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND));
     }
 
-    @PostMapping
-    public String createMatch(RedirectAttributes redirectAttributes, Model model) {
-        UUID userId = authService.getAuthenticatedUser().getId();
-        Match match = matchService.createMatch(userId);
-        MatchPlayer player = match.getPlayers().getFirst();
-        model.addAttribute("matchPlayerId", player.getId());
-
-        return String.format("redirect:/game/%s", match.getInviteToken());
+    @PostMapping("/{inviteToken}/place-ship")
+    public Long placeShip(
+            @PathVariable String inviteToken,
+            @RequestBody @Valid ShipRequest shipRequest
+    ) {
+        UUID playerId = resolveMatchPlayer(inviteToken).getId();
+        Ship ship = gameService.placeShip(inviteToken, playerId, shipRequest);
+        return ship.getId();
     }
 
-    @GetMapping("/{inviteToken}")
-    public String gamePage(@PathVariable String inviteToken) {
-        UUID userId = authService.getAuthenticatedUser().getId();
-        Match match = matchService.getMatchByInviteToken(inviteToken);
-        match.getPlayers()
-                .stream()
-                .filter(p -> p.getUserId().equals(userId))
-                .findFirst()
-                .orElseThrow(() -> new GameRuleViolationException("You are not a player in this match."));
-
-        return "game";
+    @PostMapping("/{inviteToken}/generate-random-ships")
+    public List<ShipResponse> generateRandomShips(@PathVariable String inviteToken) {
+        UUID playerId = resolveMatchPlayer(inviteToken).getId();
+        return gameService.generateRandomShips(inviteToken, playerId)
+                .stream().map(shipConverter::toResponse).toList();
     }
 
-    @GetMapping("/join/{inviteToken}")
-    public String joinPage(@PathVariable String inviteToken) {
-        UUID userId = authService.getAuthenticatedUser().getId();
+    @PostMapping("/{inviteToken}/move-ship/{shipId}")
+    public Long moveShip(
+            @PathVariable String inviteToken,
+            @PathVariable Long shipId,
+            @RequestParam int startX,
+            @RequestParam int startY,
+            @RequestParam Orientation orientation
+    ) {
+        UUID playerId = resolveMatchPlayer(inviteToken).getId();
+        gameService.moveShip(inviteToken, playerId, shipId, startX, startY, orientation);
+        return shipId;
+    }
 
-        try {
-            Match match = matchService.joinMatch(userId, inviteToken);
-            UUID opponentId = gameService.getOpponentPlayerId(match, userId);
-            webSocketService.handleOpponentConnected(match.getId(),
-                    opponentId);
-        } catch (GameRuleViolationException e) {
-            return String.format("redirect:/game?error=%s", e.getMessage());
+    @PostMapping("/{inviteToken}/mark-ready")
+    public void markReady(@PathVariable String inviteToken) {
+        MatchPlayer player = resolveMatchPlayer(inviteToken);
+        gameService.markReady(inviteToken, player);
+    }
+
+    @PostMapping("/{inviteToken}/fire")
+    public List<MoveResponse> fire(
+            @PathVariable String inviteToken,
+            @Valid @RequestBody MoveRequest moveRequest
+    ) {
+        UUID shooterId = resolveMatchPlayer(inviteToken).getId();
+        return gameService.executeMove(inviteToken, shooterId, moveRequest).stream()
+                .map(moveConverter::toResponse)
+                .toList();
+    }
+
+    @GetMapping("{inviteToken}/info")
+    public GameInfoResponse info(@PathVariable String inviteToken) {
+        Match match = matchService.getByInviteToken(inviteToken);
+        MatchPlayer matchPlayer = resolveMatchPlayer(inviteToken);
+
+        if (MatchStatus.IN_PROGRESS.equals(match.getStatus())) {
+            gameService.handleReconnect(match, matchPlayer);
         }
 
-        return String.format("redirect:/game/%s", inviteToken);
+        return gameService.getMatchInfo(match, matchPlayer);
     }
 }
-

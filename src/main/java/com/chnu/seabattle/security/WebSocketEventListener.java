@@ -24,14 +24,15 @@ public class WebSocketEventListener {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
 
         if (headerAccessor.getSessionAttributes() != null) {
-            Long matchId = (Long) headerAccessor.getSessionAttributes().get("matchId");
+            String inviteToken = (String) headerAccessor.getSessionAttributes().get("inviteToken");
             UUID matchPlayerId = (UUID) headerAccessor.getSessionAttributes().get("matchPlayerId");
 
-            if (matchId != null && matchPlayerId != null) {
-                log.info("User disconnected from match: matchId={}, matchPlayerId={}", matchId, matchPlayerId);
-                webSocketService.handleDisconnect(matchId, matchPlayerId);
+            if (inviteToken != null && matchPlayerId != null) {
+                log.info("User disconnected from match: inviteToken={}, matchPlayerId={}", inviteToken, matchPlayerId);
+                webSocketService.handleDisconnect(inviteToken, matchPlayerId);
+                gameService.handleDisconnect(inviteToken, matchPlayerId);
             } else {
-                log.warn("WebSocket disconnect event received but missing matchId or matchPlayerId");
+                log.warn("WebSocket disconnect event received but missing inviteToken or matchPlayerId");
             }
         } else {
             log.warn("WebSocket disconnect event received but session attributes are null");

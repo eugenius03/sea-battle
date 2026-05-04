@@ -1,5 +1,6 @@
 package com.chnu.seabattle.service.impl;
 
+import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.User;
 import com.chnu.seabattle.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException(ErrorConstants.USER_NOT_FOUND));
 
         return convertToUserDetails(user);
     }

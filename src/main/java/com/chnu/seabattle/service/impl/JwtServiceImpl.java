@@ -7,6 +7,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -62,16 +63,30 @@ public class JwtServiceImpl implements JwtService {
                 .build();
     }
 
-    public String generateGuestToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("guest", true);
-        return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(username)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpirationInMs))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
+    public void clearAuthCookies(HttpServletResponse response) {
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE,
+                ResponseCookie.from("accessToken", "")
+                        .httpOnly(true)
+                        .secure(cookieSecure)
+                        .sameSite("Strict")
+                        .path("/")
+                        .maxAge(0)
+                        .build().toString());
+
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE,
+                ResponseCookie.from("refreshToken", "")
+                        .httpOnly(true)
+                        .secure(cookieSecure)
+                        .sameSite("Strict")
+                        .path("/")
+                        .maxAge(0)
+                        .build().toString());
+
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE,
+                ResponseCookie.from("JSESSIONID", "")
+                        .path("/")
+                        .maxAge(0)
+                        .build().toString());
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
@@ -83,13 +98,10 @@ public class JwtServiceImpl implements JwtService {
         return generateToken(userDetails, accessTokenExpirationInMs);
     }
 
-
     private String generateToken(
             UserDetails userDetails,
-            long expirationMs
-    ) {
+            long expirationMs) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("guest", false);
         return generateToken(claims, userDetails, expirationMs);
     }
 
@@ -142,4 +154,3 @@ public class JwtServiceImpl implements JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
-

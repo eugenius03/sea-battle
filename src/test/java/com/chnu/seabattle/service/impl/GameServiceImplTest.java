@@ -2,9 +2,9 @@ package com.chnu.seabattle.service.impl;
 
 import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.converter.ShipConverter;
-import com.chnu.seabattle.dto.FireResult;
 import com.chnu.seabattle.dto.move.MoveRequest;
 import com.chnu.seabattle.dto.move.MoveResponse;
+import com.chnu.seabattle.dto.ship.ShipRequest;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
@@ -33,6 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,7 +44,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,30 +56,25 @@ class GameServiceImplTest {
 
     @Mock
     private MatchService matchService;
-
     @Mock
     private MatchPlayerService matchPlayerService;
-
     @Mock
     private MoveService moveService;
-
     @Mock
     private ShipRepository shipRepository;
-
     @Mock
     private MoveConverter moveConverter;
-
     @Mock
     private ShipConverter shipConverter;
-
     @Mock
     private WebSocketService webSocketService;
-
     @Mock
     private Map<MoveType, MoveStrategy> strategies;
 
     @InjectMocks
     private GameServiceImpl gameService;
+
+    private static final String INVITE_TOKEN = "token1";
 
     private Match match;
     private MatchPlayer player1;
@@ -92,6 +89,7 @@ class GameServiceImplTest {
 
         match = new Match();
         match.setId(1L);
+        match.setInviteToken(INVITE_TOKEN);
         match.setStatus(MatchStatus.PLANNING);
         match.setCurrentPlayerTurnId(playerId1);
         match.setPlayers(new ArrayList<>());
@@ -115,10 +113,7 @@ class GameServiceImplTest {
 
         match.getPlayers().add(player1);
         match.getPlayers().add(player2);
-
     }
-
-    // ==================== placeShip Tests ====================
 
     @Nested
     @DisplayName("placeShip Tests")
@@ -128,19 +123,19 @@ class GameServiceImplTest {
         @DisplayName("Should successfully place a ship")
         void shouldSuccessfullyPlaceShip() {
             when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
-            when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             when(shipRepository.save(any())).thenReturn(Ship.builder()
                     .id(1L)
                     .matchPlayer(player1)
                     .shipType(ShipType.QUADRO_DECK)
-                    .startX(0)
-                    .startY(0)
-                    .hits(0)
-                    .isSunk(false)
+                    .startX(0).startY(0)
+                    .hits(0).isSunk(false)
                     .orientation(Orientation.HORIZONTAL)
                     .build());
 
-            Ship placedShip = gameService.placeShip(1L, playerId1, ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL);
+            when(shipConverter.toEntity(any(ShipRequest.class))).thenReturn(Ship.builder().build());
+
+            Ship placedShip = gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL));
 
             assertEquals(1, player1.getShips().size());
             assertEquals(ShipType.QUADRO_DECK, placedShip.getShipType());
@@ -157,327 +152,422 @@ class GameServiceImplTest {
             when(matchPlayerService.findById(any(UUID.class))).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.placeShip(1L, playerId1, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL)
+                    gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL))
             );
         }
 
+        @Test
+        @DisplayName("Should throw exception when match not found")
+        void shouldThrowExceptionWhenMatchNotFound() {
+            when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
+            when(matchService.findByInviteTokenForGame(anyString())).thenReturn(Optional.empty());
 
-//        @Test
-//        @DisplayName("Should throw exception when match is not in PLANNING status")
-//        void shouldThrowExceptionWhenNotInPlanningStatus() {
-//            match.setStatus(MatchStatus.IN_PROGRESS);
-//            when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-//
-//            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-//                    gameService.placeShip(1L, playerId1, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL)
-//            );
-//
-//            assertTrue(exception.getMessage().contains("Action not allowed in state"));
-//        }
+            assertThrows(ResourceNotFoundException.class, () ->
+                    gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL))
+            );
+        }
 
         @Test
         @DisplayName("Should throw exception when player is already ready")
         void shouldThrowExceptionWhenPlayerAlreadyReady() {
             player1.setReady(true);
             when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
-            when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.placeShip(1L, playerId1, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL)
+                    gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL))
             );
 
             assertEquals("Action unsupported: player is already ready", exception.getMessage());
         }
 
-        // ==================== markReady Tests ====================
+        @Test
+        @DisplayName("Should throw exception when ship type limit is exceeded")
+        void shouldThrowExceptionWhenShipTypeLimitExceeded() {
+            player1.getShips().add(Ship.builder()
+                    .matchPlayer(player1).shipType(ShipType.QUADRO_DECK)
+                    .startX(0).startY(0).orientation(Orientation.HORIZONTAL)
+                    .hits(0).isSunk(false).build());
 
-        @Nested
-        @DisplayName("markReady Tests")
-        class MarkReadyTests {
+            when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
 
-            @Test
-            @DisplayName("Should successfully mark player as ready")
-            void shouldSuccessfullyMarkPlayerAsReady() {
-                when(matchService.findById(1L)).thenReturn(Optional.of(match));
+            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
+                    gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.QUADRO_DECK, 0, 5, Orientation.HORIZONTAL))
+            );
 
-                gameService.markReady(1L, playerId1);
+            assertTrue(exception.getMessage().contains("Ship limit reached for type"));
+        }
+    }
 
-                assertTrue(player1.isReady());
-            }
+    @Nested
+    @DisplayName("markReady Tests")
+    class MarkReadyTests {
 
-            @Test
-            @DisplayName("Should throw exception when match not found")
-            void shouldThrowExceptionWhenMatchNotFound() {
-                when(matchService.findById(anyLong())).thenReturn(Optional.empty());
+        @Test
+        @DisplayName("Should successfully mark player as ready")
+        void shouldSuccessfullyMarkPlayerAsReady() {
+            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
-                assertThrows(ResourceNotFoundException.class, () ->
-                        gameService.markReady(1L, playerId1)
-                );
-            }
+            gameService.markReady(INVITE_TOKEN, player1);
 
-            @Test
-            @DisplayName("Should throw exception when match is not in PLANNING status")
-            void shouldThrowExceptionWhenNotInPlanningStatus() {
-                match.setStatus(MatchStatus.IN_PROGRESS);
-                when(matchService.findById(1L)).thenReturn(Optional.of(match));
-
-                GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.markReady(1L, playerId1)
-                );
-
-                assertTrue(exception.getMessage().contains("Action not allowed in match state"));
-            }
+            assertTrue(player1.isReady());
         }
 
-        // ==================== fire Tests ====================
+        @Test
+        @DisplayName("Should throw exception when match not found")
+        void shouldThrowExceptionWhenMatchNotFound() {
+            when(matchService.getByInviteToken(anyString())).thenThrow(ResourceNotFoundException.class);
 
-        @Nested
-        @DisplayName("fire Tests")
-        class FireTests {
-
-            @BeforeEach
-            void setUpFire() {
-                match.setStatus(MatchStatus.IN_PROGRESS);
-                match.setCurrentPlayerTurnId(playerId1);
-
-                Ship ship = Ship.builder()
-                        .id(1L)
-                        .matchPlayer(player2)
-                        .shipType(ShipType.TRIPLE_DECK)
-                        .startX(5)
-                        .startY(5)
-                        .orientation(Orientation.HORIZONTAL)
-                        .hits(0)
-                        .isSunk(false)
-                        .build();
-                player2.getShips().add(ship);
-
-                StandardAttackStrategy standardStrategy = new StandardAttackStrategy(moveService, moveConverter);
-                lenient().when(strategies.get(MoveType.STANDARD)).thenReturn(standardStrategy);
-                lenient().when(moveService.create(any(Move.class))).thenAnswer(inv -> inv.getArgument(0));
-                lenient().when(moveConverter.toResponse(any(Move.class))).thenAnswer(inv -> {
-                    Move m = inv.getArgument(0);
-                    return new MoveResponse(m.getTargetX(), m.getTargetY(), m.getMoveResult());
-                });
-            }
-
-            @Test
-            @DisplayName("Should successfully fire and hit a ship")
-            void shouldSuccessfullyFireAndHitShip() {
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-
-                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD));
-
-                assertEquals(MoveResult.HIT, result.moveResponses().getFirst().moveResult());
-                verify(moveService).create(any(Move.class));
-                assertEquals(1, player2.getShips().getFirst().getHits());
-                assertFalse(player2.getShips().getFirst().isSunk());
-            }
-
-            @Test
-            @DisplayName("Should successfully fire and miss")
-            void shouldSuccessfullyFireAndMiss() {
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-
-                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 0, 0, MoveType.STANDARD));
-
-                assertEquals(MoveResult.MISS, result.moveResponses().getFirst().moveResult());
-                verify(moveService).create(any(Move.class));
-                assertEquals(player2.getId(), match.getCurrentPlayerTurnId());
-            }
-
-            @Test
-            @DisplayName("Should successfully fire and sink a ship")
-            void shouldSuccessfullyFireAndSinkShip() {
-                player2.getShips().getFirst().setHits(2); // Already hit twice
-
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-
-                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD));
-
-                assertEquals(MoveResult.FINISHED, result.moveResponses().getFirst().moveResult());
-                verify(moveService).create(any(Move.class));
-                assertEquals(3, player2.getShips().getFirst().getHits());
-                assertTrue(player2.getShips().getFirst().isSunk());
-            }
-
-            @Test
-            @DisplayName("Should end game when all ships are sunk")
-            void shouldEndGameWhenAllShipsSunk() {
-                player2.getShips().getFirst().setHits(2); // Already hit twice
-
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-
-                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD));
-
-                assertEquals(MoveResult.FINISHED, result.moveResponses().getFirst().moveResult());
-                assertEquals(MatchStatus.FINISHED, match.getStatus());
-                assertEquals(playerId1, match.getWinnerId());
-                assertNotNull(match.getFinishedAt());
-            }
-
-            @Test
-            @DisplayName("Should throw exception when match not found")
-            void shouldThrowExceptionWhenMatchNotFound() {
-                when(matchService.findByIdForGame(anyLong())).thenReturn(Optional.empty());
-
-                assertThrows(ResourceNotFoundException.class, () ->
-                        gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD))
-                );
-            }
-
-            @Test
-            @DisplayName("Should throw exception when not player's turn")
-            void shouldThrowExceptionWhenNotPlayersTurn() {
-                match.setCurrentPlayerTurnId(playerId2);
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-
-                GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD))
-                );
-
-                assertEquals("It's not the player's turn", exception.getMessage());
-            }
-
-            @Test
-            @DisplayName("Should throw exception when match is not in IN_PROGRESS status")
-            void shouldThrowExceptionWhenNotInProgressStatus() {
-                match.setStatus(MatchStatus.PLANNING);
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-
-                GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD))
-                );
-
-                assertTrue(exception.getMessage().contains("Action not allowed in match state"));
-            }
-
-            @Test
-            @DisplayName("Should throw exception when firing coordinates are out of bounds")
-            void shouldThrowExceptionWhenFiringOutOfBounds() {
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-
-                GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.executeMove(1L, new MoveRequest(playerId1, 10, 10, MoveType.STANDARD))
-                );
-
-                assertEquals("Coordinates out of bounds", exception.getMessage());
-            }
-
-            @Test
-            @DisplayName("Should throw exception when firing at same coordinates twice")
-            void shouldThrowExceptionWhenFiringAtSameCoordinatesTwice() {
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-                when(moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(1L, playerId1, 5, 5, MoveType.STANDARD)).thenReturn(true);
-
-                GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                        gameService.executeMove(1L, new MoveRequest(playerId1, 5, 5, MoveType.STANDARD))
-                );
-
-                assertEquals("Cannot fire at the same coordinates twice", exception.getMessage());
-            }
-
-            @Test
-            @DisplayName("Should handle vertical ship hit correctly")
-            void shouldHandleVerticalShipHitCorrectly() {
-                player2.getShips().clear();
-                Ship verticalShip = Ship.builder()
-                        .id(2L)
-                        .matchPlayer(player2)
-                        .shipType(ShipType.DOUBLE_DECK)
-                        .startX(3)
-                        .startY(3)
-                        .orientation(Orientation.VERTICAL)
-                        .hits(0)
-                        .isSunk(false)
-                        .build();
-                player2.getShips().add(verticalShip);
-
-                when(matchService.findByIdForGame(1L)).thenReturn(Optional.of(match));
-
-                FireResult result = gameService.executeMove(1L, new MoveRequest(playerId1, 3, 4, MoveType.STANDARD));
-
-                assertEquals(MoveResult.HIT, result.moveResponses().getFirst().moveResult());
-                assertEquals(1, player2.getShips().getFirst().getHits());
-            }
+            assertThrows(ResourceNotFoundException.class, () ->
+                    gameService.markReady(INVITE_TOKEN, player1)
+            );
         }
 
-        // ==================== handleDisconnect Tests ====================
+        @Test
+        @DisplayName("Should throw exception when match is not in PLANNING status")
+        void shouldThrowExceptionWhenNotInPlanningStatus() {
+            match.setStatus(MatchStatus.IN_PROGRESS);
+            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
-        @Nested
-        @DisplayName("handleDisconnect Tests")
-        class HandleDisconnectTests {
+            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
+                    gameService.markReady(INVITE_TOKEN, player1)
+            );
 
-            @Test
-            @DisplayName("Should successfully handle player disconnect")
-            void shouldSuccessfullyHandleDisconnect() {
-                gameService.handleDisconnect(match, player1);
-
-                assertFalse(player1.isConnected());
-                assertNotNull(player1.getLastSeenAt());
-            }
+            assertTrue(exception.getMessage().contains("Action not allowed in match state"));
         }
 
-        // ==================== handleReconnect Tests ====================
+        @Test
+        @DisplayName("Should throw exception when player is already ready")
+        void shouldThrowWhenPlayerAlreadyReady() {
+            player1.setReady(true);
+            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
-        @Nested
-        @DisplayName("handleReconnect Tests")
-        class HandleReconnectTests {
-
-            @Test
-            @DisplayName("Should successfully handle player reconnect")
-            void shouldSuccessfullyHandleReconnect() {
-                player1.setConnected(false);
-
-                gameService.handleReconnect(match, player1);
-
-                assertTrue(player1.isConnected());
-                assertNotNull(player1.getLastSeenAt());
-            }
+            assertThrows(GameRuleViolationException.class, () ->
+                    gameService.markReady(INVITE_TOKEN, player1)
+            );
         }
 
-        // ==================== Guest Player Tests ====================
+        @Test
+        @DisplayName("Match stays PLANNING when only first player is ready")
+        void matchStaysPlanningWhenOnlyOnePlayerReady() {
+            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
-        @Nested
-        @DisplayName("Guest Player Tests")
-        class GuestPlayerTests {
+            gameService.markReady(INVITE_TOKEN, player1);
 
-//            @Test
-//            @DisplayName("Should successfully place ship for guest player")
-//            void shouldSuccessfullyPlaceShipForGuest() {
-//                UUID guestId = UUID.randomUUID();
-//                player1.setUserId(null);
-//                player1.setGuestId(guestId);
-//
-//                when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-//                when(matchPlayerRepository.findByMatchIdAndUserIdOrMatchIdAndGuestId(
-//                        anyLong(), any(UUID.class), anyLong(), any(UUID.class)))
-//                        .thenReturn(Optional.of(player1));
-//
-//                gameService.placeShip(1L, guestId, ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL);
-//
-//                verify(matchPlayerRepository).save(player1);
-//                assertEquals(1, player1.getShips().size());
-//            }
+            assertEquals(MatchStatus.PLANNING, match.getStatus());
+        }
 
-//            @Test
-//            @DisplayName("Should switch turn to guest player after miss")
-//            void shouldSwitchTurnToGuestPlayerAfterMiss() {
-//                match.setStatus(MatchStatus.IN_PROGRESS);
-//                UUID guestId = UUID.randomUUID();
-//                player2.setUserId(null);
-//                player2.setGuestId(guestId);
-//
-//                when(matchRepository.findById(1L)).thenReturn(Optional.of(match));
-//                when(matchPlayerRepository.findByMatchIdAndUserIdOrMatchIdAndGuestId(
-//                        anyLong(), any(UUID.class), anyLong(), any(UUID.class)))
-//                        .thenReturn(Optional.of(player1));
-//
-//                MoveResult result = gameService.fire(1L, playerId1, 0, 0);
-//
-//                assertEquals(MoveResult.MISS, result);
-//                assertEquals(guestId, match.getCurrentPlayerTurnId());
-//            }
+        @Test
+        @DisplayName("Match transitions to IN_PROGRESS when both players are ready")
+        void matchTransitionsToInProgressWhenBothPlayersReady() {
+            player2.setReady(true);
+            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
+
+            gameService.markReady(INVITE_TOKEN, player1);
+
+            assertEquals(MatchStatus.IN_PROGRESS, match.getStatus());
+            assertTrue(
+                    match.getCurrentPlayerTurnId().equals(playerId1) ||
+                            match.getCurrentPlayerTurnId().equals(playerId2)
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("fire Tests")
+    class FireTests {
+
+        @BeforeEach
+        void setUpFire() {
+            match.setStatus(MatchStatus.IN_PROGRESS);
+            match.setCurrentPlayerTurnId(playerId1);
+
+            Ship ship = Ship.builder()
+                    .id(1L)
+                    .matchPlayer(player2)
+                    .shipType(ShipType.TRIPLE_DECK)
+                    .startX(5).startY(5)
+                    .orientation(Orientation.HORIZONTAL)
+                    .hits(0).isSunk(false)
+                    .build();
+            player2.getShips().add(ship);
+
+            StandardAttackStrategy standardStrategy = new StandardAttackStrategy(moveService, moveConverter);
+            lenient().when(strategies.get(MoveType.STANDARD)).thenReturn(standardStrategy);
+            lenient().when(moveService.create(any(Move.class))).thenAnswer(inv -> inv.getArgument(0));
+            lenient().when(moveConverter.toResponse(any(Move.class))).thenAnswer(inv -> {
+                Move m = inv.getArgument(0);
+                return new MoveResponse(m.getTargetX(), m.getTargetY(), m.getMoveResult());
+            });
+        }
+
+        @Test
+        @DisplayName("Should successfully fire and hit a ship")
+        void shouldSuccessfullyFireAndHitShip() {
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+
+            assertEquals(MoveResult.HIT, result.getFirst().getMoveResult());
+            verify(moveService).create(any(Move.class));
+            assertEquals(1, player2.getShips().getFirst().getHits());
+            assertFalse(player2.getShips().getFirst().isSunk());
+        }
+
+        @Test
+        @DisplayName("Should successfully fire and miss")
+        void shouldSuccessfullyFireAndMiss() {
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(0, 0, MoveType.STANDARD));
+
+            assertEquals(MoveResult.MISS, result.getFirst().getMoveResult());
+            verify(moveService).create(any(Move.class));
+            assertEquals(player2.getId(), match.getCurrentPlayerTurnId());
+        }
+
+        @Test
+        @DisplayName("Should successfully fire and sink all ships")
+        void shouldSuccessfullyFireAndSinkShip() {
+            player2.getShips().getFirst().setHits(2);
+
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+
+            assertEquals(MoveResult.FINISHED, result.getFirst().getMoveResult());
+            verify(moveService, atLeastOnce()).create(any(Move.class));
+            assertEquals(3, player2.getShips().getFirst().getHits());
+            assertTrue(player2.getShips().getFirst().isSunk());
+        }
+
+        @Test
+        @DisplayName("Should end game when all ships are sunk")
+        void shouldEndGameWhenAllShipsSunk() {
+            player2.getShips().getFirst().setHits(2);
+
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+
+            assertEquals(MatchStatus.FINISHED, match.getStatus());
+            assertEquals(playerId1, match.getWinnerId());
+            assertNotNull(match.getFinishedAt());
+        }
+
+        @Test
+        @DisplayName("Turn stays with shooter after a hit")
+        void turnStaysWithShooterAfterHit() {
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+
+            assertEquals(playerId1, match.getCurrentPlayerTurnId());
+        }
+
+        @Test
+        @DisplayName("Should return SUNK when ship is sunk but game continues")
+        void shouldReturnSunkWhenShipSunkButGameContinues() {
+            player2.getShips().getFirst().setHits(2);
+            player2.getShips().add(Ship.builder()
+                    .id(2L).matchPlayer(player2).shipType(ShipType.SINGLE_DECK)
+                    .startX(0).startY(0).orientation(Orientation.HORIZONTAL)
+                    .hits(0).isSunk(false).build());
+
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+
+            assertTrue(result.stream().anyMatch(m -> MoveResult.SUNK.equals(m.getMoveResult())));
+            assertEquals(MatchStatus.IN_PROGRESS, match.getStatus());
+        }
+
+        @Test
+        @DisplayName("Should throw exception when match not found")
+        void shouldThrowExceptionWhenMatchNotFound() {
+            when(matchService.findByInviteTokenForGame(anyString())).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () ->
+                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD))
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when not player's turn")
+        void shouldThrowExceptionWhenNotPlayersTurn() {
+            match.setCurrentPlayerTurnId(playerId2);
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
+                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD))
+            );
+
+            assertEquals("It's not the player's turn", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should throw exception when match is not in IN_PROGRESS status")
+        void shouldThrowExceptionWhenNotInProgressStatus() {
+            match.setStatus(MatchStatus.PLANNING);
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
+                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD))
+            );
+
+            assertTrue(exception.getMessage().contains("Action not allowed in match state"));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when firing coordinates are out of bounds")
+        void shouldThrowExceptionWhenFiringOutOfBounds() {
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
+                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(10, 10, MoveType.STANDARD))
+            );
+
+            assertEquals("Coordinates out of bounds", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should throw exception when firing at same coordinates twice")
+        void shouldThrowExceptionWhenFiringAtSameCoordinatesTwice() {
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+            when(moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(1L, playerId1, 5, 5, MoveType.STANDARD)).thenReturn(true);
+
+            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
+                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD))
+            );
+
+            assertEquals("Cannot fire at the same coordinates twice", exception.getMessage());
+        }
+
+        @Test
+        @DisplayName("Should handle vertical ship hit correctly")
+        void shouldHandleVerticalShipHitCorrectly() {
+            player2.getShips().clear();
+            player2.getShips().add(Ship.builder()
+                    .id(2L).matchPlayer(player2).shipType(ShipType.DOUBLE_DECK)
+                    .startX(3).startY(3).orientation(Orientation.VERTICAL)
+                    .hits(0).isSunk(false).build());
+
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(3, 4, MoveType.STANDARD));
+
+            assertEquals(MoveResult.HIT, result.getFirst().getMoveResult());
+            assertEquals(1, player2.getShips().getFirst().getHits());
+        }
+    }
+
+    @Nested
+    @DisplayName("moveShip Tests")
+    class MoveShipTests {
+
+        @BeforeEach
+        void setUpMoveShip() {
+            player1.getShips().add(Ship.builder()
+                    .id(10L).matchPlayer(player1).shipType(ShipType.DOUBLE_DECK)
+                    .startX(0).startY(0).orientation(Orientation.HORIZONTAL)
+                    .hits(0).isSunk(false).build());
+            lenient().when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
+            lenient().when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+        }
+
+        @Test
+        @DisplayName("Should successfully move a ship to a new position")
+        void shouldSuccessfullyMoveShip() {
+            Ship result = gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL);
+
+            assertEquals(5, result.getStartX());
+            assertEquals(5, result.getStartY());
+            assertEquals(Orientation.VERTICAL, result.getOrientation());
+        }
+
+        @Test
+        @DisplayName("Should throw exception when match not found")
+        void shouldThrowWhenMatchNotFound() {
+            when(matchService.findByInviteTokenForGame(anyString())).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () ->
+                    gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL)
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when player not in match")
+        void shouldThrowWhenPlayerNotInMatch() {
+            assertThrows(ResourceNotFoundException.class, () ->
+                    gameService.moveShip(INVITE_TOKEN, UUID.randomUUID(), 10L, 5, 5, Orientation.VERTICAL)
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when player is already ready")
+        void shouldThrowWhenPlayerAlreadyReady() {
+            player1.setReady(true);
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            assertThrows(GameRuleViolationException.class, () ->
+                    gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL)
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ship not found")
+        void shouldThrowWhenShipNotFound() {
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            assertThrows(ResourceNotFoundException.class, () ->
+                    gameService.moveShip(INVITE_TOKEN, playerId1, 999L, 5, 5, Orientation.VERTICAL)
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when new placement is invalid")
+        void shouldThrowWhenNewPlacementIsInvalid() {
+            player1.getShips().add(Ship.builder()
+                    .id(11L).matchPlayer(player1).shipType(ShipType.SINGLE_DECK)
+                    .startX(5).startY(5).orientation(Orientation.HORIZONTAL)
+                    .hits(0).isSunk(false).build());
+            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+
+            assertThrows(GameRuleViolationException.class, () ->
+                    gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.HORIZONTAL)
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("handleDisconnect Tests")
+    class HandleDisconnectTests {
+
+        @Test
+        @DisplayName("Should successfully handle player disconnect")
+        void shouldSuccessfullyHandleDisconnect() {
+            when(matchService.findByInviteTokenForGame(match.getInviteToken())).thenReturn(Optional.of(match));
+            gameService.handleDisconnect(match.getInviteToken(), player1.getId());
+
+            assertFalse(player1.isConnected());
+            assertNotNull(player1.getLastSeenAt());
+        }
+    }
+
+    @Nested
+    @DisplayName("handleReconnect Tests")
+    class HandleReconnectTests {
+
+        @Test
+        @DisplayName("Should successfully handle player reconnect")
+        void shouldSuccessfullyHandleReconnect() {
+            player1.setConnected(false);
+
+            gameService.handleReconnect(match, player1);
+
+            assertTrue(player1.isConnected());
+            assertNotNull(player1.getLastSeenAt());
         }
     }
 }

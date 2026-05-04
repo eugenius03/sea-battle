@@ -38,7 +38,7 @@ public class MoveServiceImpl extends AbstractBaseService<Move, Long> implements 
     }
 
     @Override
-    public long countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(Long matchId, UUID shooterId, MoveType moveType) {
+    public long countUsagesForMoveType(Long matchId, UUID shooterId, MoveType moveType) {
         return moveRepository.countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(matchId, shooterId, moveType);
     }
 }

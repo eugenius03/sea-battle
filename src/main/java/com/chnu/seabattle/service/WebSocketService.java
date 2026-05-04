@@ -1,7 +1,7 @@
 package com.chnu.seabattle.service;
 
-import com.chnu.seabattle.dto.GameInfoResponse;
 import com.chnu.seabattle.dto.move.MoveResponse;
+import com.chnu.seabattle.dto.ship.ShipResponse;
 import com.chnu.seabattle.entity.MatchStatus;
 
 import java.util.List;
@@ -9,23 +9,21 @@ import java.util.UUID;
 
 public interface WebSocketService {
 
-    void handleOpponentConnected(Long matchId, UUID matchPlayerId);
+    void handleOpponentConnected(String inviteToken, UUID matchPlayerId);
 
-    void handleDisconnect(Long matchId, UUID matchPlayerId);
+    void handleDisconnect(String inviteToken, UUID matchPlayerId);
 
-    void sendPlayerReadyMessage(Long matchId, UUID matchPlayerId);
+    void sendPlayerReadyMessage(String inviteToken, UUID matchPlayerId);
 
-    void handleReconnect(Long matchId, UUID matchPlayerId);
+    void handleReconnect(String inviteToken, UUID matchPlayerId);
 
-    void updateMatchStatus(Long matchId, MatchStatus matchStatus, UUID currentTurnPlayerId);
+    void updateMatchStatus(String inviteToken, MatchStatus matchStatus, UUID currentTurnPlayerId, List<ShipResponse> winnerShips);
 
-    void sendOpponentMoveMessage(Long matchId, UUID recipientMatchPlayerId,
+    void sendOpponentMoveMessage(String inviteToken, UUID recipientMatchPlayerId,
                                  List<MoveResponse> moveResponses, boolean isItMyTurn
     );
 
-    void sendReconnectData(
-            Long matchId,
-            UUID recipientMatchPlayerId,
-            GameInfoResponse gameInfoResponse
-    );
+    void sendRematchRequested(String inviteToken, UUID matchPlayerId);
+
+    void sendRematchAgreed(String inviteToken, String newInviteToken);
 }

@@ -1,5 +1,6 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,9 +9,9 @@ import java.util.List;
 import java.util.Optional;
 
 @Transactional
-public abstract class AbstractBaseService<T, ID> implements BaseService<T, ID> {
+public abstract class AbstractBaseService<T, I> implements BaseService<T, I> {
 
-    protected abstract JpaRepository<T, ID> getRepository();
+    protected abstract JpaRepository<T, I> getRepository();
 
     public T create(T entity) {
         beforeCreate(entity);
@@ -27,7 +28,7 @@ public abstract class AbstractBaseService<T, ID> implements BaseService<T, ID> {
     }
 
     @Transactional(readOnly = true)
-    public Optional<T> findById(ID id) {
+    public Optional<T> findById(I id) {
         return getRepository().findById(id);
     }
 
@@ -36,9 +37,9 @@ public abstract class AbstractBaseService<T, ID> implements BaseService<T, ID> {
         return getRepository().findAll();
     }
 
-    public void deleteById(ID id) {
+    public void deleteById(I id) {
         T entity = getRepository().findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Entity not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.ENTITY_NOT_FOUND));
         beforeDelete(entity);
         getRepository().delete(entity);
         afterDelete(entity);

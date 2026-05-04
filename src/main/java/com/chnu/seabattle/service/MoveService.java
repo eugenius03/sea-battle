@@ -14,7 +14,7 @@ public interface MoveService extends BaseService<Move, Long> {
 
     long countByMatchIdAndShooterIdAndMoveType(Long matchId, UUID shooterId, MoveType moveType);
 
-    long countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(Long matchId, UUID shooterId, MoveType moveType);
+    long countUsagesForMoveType(Long matchId, UUID shooterId, MoveType moveType);
 }
 
 

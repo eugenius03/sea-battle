@@ -8,6 +8,8 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
@@ -19,12 +21,17 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         String requestUri = request.getRequestURI();
 
-        if (requestUri.startsWith("/api/")) {
+        if (requestUri.contains("/api/")) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"Unauthorized - Please login first\"}");
         } else {
-            response.sendRedirect("/login");
+            String redirect = requestUri;
+            String query = request.getQueryString();
+            if (query != null && !query.isEmpty()) {
+                redirect += "?" + query;
+            }
+            response.sendRedirect("/login?redirect=" + URLEncoder.encode(redirect, StandardCharsets.UTF_8));
         }
     }
 }
