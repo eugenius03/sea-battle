@@ -1,10 +1,9 @@
 package com.chnu.seabattle.service.strategy;
 
+import com.chnu.seabattle.config.DroneConfig;
 import com.chnu.seabattle.constants.ErrorConstants;
-import com.chnu.seabattle.converter.MoveConverter;
-import com.chnu.seabattle.dto.Cell;
+import com.chnu.seabattle.dto.game.Cell;
 import com.chnu.seabattle.dto.move.MoveRequest;
-import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.Move;
@@ -14,7 +13,6 @@ import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
 import com.chnu.seabattle.service.MoveService;
 import com.chnu.seabattle.util.BoardUtils;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,14 +20,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 public class SurveillanceDroneStrategy implements MoveStrategy {
 
     private final MoveService moveService;
-    private final MoveConverter moveConverter;
+    private final DroneConfig droneConfig;
+
+    public SurveillanceDroneStrategy(MoveService moveService, DroneConfig droneConfig) {
+        this.moveService = moveService;
+        this.droneConfig = droneConfig;
+    }
 
     @Override
     public MoveType getType() {
@@ -37,22 +40,20 @@ public class SurveillanceDroneStrategy implements MoveStrategy {
     }
 
     @Override
-    public void validate(Match match, MoveRequest moveRequest) {
-
-        long used = moveService.countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(
-                match.getId(), moveRequest.shooterId(), getType());
-        if (used >= getType().getMaxUsesPerMatch()) {
+    public void validate(Match match, UUID shooterId, MoveRequest moveRequest) {
+        long used = moveService.countUsagesForMoveType(match.getId(), shooterId, getType());
+        if (used >= droneConfig.getSurveillanceMaxUsages()) {
             throw new GameRuleViolationException(ErrorConstants.DRONE_LIMIT_EXCEEDED);
         }
     }
 
     @Override
     @Transactional
-    public List<MoveResponse> execute(Match match, MoveRequest moveRequest) {
-        validate(match, moveRequest);
+    public List<Move> execute(Match match, UUID shooterId, MoveRequest moveRequest) {
+        validate(match, shooterId, moveRequest);
 
         MatchPlayer opponent = match.getPlayers().stream()
-                .filter(mp -> !mp.getId().equals(moveRequest.shooterId()))
+                .filter(mp -> !mp.getId().equals(shooterId))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND));
 
@@ -75,7 +76,7 @@ public class SurveillanceDroneStrategy implements MoveStrategy {
                         : MoveResult.MISS;
                 found.add(Move.builder()
                         .match(match)
-                        .shooterId(moveRequest.shooterId())
+                        .shooterId(shooterId)
                         .targetX(nx)
                         .targetY(ny)
                         .moveType(MoveType.SURVEILLANCE_DRONE)
@@ -86,12 +87,10 @@ public class SurveillanceDroneStrategy implements MoveStrategy {
                 );
             }
         }
-        match.setCurrentPlayerTurnId(
-                opponent.getId()
-        );
+        match.setCurrentPlayerTurnId(opponent.getId());
 
         found.forEach(moveService::create);
 
-        return found.stream().map(moveConverter::toResponse).toList();
+        return found.stream().toList();
     }
 }

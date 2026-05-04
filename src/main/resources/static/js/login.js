@@ -20,7 +20,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (response.ok) {
-                globalThis.location.href = '/game';
+                const redirectInput = document.getElementById('redirectUrl');
+                globalThis.location.href = redirectInput ? redirectInput.value : '/game';
             } else {
                 await response.text();
                 showError('Invalid username or password');

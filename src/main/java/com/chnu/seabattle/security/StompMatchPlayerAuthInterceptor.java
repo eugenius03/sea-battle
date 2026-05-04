@@ -22,7 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StompMatchPlayerAuthInterceptor implements ChannelInterceptor {
 
-    private static final String H_MATCH_ID = "X-Match-Id";
+    private static final String H_INVITE_TOKEN = "X-Invite-Token";
     private static final String H_MATCH_PLAYER_ID = "X-Match-Player-Id";
 
     private final MatchPlayerRepository matchPlayerRepository;
@@ -37,14 +37,14 @@ public class StompMatchPlayerAuthInterceptor implements ChannelInterceptor {
         }
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-            Long matchId = parseLongHeader(accessor, H_MATCH_ID);
-            UUID matchPlayerId = UUID.fromString(firstNativeHeader(accessor, H_MATCH_PLAYER_ID));
-
-            if (matchId == null || matchPlayerId == null) {
+            String inviteToken = firstNativeHeader(accessor, H_INVITE_TOKEN);
+            String matchPlayerIdRaw = firstNativeHeader(accessor, H_MATCH_PLAYER_ID);
+            if (inviteToken == null || matchPlayerIdRaw == null) {
                 throw new IllegalArgumentException(ErrorConstants.MISSING_MATCH_HEADERS);
             }
+            UUID matchPlayerId = UUID.fromString(matchPlayerIdRaw);
             MatchPlayer mp = matchPlayerRepository
-                    .findByMatchIdAndId(matchId, matchPlayerId)
+                    .findByMatchInviteTokenAndId(inviteToken, matchPlayerId)
                     .orElseThrow(() -> new IllegalArgumentException(ErrorConstants.INVALID_MATCH_HEADERS));
 
             Principal principal = new UsernamePasswordAuthenticationToken(
@@ -53,7 +53,7 @@ public class StompMatchPlayerAuthInterceptor implements ChannelInterceptor {
 
             accessor.setUser(principal);
 
-            accessor.getSessionAttributes().put("matchId", matchId);
+            accessor.getSessionAttributes().put("inviteToken", inviteToken);
             accessor.getSessionAttributes().put("matchPlayerId", mp.getId());
         }
         return message;
@@ -61,15 +61,5 @@ public class StompMatchPlayerAuthInterceptor implements ChannelInterceptor {
 
     private static String firstNativeHeader(StompHeaderAccessor accessor, String name) {
         return accessor.getFirstNativeHeader(name);
-    }
-
-    private static Long parseLongHeader(StompHeaderAccessor accessor, String name) {
-        String v = accessor.getFirstNativeHeader(name);
-        if (v == null) return null;
-        try {
-            return Long.parseLong(v);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException(String.format(ErrorConstants.INVALID_HEADER_VALUE, name));
-        }
     }
 }

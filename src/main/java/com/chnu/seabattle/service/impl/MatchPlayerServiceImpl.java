@@ -24,8 +24,8 @@ public class MatchPlayerServiceImpl extends AbstractBaseService<MatchPlayer, UUI
     }
 
     @Override
-    public Optional<MatchPlayer> findByMatchIdAndUserId(Long matchId, UUID userId) {
-        return matchPlayerRepository.findByMatchIdAndUserId(matchId, userId);
+    public Optional<MatchPlayer> findByMatchInviteTokenAndUserId(String inviteToken, UUID userId) {
+        return matchPlayerRepository.findByMatchInviteTokenAndUserId(inviteToken, userId);
     }
 
     @Override

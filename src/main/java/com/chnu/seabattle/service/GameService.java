@@ -1,14 +1,13 @@
 package com.chnu.seabattle.service;
 
-import com.chnu.seabattle.dto.FireResult;
-import com.chnu.seabattle.dto.GameInfoResponse;
+import com.chnu.seabattle.dto.game.GameInfoResponse;
 import com.chnu.seabattle.dto.move.MoveRequest;
-import com.chnu.seabattle.dto.ship.ShipResponse;
+import com.chnu.seabattle.dto.ship.ShipRequest;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
+import com.chnu.seabattle.entity.Move;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
-import com.chnu.seabattle.entity.ShipType;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,23 +16,22 @@ import java.util.UUID;
 @Service
 public interface GameService {
 
-    Ship placeShip(Long matchId, UUID playerId, ShipType type, int startX,
-                   int startY, Orientation orientation);
+    Ship placeShip(String inviteToken, UUID playerId, ShipRequest shipRequest);
 
-    List<ShipResponse> generateRandomShips(Long matchId, UUID playerId);
+    List<Ship> generateRandomShips(String inviteToken, UUID playerId);
 
-    Ship moveShip(Long matchId, UUID playerId, Long shipId, int x, int y, Orientation orientation);
+    Ship moveShip(String inviteToken, UUID playerId, Long shipId, int x, int y, Orientation orientation);
 
-    Match markReady(Long matchId, UUID playerId);
+    Match markReady(String inviteToken, MatchPlayer player);
 
-    FireResult executeMove(Long matchId, MoveRequest moveRequest);
+    List<Move> executeMove(String inviteToken, UUID shooterId, MoveRequest moveRequest);
 
-    void handleDisconnect(Match match, MatchPlayer player);
+    void handleDisconnect(String inviteToken, UUID matchPlayerId);
 
     void handleReconnect(Match match, MatchPlayer player);
 
     UUID getOpponentPlayerId(Match match, UUID playerId);
 
-    GameInfoResponse getMatchInfo(Long matchId, MatchPlayer matchPlayer);
+    GameInfoResponse getMatchInfo(Match match, MatchPlayer matchPlayer);
 
 }

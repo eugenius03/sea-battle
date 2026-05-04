@@ -1,10 +1,10 @@
 package com.chnu.seabattle.service.strategy;
 
+import com.chnu.seabattle.config.DroneConfig;
 import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.converter.MoveConverter;
-import com.chnu.seabattle.dto.Cell;
+import com.chnu.seabattle.dto.game.Cell;
 import com.chnu.seabattle.dto.move.MoveRequest;
-import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.Move;
@@ -20,14 +20,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 
 @Component
 public class AttackDroneStrategy extends AbstractAttackStrategy {
 
     private final Random random = new Random();
+    private final DroneConfig droneConfig;
 
-    public AttackDroneStrategy(MoveService moveService, MoveConverter moveConverter) {
+    public AttackDroneStrategy(MoveService moveService, MoveConverter moveConverter, DroneConfig droneConfig) {
         super(moveService, moveConverter);
+        this.droneConfig = droneConfig;
     }
 
     @Override
@@ -36,21 +40,19 @@ public class AttackDroneStrategy extends AbstractAttackStrategy {
     }
 
     @Override
-    public void validate(Match match, MoveRequest moveRequest) {
-        long used = moveService.countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(
-                match.getId(), moveRequest.shooterId(), getType());
-        if (used >= getType().getMaxUsesPerMatch()) {
+    public void validate(Match match, UUID shooterId, MoveRequest moveRequest) {
+        long used = moveService.countUsagesForMoveType(match.getId(), shooterId, getType());
+        if (used >= droneConfig.getAttackMaxUsages()) {
             throw new GameRuleViolationException(ErrorConstants.DRONE_LIMIT_EXCEEDED);
         }
     }
 
     @Override
     @Transactional
-    public List<MoveResponse> execute(Match match, MoveRequest moveRequest) {
-        validate(match, moveRequest);
+    public List<Move> execute(Match match, UUID shooterId, MoveRequest moveRequest) {
+        validate(match, shooterId, moveRequest);
 
-        MatchPlayer opponent = getOpponent(match, moveRequest.shooterId());
-
+        MatchPlayer opponent = getOpponent(match, shooterId);
 
         int cx = moveRequest.x();
         int cy = moveRequest.y();
@@ -70,6 +72,7 @@ public class AttackDroneStrategy extends AbstractAttackStrategy {
                 .limit(shotCount)
                 .toList();
 
+        Set<Cell> targetedCells = collectTargetedCells(match, shooterId);
         List<Move> moves = new ArrayList<>();
         boolean gameOver = false;
         boolean isFirstMove = true;
@@ -77,7 +80,7 @@ public class AttackDroneStrategy extends AbstractAttackStrategy {
         for (Cell cell : targetCells) {
             Move move = Move.builder()
                     .match(match)
-                    .shooterId(moveRequest.shooterId())
+                    .shooterId(shooterId)
                     .targetX(cell.x())
                     .targetY(cell.y())
                     .moveType(MoveType.ATTACK_DRONE)
@@ -86,11 +89,17 @@ public class AttackDroneStrategy extends AbstractAttackStrategy {
 
             isFirstMove = false;
 
-            MoveResult result = resolveHit(match, opponent, move);
-            move.setMoveResult(result);
-            moves.add(moveService.create(move));
+            HitResult hitResult = resolveHit(match, opponent, move);
+            move.setMoveResult(hitResult.result());
+            Move savedMove = moveService.create(move);
+            moves.add(savedMove);
+            targetedCells.add(cell);
 
-            if (MoveResult.FINISHED.equals(result)) {
+            if (hitResult.isShipSunk()) {
+                moves.addAll(createSurroundingMissMoves(hitResult.sunkShip(), match, shooterId, targetedCells));
+            }
+
+            if (MoveResult.FINISHED.equals(hitResult.result())) {
                 gameOver = true;
                 break;
             }
@@ -100,6 +109,6 @@ public class AttackDroneStrategy extends AbstractAttackStrategy {
             match.setCurrentPlayerTurnId(opponent.getId());
         }
 
-        return moves.stream().map(moveConverter::toResponse).toList();
+        return moves;
     }
 }

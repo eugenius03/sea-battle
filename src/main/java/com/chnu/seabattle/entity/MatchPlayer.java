@@ -38,7 +38,7 @@ public class MatchPlayer {
     @JoinColumn(name = "match_id", nullable = false)
     private Match match;
 
-    @JoinColumn(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
     private boolean isReady;
@@ -52,4 +52,5 @@ public class MatchPlayer {
     @Column(nullable = false)
     private boolean connected;
 
+    private boolean wantsRematch = false;
 }

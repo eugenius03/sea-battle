@@ -1,7 +1,7 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.dto.match.MatchResponse;
 import com.chnu.seabattle.entity.Match;
-import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -10,9 +10,11 @@ public interface MatchService extends BaseService<Match, Long> {
 
     Match createMatch(UUID userId);
 
-    Optional<Match> findByIdForGame(@Param("id") Long id);
+    Optional<Match> findByInviteTokenForGame(String inviteToken);
 
     Match joinMatch(UUID userId, String inviteToken);
 
-    Match getMatchByInviteToken(String inviteToken);
+    Match getByInviteToken(String inviteToken);
+
+    Optional<MatchResponse> processRematch(String inviteToken, UUID userId);
 }

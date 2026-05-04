@@ -1,11 +1,11 @@
 package com.chnu.seabattle.service.impl;
 
-import com.chnu.seabattle.dto.GameInfoResponse;
-import com.chnu.seabattle.dto.MatchStatusMessage;
-import com.chnu.seabattle.dto.MoveMessage;
-import com.chnu.seabattle.dto.PresenceMessage;
-import com.chnu.seabattle.dto.PresenseEventType;
+import com.chnu.seabattle.dto.match.MatchStatusMessage;
 import com.chnu.seabattle.dto.move.MoveResponse;
+import com.chnu.seabattle.dto.ship.ShipResponse;
+import com.chnu.seabattle.dto.ws.MoveMessage;
+import com.chnu.seabattle.dto.ws.PresenceEventType;
+import com.chnu.seabattle.dto.ws.PresenceMessage;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
@@ -24,89 +24,85 @@ public class WebSocketServiceImpl implements WebSocketService {
 
     private final SimpMessagingTemplate messagingTemplate;
 
-    private String presenceTopic(Long matchId) {
-        return "/topic/match/" + matchId + "/presence";
+    private String presenceTopic(String inviteToken) {
+        return "/topic/match/" + inviteToken + "/presence";
     }
 
-    private String statusTopic(Long matchId) {
-        return "/topic/match/" + matchId + "/status";
+    private String statusTopic(String inviteToken) {
+        return "/topic/match/" + inviteToken + "/status";
     }
 
-    private String privateQueue(Long matchId) {
-        return "/queue/match/" + matchId;
+    private String privateQueue(String inviteToken) {
+        return "/queue/match/" + inviteToken;
     }
 
     @Override
-    public void handleOpponentConnected(Long matchId, UUID matchPlayerId) {
+    public void handleOpponentConnected(String inviteToken, UUID matchPlayerId) {
         messagingTemplate.convertAndSend(
-                presenceTopic(matchId),
+                presenceTopic(inviteToken),
                 PresenceMessage.builder()
-                        .matchId(matchId)
                         .matchPlayerId(matchPlayerId)
-                        .presenseEventType(PresenseEventType.OPPONENT_CONNECTED)
+                        .presenceEventType(PresenceEventType.OPPONENT_CONNECTED)
                         .at(Instant.now())
                         .build()
         );
     }
 
     @Override
-    public void handleDisconnect(Long matchId, UUID matchPlayerId) {
+    public void handleDisconnect(String inviteToken, UUID matchPlayerId) {
         messagingTemplate.convertAndSend(
-                presenceTopic(matchId),
+                presenceTopic(inviteToken),
                 PresenceMessage.builder()
-                        .matchId(matchId)
                         .matchPlayerId(matchPlayerId)
-                        .presenseEventType(PresenseEventType.DISCONNECTED)
+                        .presenceEventType(PresenceEventType.DISCONNECTED)
                         .at(Instant.now())
                         .build()
         );
     }
 
     @Override
-    public void sendPlayerReadyMessage(Long matchId, UUID matchPlayerId) {
+    public void sendPlayerReadyMessage(String inviteToken, UUID matchPlayerId) {
         messagingTemplate.convertAndSend(
-                presenceTopic(matchId),
+                presenceTopic(inviteToken),
                 PresenceMessage.builder()
-                        .matchId(matchId)
                         .matchPlayerId(matchPlayerId)
-                        .presenseEventType(PresenseEventType.OPPONENT_READY)
+                        .presenceEventType(PresenceEventType.OPPONENT_READY)
                         .at(Instant.now())
                         .build()
         );
     }
 
     @Override
-    public void handleReconnect(Long matchId, UUID matchPlayerId) {
+    public void handleReconnect(String inviteToken, UUID matchPlayerId) {
         messagingTemplate.convertAndSend(
-                presenceTopic(matchId),
+                presenceTopic(inviteToken),
                 PresenceMessage.builder()
-                        .matchId(matchId)
                         .matchPlayerId(matchPlayerId)
-                        .presenseEventType(PresenseEventType.RECONNECTED)
+                        .presenceEventType(PresenceEventType.RECONNECTED)
                         .at(Instant.now())
                         .build()
         );
     }
 
     @Override
-    public void updateMatchStatus(Long matchId, MatchStatus matchStatus, UUID currentTurnPlayerId) {
+    public void updateMatchStatus(String inviteToken, MatchStatus matchStatus, UUID currentTurnPlayerId, List<ShipResponse> winnerShips) {
         messagingTemplate.convertAndSend(
-                statusTopic(matchId),
+                statusTopic(inviteToken),
                 MatchStatusMessage.builder()
-                        .matchId(matchId)
+                        .inviteToken(inviteToken)
                         .matchStatus(matchStatus)
                         .at(Instant.now())
                         .currentTurnPlayerId(currentTurnPlayerId)
+                        .winnerShips(winnerShips)
                         .build()
         );
     }
 
     @Override
-    public void sendOpponentMoveMessage(Long matchId, UUID recipientMatchPlayerId,
+    public void sendOpponentMoveMessage(String inviteToken, UUID recipientMatchPlayerId,
                                         List<MoveResponse> moveResponses, boolean isItMyTurn
     ) {
         MoveMessage payload = new MoveMessage(
-                matchId,
                 recipientMatchPlayerId,
                 moveResponses,
                 Instant.now(),
@@ -115,22 +111,32 @@ public class WebSocketServiceImpl implements WebSocketService {
 
         messagingTemplate.convertAndSendToUser(
                 recipientMatchPlayerId.toString(),
-                privateQueue(matchId),
+                privateQueue(inviteToken),
                 payload
         );
-
     }
 
     @Override
-    public void sendReconnectData(
-            Long matchId,
-            UUID recipientMatchPlayerId,
-            GameInfoResponse gameInfoResponse
-    ) {
-        messagingTemplate.convertAndSendToUser(
-                recipientMatchPlayerId.toString(),
-                privateQueue(matchId),
-                gameInfoResponse
+    public void sendRematchRequested(String inviteToken, UUID matchPlayerId) {
+        messagingTemplate.convertAndSend(
+                presenceTopic(inviteToken),
+                PresenceMessage.builder()
+                        .matchPlayerId(matchPlayerId)
+                        .presenceEventType(PresenceEventType.REMATCH_REQUESTED)
+                        .at(Instant.now())
+                        .build()
+        );
+    }
+
+    @Override
+    public void sendRematchAgreed(String inviteToken, String newInviteToken) {
+        messagingTemplate.convertAndSend(
+                presenceTopic(inviteToken),
+                PresenceMessage.builder()
+                        .presenceEventType(PresenceEventType.REMATCH_AGREED)
+                        .inviteToken(newInviteToken)
+                        .at(Instant.now())
+                        .build()
         );
     }
 }

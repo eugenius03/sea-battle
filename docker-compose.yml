@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
-      - "5433:5432"
+      - "5432:5432"
 
   backend:
     build:
@@ -27,6 +27,7 @@ services:
       JWT_SECRET: AvaBwBD0xSg1ZlAop3WyS3XxdvjRJ9ezTAKjYQ0dak2
       REFRESH_TOKEN_EXPIRATION: 604800000
       ACCESS_TOKEN_EXPIRATION: 900000
+      WEBSOCKET_ALLOWED_ORIGINS: *
 
 volumes:
   postgres_data:

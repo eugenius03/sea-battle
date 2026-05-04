@@ -11,13 +11,14 @@ public final class ErrorConstants {
     public static final String SHIP_NOT_FOUND = "Ship not found";
     public static final String USER_NOT_FOUND = "User not found";
     public static final String AUTHENTICATED_USER_NOT_FOUND = "Authenticated user not found in database";
-    public static final String MATCH_PLAYER_NOT_FOUND = "MatchPlayer not found";
+    public static final String ENTITY_NOT_FOUND = "Entity not found";
 
     // --- Authentication / Authorization ---
     public static final String USERNAME_ALREADY_EXISTS = "Username already exists";
     public static final String REFRESH_TOKEN_EXPIRED = "Refresh token expired";
     public static final String INVALID_TOKEN = "Invalid token";
     public static final String USER_NOT_AUTHENTICATED = "User is not authenticated";
+    public static final String SHORT_PASSWORD = "Your password is too short";
 
     // --- Match rules ---
     public static final String ONLY_TWO_PLAYERS = "Match must have exactly 2 players";
@@ -41,7 +42,8 @@ public final class ErrorConstants {
     public static final String UNKNOWN_MOVE_TYPE = "Unknown or unimplemented move type: %s";
 
     // --- WebSocket / STOMP ---
-    public static final String MISSING_MATCH_HEADERS = "Missing X-Match-Id / X-Match-Player-Id";
-    public static final String INVALID_MATCH_HEADERS = "Invalid X-Match-Id / X-Match-Player-Id";
-    public static final String INVALID_HEADER_VALUE = "Invalid %s";
+    public static final String MISSING_MATCH_HEADERS = "Missing X-Invite-Token / X-Match-Player-Id";
+    public static final String INVALID_MATCH_HEADERS = "Invalid X-Invite-Token / X-Match-Player-Id";
+
+    public static final String SHIP_GENERATION_FAILED = "Failed to generate a valid board layout after maximum attempts";
 }

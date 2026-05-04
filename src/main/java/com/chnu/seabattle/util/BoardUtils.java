@@ -1,6 +1,6 @@
 package com.chnu.seabattle.util;
 
-import com.chnu.seabattle.dto.Cell;
+import com.chnu.seabattle.dto.game.Cell;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.entity.ShipType;

@@ -13,8 +13,8 @@ import java.util.Optional;
 public interface MatchRepository extends JpaRepository<Match, Long> {
 
     @EntityGraph(attributePaths = {"players"})
-    @Query("SELECT m FROM Match m WHERE m.id = :id")
-    Optional<Match> findByIdForGame(@Param("id") Long id);
+    @Query("SELECT m FROM Match m WHERE m.inviteToken = :inviteToken")
+    Optional<Match> findByInviteTokenForGame(@Param("inviteToken") String inviteToken);
 
     @EntityGraph(attributePaths = {"players"})
     Optional<Match> findByInviteToken(String inviteToken);

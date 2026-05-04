@@ -7,7 +7,5 @@ import java.util.UUID;
 
 public interface MatchPlayerService extends BaseService<MatchPlayer, UUID> {
 
-    Optional<MatchPlayer> findByMatchIdAndUserId(
-            Long matchId, UUID userId
-    );
+    Optional<MatchPlayer> findByMatchInviteTokenAndUserId(String inviteToken, UUID userId);
 }

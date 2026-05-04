@@ -49,9 +49,9 @@ public class Ship {
     @Column(nullable = false)
     private Orientation orientation;
 
-    private int hits;
+    private int hits = 0;
 
-    private boolean isSunk;
+    private boolean isSunk = false;
 
 }
 

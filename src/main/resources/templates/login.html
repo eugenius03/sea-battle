@@ -1,62 +1,64 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sea Battle - Login</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap"
-          rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/login.css">
 </head>
-<body>
-<div class="container">
-    <div class="form-header">
-        <h1>🚢 Sea Battle</h1>
-    </div>
-    <div class="subtitle">Login to your account</div>
+<body class="has-navbar">
 
-    <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
-    <div th:if="${success}" class="alert alert-success">
-        You have successfully logged out!
-    </div>
+<div th:replace="~{fragments/navbar :: navbar('login')}"></div>
 
-    <form th:action="@{/api/auth/login}" method="post" id="loginForm">
-        <div class="form-group">
-            <label for="username">Username <span class="required">*</span></label>
-            <input type="text"
-                   id="username"
-                   name="username"
-                   placeholder="Enter your username"
-                   required
-                   autofocus>
+<div class="page-center">
+    <div class="auth-card">
+        <div class="form-header">
+            <span class="logo-lock">
+                <img src="/img/logo.svg" alt="">
+                <span class="wm">Sea Battle</span>
+            </span>
+        </div>
+        <div class="subtitle">Login to your account</div>
+
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+        <div th:if="${success}" class="alert alert-success">
+            You have successfully logged out!
         </div>
 
-        <div class="form-group">
-            <label for="password">Password <span class="required">*</span></label>
-            <input type="password"
-                   id="password"
-                   name="password"
-                   placeholder="Enter your password"
-                   required>
+        <form th:action="@{/api/auth/login}" method="post" id="loginForm">
+            <input th:if="${redirect}" type="hidden" id="redirectUrl" th:value="${redirect}">
+            <div class="field">
+                <label for="username">Username <span class="req">*</span></label>
+                <input type="text"
+                       id="username"
+                       name="username"
+                       placeholder="Enter your username"
+                       required
+                       autofocus>
+            </div>
+
+            <div class="field">
+                <label for="password">Password <span class="req">*</span></label>
+                <input type="password"
+                       id="password"
+                       name="password"
+                       placeholder="Enter your password"
+                       required>
+            </div>
+
+            <button type="submit" class="btn">Login</button>
+        </form>
+
+        <div class="auth-link">
+            Don't have an account? <a href="/register">Register here</a>
         </div>
-
-        <div class="remember-me">
-            <input type="checkbox" id="remember" name="remember">
-            <label for="remember">Remember me</label>
-        </div>
-
-        <button type="submit">Login</button>
-    </form>
-
-    <div class="auth-link">
-        Don't have an account? <a href="/register">Register here</a>
     </div>
 </div>
 
 <script src="/js/common.js"></script>
+<script src="/js/navbar.js"></script>
 <script src="/js/login.js"></script>
 </body>
 </html>
