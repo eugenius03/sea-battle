@@ -21,9 +21,13 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sea_battle_db
       SPRING_PROFILES_ACTIVE: prod
       PORT: 8080
-      DB_URL: jdbc:postgresql://localhost:5432/sea_battle_db
+      DB_URL: jdbc:postgresql://postgres:5432/sea_battle_db
       DB_USERNAME: user
       DB_PASSWORD: password
+      JWT_SECRET: AvaBwBD0xSg1ZlAop3WyS3XxdvjRJ9ezTAKjYQ0dak2
+      REFRESH_TOKEN_EXPIRATION: 604800000
+      ACCESS_TOKEN_EXPIRATION: 900000
+      WEBSOCKET_ALLOWED_ORIGINS: "*"
 
 volumes:
   postgres_data:

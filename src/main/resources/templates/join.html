@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sea Battle - Joining Match</title>
+    <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body class="has-navbar">
+
+<div th:replace="~{fragments/navbar :: navbar('home')}"></div>
+
+<div class="page-center">
+    <div class="auth-card" style="text-align:center;">
+        <span class="logo-lock">
+            <img src="/img/logo.svg" alt="">
+            <span class="wm">Sea Battle</span>
+        </span>
+        <p id="joinStatus" style="margin-top: 24px;">Joining match…</p>
+    </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/join.js"></script>
+</body>
+</html>

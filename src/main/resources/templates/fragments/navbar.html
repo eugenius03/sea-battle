@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<nav th:fragment="navbar(active)" class="navbar">
+    <a id="navBrandLink" class="navbar-brand"
+       href="/login"
+       aria-label="Sea Battle home">
+        <img src="/img/logo.svg" alt="Sea Battle">
+        <span class="wm">Sea Battle</span>
+    </a>
+
+    <div class="navbar-links">
+        <a id="navHomeLink"
+           class="navbar-link"
+           th:classappend="${active == 'home'} ? 'active'"
+           href="/game"
+           style="display: none;">Home</a>
+    </div>
+
+    <div class="navbar-auth">
+        <div id="navGuestSection" style="display: none; gap: 1rem; align-items: center;">
+            <a class="navbar-link"
+               th:classappend="${active == 'login'} ? 'active'"
+               href="/login">Login</a>
+            <a class="btn btn--inline"
+               href="/register">Register</a>
+        </div>
+        <div id="navUserSection" style="display: none; gap: 1rem; align-items: center;">
+            <span class="navbar-user">
+                <svg viewBox="0 0 24 24"><use href="/img/icons.svg#user"/></svg>
+                <span id="navUsernameDisplay">user</span>
+            </span>
+            <button id="navLogoutBtn" class="btn btn--muted btn--inline" type="button">
+                <svg class="icon" viewBox="0 0 24 24" style="stroke:white">
+                    <use href="/img/icons.svg#logout"/>
+                </svg>
+                Logout
+            </button>
+        </div>
+    </div>
+</nav>
+
+</body>
+</html>

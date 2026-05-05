@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sea Battle - Home</title>
+    <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body class="has-navbar">
+
+<div th:replace="~{fragments/navbar :: navbar('home')}"></div>
+
+<div class="page-center">
+    <div class="auth-card">
+        <div class="form-header">
+            <span class="logo-lock">
+                <img src="/img/logo.svg" alt="">
+                <span class="wm">Sea Battle</span>
+            </span>
+        </div>
+
+        <div class="banner banner--info">
+            <strong>Quick Start:</strong> Create a new match or paste an invite code from a friend.
+        </div>
+
+        <div id="guestUsernameField">
+            <div class="field">
+                <label for="guestUsername">Your Username <span class="req">*</span></label>
+                <input type="text" id="guestUsername" name="guestUsername"
+                       placeholder="Enter your username" minlength="3" maxlength="20">
+                <span id="usernameError" class="error-message" style="display: none;"></span>
+            </div>
+        </div>
+
+        <form id="createMatchForm">
+            <button type="submit" class="btn btn--success">Create New Match</button>
+        </form>
+
+        <div class="divider">OR</div>
+
+        <form id="joinForm">
+            <h3 style="text-align:center; margin-bottom: 12px;">Join Existing Match</h3>
+            <div class="field">
+                <label for="inviteToken">Invite Code <span class="req">*</span></label>
+                <input type="text" id="inviteToken" name="inviteToken" placeholder="Enter invite code" required>
+            </div>
+            <button type="submit" class="btn">Join Game</button>
+        </form>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+    /*]]>*/
+</script>
+<script src="/js/common.js"></script>
+<script src="/js/navbar.js"></script>
+<script src="/js/index.js"></script>
+</body>
+</html>

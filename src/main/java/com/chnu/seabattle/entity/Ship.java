@@ -1,7 +1,18 @@
 package com.chnu.seabattle.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,13 +24,14 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Ship {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "match_player_id")
     private MatchPlayer matchPlayer;
 
@@ -27,19 +39,19 @@ public class Ship {
     @Column(nullable = false, updatable = false)
     private ShipType shipType;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private int startX;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private int startY;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private Orientation orientation;
 
-    private int hits;
+    private int hits = 0;
 
-    private boolean isSunk;
+    private boolean isSunk = false;
 
 }
 

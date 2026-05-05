@@ -1,0 +1,192 @@
+/* ============================================================
+   Sea Battle — game.css patch
+   Adds:
+     1. .rematch-banner          — styling for #rematchNotification
+     2. .opponent-status         — header pill showing opponent state
+   Both lean entirely on tokens from colors_and_type.css.
+   ============================================================ */
+
+/* ---------- 1. REMATCH BANNER ---------- */
+/* Your existing markup: <div id="rematchNotification" class="panel rematch-banner"> */
+
+.rematch-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+
+    background: var(--success-bg);
+    border: 1px solid var(--success-border);
+    border-left: 4px solid var(--success);
+    color: var(--success-strong);
+
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-panel);
+    margin-bottom: var(--space-5);
+
+    animation: rematch-rise 220ms var(--ease-default);
+}
+
+.rematch-banner.is-open {
+    display: flex;
+}
+
+.rematch-banner__copy {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-body-sm);
+    color: var(--success-strong);
+}
+
+.rematch-banner__copy svg {
+    width: 20px;
+    height: 20px;
+    stroke: var(--success);
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+.rematch-banner__actions {
+    display: flex;
+    gap: var(--space-2_5);
+    flex-shrink: 0;
+}
+
+@keyframes rematch-rise {
+    from {
+        transform: translateY(-4px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ---------- 2. OPPONENT STATUS PILL ---------- */
+/* Drop in the game header:
+   <div class="opponent-status" id="opponentStatus" data-state="awaiting">
+       <span class="opponent-status__dot"></span>
+       <span class="opponent-status__label">Waiting for opponent</span>
+   </div>
+*/
+
+.opponent-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    padding: 6px var(--space-3);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--line);
+    background: var(--panel);
+
+    font-family: var(--font-body);
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-semibold);
+    color: var(--muted);
+    line-height: 1;
+    white-space: nowrap;
+
+    transition: background var(--dur-fast) var(--ease-default),
+    border-color var(--dur-fast) var(--ease-default),
+    color var(--dur-fast) var(--ease-default);
+}
+
+.opponent-status__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--muted-2);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 0 currentColor;
+}
+
+/* state: awaiting (no opponent yet, or disconnected) */
+.opponent-status[data-state="awaiting"],
+.opponent-status[data-state="disconnected"] {
+    background: var(--danger-bg);
+    border-color: #fecaca;
+    color: var(--danger-text);
+}
+
+.opponent-status[data-state="awaiting"] .opponent-status__dot,
+.opponent-status[data-state="disconnected"] .opponent-status__dot {
+    background: var(--danger);
+    animation: status-pulse 1.6s ease-in-out infinite;
+}
+
+/* state: connected (in lobby, before they place) */
+.opponent-status[data-state="connected"] {
+    background: var(--accent-bg);
+    border-color: var(--accent-soft);
+    color: var(--accent-strong);
+}
+
+.opponent-status[data-state="connected"] .opponent-status__dot {
+    background: var(--accent);
+}
+
+/* state: placing (connected, placing ships) */
+.opponent-status[data-state="placing"] {
+    background: var(--warn-bg);
+    border-color: var(--warn-border);
+    color: var(--warn-text);
+}
+
+.opponent-status[data-state="placing"] .opponent-status__dot {
+    background: var(--warn-3);
+    animation: status-pulse 1.4s ease-in-out infinite;
+}
+
+/* state: ready (placed all ships, waiting on game start) */
+.opponent-status[data-state="ready"] {
+    background: var(--success-bg);
+    border-color: var(--success-border);
+    color: var(--success-strong);
+}
+
+.opponent-status[data-state="ready"] .opponent-status__dot {
+    background: var(--success);
+}
+
+@keyframes status-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 currentColor;
+        opacity: 1;
+    }
+    50% {
+        box-shadow: 0 0 0 4px transparent;
+        opacity: 0.55;
+    }
+}
+
+/* Make game header lay out cleanly with the pill */
+.game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.game-header h1 {
+    margin: 0;
+}
+
+.ship-visual.selected {
+    outline: 2px solid var(--accent-strong);
+    box-shadow: 0 0 10px rgba(14, 165, 164, 0.5);
+    opacity: 0.8;
+}
+
+#playerBoard .cell.ship.selected {
+    background-color: var(--accent);
+    opacity: 0.7;
+}

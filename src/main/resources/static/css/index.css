@@ -1,0 +1,9 @@
+/* Home page — uses kit.css. */
+#guestUsernameField {
+    display: none;
+    margin-bottom: 20px;
+}
+
+#guestUsernameField.show {
+    display: block;
+}

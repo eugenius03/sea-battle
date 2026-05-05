@@ -1,10 +1,7 @@
 package com.chnu.seabattle.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
@@ -16,6 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Setter
+@Builder
 public class User {
 
     @Id
@@ -26,9 +24,9 @@ public class User {
     private String username;
 
     @Column(nullable = false)
-    private String password;
+    private String passwordHash;
 
-    @Column(unique = true)
+    @Column
     private String email;
 
     @CreationTimestamp

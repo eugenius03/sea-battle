@@ -1,0 +1,4 @@
+/* Sea Battle — global stylesheet entry point.
+   Loads design tokens (colors_and_type) + UI kit. */
+@import url("colors_and_type.css");
+@import url("kit.css");
