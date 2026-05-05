@@ -30,6 +30,7 @@ import com.chnu.seabattle.service.strategy.MoveStrategy;
 import com.chnu.seabattle.util.BoardUtils;
 import com.chnu.seabattle.util.MatchUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +48,7 @@ import static java.util.stream.Collectors.counting;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GameServiceImpl implements GameService {
 
     private static final int GRID_SIZE = 10;
@@ -273,7 +275,7 @@ public class GameServiceImpl implements GameService {
         UUID opponentId = getOpponentPlayerId(match, player.getId());
 
         webSocketService.sendPlayerReadyMessage(inviteToken, opponentId);
-
+        log.info("All players ready. Match {} is now IN_PROGRESS. First turn: {}", inviteToken, match.getCurrentPlayerTurnId());
         return match;
     }
 
@@ -285,20 +287,28 @@ public class GameServiceImpl implements GameService {
         );
         MatchUtils.requireStatuses(match, MatchStatus.IN_PROGRESS);
         if (!isPlayerTurn(match, shooterId)) {
+            log.warn("Rule violation: Player {} attempted to fire out of turn in match {}",
+                    shooterId, match.getInviteToken());
             throw new GameRuleViolationException(ErrorConstants.NOT_PLAYERS_TURN);
         }
 
         if (!BoardUtils.isWithinBounds(moveRequest.x(), moveRequest.y())) {
+            log.warn("Rule violation: Player {} attempted to fire out of bounds in match {}",
+                    shooterId, match.getInviteToken());
             throw new GameRuleViolationException(ErrorConstants.COORDINATES_OUT_OF_BOUNDS);
         }
 
         if (moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(
                 match.getId(), shooterId, moveRequest.x(), moveRequest.y(), moveRequest.moveType())) {
+            log.warn("Rule violation: Player {} attempted to fire at the same coordinates with the same MoveType {}",
+                    shooterId, moveRequest.moveType());
             throw new GameRuleViolationException(ErrorConstants.DUPLICATE_FIRE);
         }
 
         MoveStrategy strategy = strategies.get(moveRequest.moveType());
         if (strategy == null) {
+            log.warn("Rule violation: Player {} attempted to fire with unknown MoveType {}",
+                    shooterId, moveRequest.moveType());
             throw new GameRuleViolationException(
                     String.format(ErrorConstants.UNKNOWN_MOVE_TYPE, moveRequest.moveType())
             );
@@ -315,6 +325,10 @@ public class GameServiceImpl implements GameService {
                 isItOpponentsTurn
         );
 
+        log.info("Player {} fired at [{}, {}] in match {} using moveType {}",
+                shooterId, moveRequest.x(), moveRequest.y(), match.getInviteToken(), moveRequest.moveType()
+        );
+
         if (MatchStatus.FINISHED.equals(match.getStatus())) {
             List<ShipResponse> winnerShips = getMatchPlayer(match, shooterId).getShips().stream()
                     .map(shipConverter::toResponse)
@@ -323,8 +337,8 @@ public class GameServiceImpl implements GameService {
             webSocketService.updateMatchStatus(
                     match.getInviteToken(), MatchStatus.FINISHED,
                     match.getCurrentPlayerTurnId(), winnerShips);
+            log.info("Match {} FINISHED. Winner: {}", match.getInviteToken(), shooterId);
         }
-
         return result;
     }
 
@@ -337,6 +351,7 @@ public class GameServiceImpl implements GameService {
         MatchPlayer player = getMatchPlayer(match, matchPlayerId);
         player.setConnected(false);
         player.setLastSeenAt(Instant.now());
+        log.info("Player {} disconnected from match {}", matchPlayerId, inviteToken);
     }
 
     @Override
@@ -344,7 +359,7 @@ public class GameServiceImpl implements GameService {
     public void handleReconnect(Match match, MatchPlayer player) {
         player.setConnected(true);
         player.setLastSeenAt(Instant.now());
-
+        log.info("Player {} reconnected to match {}", player.getId(), match.getInviteToken());
         webSocketService.handleReconnect(match.getInviteToken(), player.getId());
     }
 
