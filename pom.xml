@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.chnu</groupId>
     <artifactId>sea-battle</artifactId>
-    <version>0.0.99-PRE-RELEASE</version>
+    <version>1.0.0-RELEASE</version>
     <name>sea-battle</name>
     <description>sea-battle</description>
     <url/>

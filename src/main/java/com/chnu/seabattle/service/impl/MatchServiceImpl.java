@@ -14,6 +14,7 @@ import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.WebSocketService;
 import com.chnu.seabattle.util.MatchUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import java.util.UUID;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class MatchServiceImpl extends AbstractBaseService<Match, Long> implements MatchService {
 
     private final MatchRepository matchRepository;
@@ -61,6 +63,7 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
         MatchPlayer matchPlayer = createMatchPlayer(match, userId);
 
         match.getPlayers().add(matchPlayer);
+        log.info("Match created with inviteToken: {} by userId: {}", match.getInviteToken(), userId);
         return update(match);
     }
 
@@ -82,6 +85,7 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
         }
 
         if (match.getPlayers().size() == 2) {
+            log.warn("Failed join attempt: Player {} tried to join full match {}", userId, inviteToken);
             throw new GameRuleViolationException(ErrorConstants.MATCH_NOT_JOINABLE);
         }
 
@@ -90,6 +94,7 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
         match.getPlayers().add(matchPlayer);
         match.setStatus(MatchStatus.PLANNING);
 
+        log.info("Player {} joined match {}", userId, inviteToken);
         return match;
 
     }
@@ -143,7 +148,9 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
         Match joinedMatch = joinMatch(opponent.getUserId(), newMatch.getInviteToken());
 
         webSocketService.sendRematchAgreed(inviteToken, joinedMatch.getInviteToken());
-
+        log.info("Players {} and {} agreed on rematch new match {} created",
+                requester.getUserId(), opponent.getUserId(), newMatch.getInviteToken()
+        );
         return Optional.of(new MatchResponse(
                 joinedMatch.getInviteToken(),
                 requester.getUserId()

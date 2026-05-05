@@ -13,6 +13,7 @@ import com.chnu.seabattle.service.JwtService;
 import com.chnu.seabattle.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final JwtService jwtService;
@@ -36,9 +38,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public User register(@Valid UserRegistrationRequest registrationRequest) {
         if (userService.existsByUsername(registrationRequest.username())) {
+            log.warn("Failed registration: Username {} already exists.", registrationRequest.username());
             throw new UserAlreadyExistsException(ErrorConstants.USERNAME_ALREADY_EXISTS);
         }
         if (registrationRequest.password().length() < 6) {
+            log.warn("Failed registration: Password is too short.");
             throw new BadRequestException(ErrorConstants.SHORT_PASSWORD);
         }
 
@@ -73,6 +77,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userService.findByUsername(username)
                 .orElseThrow(() -> new UnauthorizedException(ErrorConstants.INVALID_TOKEN));
 
+        log.info("Refreshed access token for user ID: {}", user.getId());
         return jwtService.createAccessCookie(userDetailsService.convertToUserDetails(user));
     }
 
