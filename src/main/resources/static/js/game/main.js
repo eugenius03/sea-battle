@@ -4,7 +4,7 @@ import {initBoards} from './board.js';
 import {initShips, rotateOrientation} from './dragDrop.js';
 import {generateRandomShips, markReady, requestRematch} from './api.js';
 import {connectWs} from './websocket.js';
-import {clearDronePreview, hideMatchEndModal, lockEnemyBoard, showMatchEndModal} from './ui.js';
+import {hideMatchEndModal, lockEnemyBoard, showMatchEndModal} from './ui.js';
 
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -34,33 +34,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const surveillanceDrone = $('surveillanceDrone');
     if (surveillanceDrone) {
-        surveillanceDrone.addEventListener('dragstart', (e) => {
-            if (state.surveillanceDroneUsesLeft <= 0) {
-                e.preventDefault();
-                return;
+        surveillanceDrone.addEventListener('click', () => {
+            if (state.surveillanceDroneUsesLeft <= 0) return;
+
+            if (state.draggedDroneType === 'SURVEILLANCE_DRONE') {
+                state.draggedDroneType = null;
+                surveillanceDrone.classList.remove('selected');
+            } else {
+                state.draggedDroneType = 'SURVEILLANCE_DRONE';
+                surveillanceDrone.classList.add('selected');
+                if (attackDrone) attackDrone.classList.remove('selected'); // Deselect the other
             }
-            state.draggedDroneType = 'SURVEILLANCE_DRONE';
-            e.dataTransfer.effectAllowed = 'move';
-        });
-        surveillanceDrone.addEventListener('dragend', () => {
-            state.draggedDroneType = null;
-            clearDronePreview();
         });
     }
 
     const attackDrone = $('attackDrone');
     if (attackDrone) {
-        attackDrone.addEventListener('dragstart', (e) => {
-            if (state.attackDroneUsesLeft <= 0) {
-                e.preventDefault();
-                return;
+        attackDrone.addEventListener('click', () => {
+            if (state.attackDroneUsesLeft <= 0) return;
+
+            if (state.draggedDroneType === 'ATTACK_DRONE') {
+                state.draggedDroneType = null;
+                attackDrone.classList.remove('selected');
+            } else {
+                state.draggedDroneType = 'ATTACK_DRONE';
+                attackDrone.classList.add('selected');
+                if (surveillanceDrone) surveillanceDrone.classList.remove('selected');
             }
-            state.draggedDroneType = 'ATTACK_DRONE';
-            e.dataTransfer.effectAllowed = 'move';
-        });
-        attackDrone.addEventListener('dragend', () => {
-            state.draggedDroneType = null;
-            clearDronePreview();
         });
     }
 

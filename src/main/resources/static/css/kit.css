@@ -553,6 +553,11 @@ body {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
+.drone-chip.selected {
+    outline: 2px solid var(--warn-3);
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+}
+
 .drone-chip:hover:not(.exhausted),
 .drone-item:hover:not(.exhausted) {
     transform: translateY(-2px);
