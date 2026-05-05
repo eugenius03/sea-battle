@@ -2,6 +2,12 @@ import {shipTypes, state, unplacedShipOrientations} from './state.js';
 import {$, showMessage} from './utils.js';
 import {moveShip, placeShip} from './api.js';
 
+export function clearSelection() {
+    state.selectedShip = null;
+    document.querySelectorAll('.ship-visual.selected').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('#playerBoard .cell.selected').forEach(el => el.classList.remove('selected'));
+}
+
 export function initShips() {
     const container = $('shipsContainer');
     if (!container) return;
@@ -34,6 +40,7 @@ export function initShips() {
 
             shipVisual.addEventListener('dragstart', (e) => {
                 if (state.isReady) return;
+                clearSelection();
                 const shipKey = `${e.target.dataset.type}_${e.target.dataset.index}`;
                 state.selectedShip = {
                     fromBoard: false,
@@ -49,6 +56,29 @@ export function initShips() {
             shipVisual.addEventListener('dragend', () => {
                 state.selectedShip = null;
                 document.querySelectorAll('.cell.drag-over').forEach(cell => cell.classList.remove('drag-over'));
+            });
+
+            shipVisual.addEventListener('click', (e) => {
+                if (state.isReady || shipVisual.classList.contains('placed')) return;
+
+                if (state.selectedShip && state.selectedShip.element === shipVisual) {
+                    clearSelection();
+                    return;
+                }
+
+                clearSelection();
+
+                const shipKey = `${shipVisual.dataset.type}_${shipVisual.dataset.index}`;
+                state.selectedShip = {
+                    fromBoard: false,
+                    type: shipVisual.dataset.type,
+                    size: Number.parseInt(shipVisual.dataset.size),
+                    index: shipVisual.dataset.index,
+                    element: shipVisual,
+                    orientation: unplacedShipOrientations.get(shipKey) || 'HORIZONTAL'
+                };
+
+                shipVisual.classList.add('selected');
             });
 
             const shipInfo = document.createElement('div');

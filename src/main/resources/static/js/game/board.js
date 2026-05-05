@@ -1,14 +1,14 @@
 import {state} from './state.js';
 import {$} from './utils.js';
 import {
+    clearSelection,
     handleBoardShipDoubleClick,
     handleBoardShipDragEnd,
     handleBoardShipDragStart,
     handleDragOver,
     handleDrop
 } from './dragDrop.js';
-import {fireAttackDrone, fireSurveillanceDrone, handleEnemyCellClick} from './api.js';
-import {clearDronePreview, showDronePreview} from './ui.js';
+import {fireAttackDrone, fireSurveillanceDrone, handleEnemyCellClick, moveShip, placeShip} from './api.js';
 
 export function initBoards() {
     const playerBoard = $('playerBoard');
@@ -39,25 +39,60 @@ export function createCell(x, y, isPlayerBoard) {
         cell.addEventListener('dragstart', handleBoardShipDragStart);
         cell.addEventListener('dragend', handleBoardShipDragEnd);
         cell.addEventListener('dblclick', handleBoardShipDoubleClick);
-    } else {
-        cell.addEventListener('click', handleEnemyCellClick);
-        cell.addEventListener('dragover', (e) => {
-            if (!state.draggedDroneType) return;
-            e.preventDefault();
-            showDronePreview(Number.parseInt(e.target.dataset.x), Number.parseInt(e.target.dataset.y));
-        });
-        cell.addEventListener('drop', (e) => {
-            if (!state.draggedDroneType) return;
-            e.preventDefault();
-            clearDronePreview();
-            const px = Number.parseInt(e.target.dataset.x);
-            const py = Number.parseInt(e.target.dataset.y);
-            if (state.draggedDroneType === 'ATTACK_DRONE') {
-                fireAttackDrone(px, py);
-            } else {
-                fireSurveillanceDrone(px, py);
+
+        cell.addEventListener('click', (e) => {
+            if (state.isReady) return;
+
+            const px = Number.parseInt(cell.dataset.x);
+            const py = Number.parseInt(cell.dataset.y);
+
+            if (state.selectedShip) {
+                if (state.selectedShip.fromBoard) {
+                    if (state.selectedShip.id !== cell.dataset.shipId) {
+                        moveShip(state.selectedShip, px, py);
+                    }
+                } else {
+                    placeShip(state.selectedShip, px, py);
+                }
+                clearSelection();
+            } else if (cell.dataset.shipId) {
+                const shipId = cell.dataset.shipId;
+                const shipData = state.shipRegistry.get(String(shipId));
+                if (!shipData) return;
+
+                state.selectedShip = {
+                    fromBoard: true,
+                    id: String(shipId),
+                    size: shipData.size,
+                    orientation: shipData.orientation
+                };
+                state.currentOrientation = shipData.orientation;
+
+                document.querySelectorAll(`#playerBoard .cell[data-ship-id="${shipId}"]`)
+                    .forEach(c => c.classList.add('selected'));
             }
         });
+
+    } else {
+        cell.addEventListener('click', (e) => {
+            if (state.draggedDroneType) {
+                const px = Number.parseInt(e.target.dataset.x);
+                const py = Number.parseInt(e.target.dataset.y);
+
+                if (state.draggedDroneType === 'ATTACK_DRONE') {
+                    fireAttackDrone(px, py);
+                } else if (state.draggedDroneType === 'SURVEILLANCE_DRONE') {
+                    fireSurveillanceDrone(px, py);
+                }
+
+                state.draggedDroneType = null;
+                document.querySelectorAll('.drone-btn').forEach(btn => btn.classList.remove('selected'));
+                return;
+            }
+
+            handleEnemyCellClick(e);
+        });
+
     }
     return cell;
 }
