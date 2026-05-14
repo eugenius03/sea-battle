@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             document.cookie = "nav_username=; path=/; max-age=0";
+            document.cookie = "nav_userid=; path=/; max-age=0";
             await fetch('/api/auth/logout', {method: 'POST'});
             globalThis.location.href = '/login';
         });

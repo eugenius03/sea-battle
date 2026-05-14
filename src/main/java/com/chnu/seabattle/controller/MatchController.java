@@ -2,10 +2,9 @@ package com.chnu.seabattle.controller;
 
 import com.chnu.seabattle.dto.match.MatchResponse;
 import com.chnu.seabattle.entity.Match;
-import com.chnu.seabattle.service.GameService;
 import com.chnu.seabattle.service.MatchService;
+import com.chnu.seabattle.service.MatchmakingService;
 import com.chnu.seabattle.service.UserService;
-import com.chnu.seabattle.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,8 +24,7 @@ public class MatchController {
 
     private final MatchService matchService;
     private final UserService userService;
-    private final WebSocketService webSocketService;
-    private final GameService gameService;
+    private final MatchmakingService matchmakingService;
 
     @PostMapping("/create")
     public MatchResponse createMatch() {
@@ -40,8 +38,6 @@ public class MatchController {
     public MatchResponse joinMatch(@RequestParam String inviteToken) {
         UUID playerId = userService.getAuthenticatedUser().getId();
         Match match = matchService.joinMatch(playerId, inviteToken);
-        UUID opponentId = gameService.getOpponentPlayerId(match, playerId);
-        webSocketService.handleOpponentConnected(inviteToken, opponentId);
 
         return new MatchResponse(match.getInviteToken(), playerId);
     }
@@ -54,5 +50,12 @@ public class MatchController {
         return rematchResponse
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.accepted().build());
+    }
+
+    @PostMapping("/find")
+    public ResponseEntity<Void> findGame() {
+        UUID userId = userService.getAuthenticatedUser().getId();
+        matchmakingService.joinQueue(userId);
+        return ResponseEntity.accepted().build();
     }
 }

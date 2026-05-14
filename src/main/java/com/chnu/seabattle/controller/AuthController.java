@@ -2,6 +2,7 @@ package com.chnu.seabattle.controller;
 
 import com.chnu.seabattle.dto.auth.UserLoginRequest;
 import com.chnu.seabattle.dto.auth.UserRegistrationRequest;
+import com.chnu.seabattle.dto.auth.UserResponse;
 import com.chnu.seabattle.entity.User;
 import com.chnu.seabattle.service.AuthService;
 import com.chnu.seabattle.service.JwtService;
@@ -20,8 +21,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -33,10 +32,10 @@ public class AuthController {
     private final JwtService jwtService;
 
     @GetMapping("/me")
-    public ResponseEntity<Map<String, String>> getCurrentUser() {
+    public UserResponse getCurrentUser() {
         User user = userService.getAuthenticatedUser();
 
-        return ResponseEntity.ok(Map.of("username", user.getUsername()));
+        return new UserResponse(user.getId(), user.getUsername());
     }
 
     @PostMapping("/register")

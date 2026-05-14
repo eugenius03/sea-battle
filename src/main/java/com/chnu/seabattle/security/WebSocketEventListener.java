@@ -1,6 +1,7 @@
 package com.chnu.seabattle.security;
 
 import com.chnu.seabattle.service.GameService;
+import com.chnu.seabattle.service.MatchmakingService;
 import com.chnu.seabattle.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ public class WebSocketEventListener {
 
     private final WebSocketService webSocketService;
     private final GameService gameService;
+    private final MatchmakingService matchmakingService;
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
@@ -32,7 +34,16 @@ public class WebSocketEventListener {
                 webSocketService.handleDisconnect(inviteToken, matchPlayerId);
                 gameService.handleDisconnect(inviteToken, matchPlayerId);
             } else {
-                log.warn("WebSocket disconnect event received but missing inviteToken or matchPlayerId");
+                String userIdStr = (String) headerAccessor.getSessionAttributes().get("userId");
+                if (userIdStr != null) {
+                    try {
+                        matchmakingService.leaveQueue(UUID.fromString(userIdStr));
+                    } catch (IllegalArgumentException e) {
+                        log.error("Invalid userId format: {}", userIdStr);
+                    }
+                } else {
+                    log.warn("WebSocket disconnect event received but missing inviteToken or matchPlayerId");
+                }
             }
         } else {
             log.warn("WebSocket disconnect event received but session attributes are null");

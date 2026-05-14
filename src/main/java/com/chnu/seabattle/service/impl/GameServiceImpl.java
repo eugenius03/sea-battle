@@ -273,7 +273,7 @@ public class GameServiceImpl implements GameService {
             log.info("All players ready. Match {} is now IN_PROGRESS. First turn: {}", inviteToken, match.getCurrentPlayerTurnId());
         }
 
-        UUID opponentId = getOpponentPlayerId(match, player.getId());
+        UUID opponentId = MatchUtils.getOpponentPlayerId(match, player.getId());
 
         webSocketService.sendPlayerReadyMessage(inviteToken, opponentId);
         return match;
@@ -315,7 +315,7 @@ public class GameServiceImpl implements GameService {
         }
 
         List<Move> result = strategy.execute(match, shooterId, moveRequest);
-        UUID opponentId = getOpponentPlayerId(match, shooterId);
+        UUID opponentId = MatchUtils.getOpponentPlayerId(match, shooterId);
 
         boolean isItOpponentsTurn = opponentId.equals(match.getCurrentPlayerTurnId());
 
@@ -361,21 +361,6 @@ public class GameServiceImpl implements GameService {
         player.setLastSeenAt(Instant.now());
         log.info("Player {} reconnected to match {}", player.getId(), match.getInviteToken());
         webSocketService.handleReconnect(match.getInviteToken(), player.getId());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public UUID getOpponentPlayerId(Match match, UUID playerId) {
-        List<MatchPlayer> players = match.getPlayers();
-        if (players.size() != 2) {
-            throw new GameRuleViolationException(ErrorConstants.ONLY_TWO_PLAYERS);
-        }
-
-        return players.stream()
-                .filter(p -> !p.getId().equals(playerId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND))
-                .getId();
     }
 
     @Override

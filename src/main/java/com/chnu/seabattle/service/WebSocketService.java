@@ -26,4 +26,8 @@ public interface WebSocketService {
     void sendRematchRequested(String inviteToken, UUID matchPlayerId);
 
     void sendRematchAgreed(String inviteToken, String newInviteToken);
+
+    void sendQueuePosition(String matchmakingId, Long position);
+
+    void sendMatchFound(String matchmakingId, String inviteToken);
 }

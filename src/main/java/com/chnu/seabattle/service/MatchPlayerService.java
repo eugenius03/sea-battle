@@ -8,4 +8,10 @@ import java.util.UUID;
 public interface MatchPlayerService extends BaseService<MatchPlayer, UUID> {
 
     Optional<MatchPlayer> findByMatchInviteTokenAndUserId(String inviteToken, UUID userId);
+
+    Optional<MatchPlayer> findByMatchInviteTokenAndId(
+            String inviteToken, UUID matchPlayerId
+    );
+
+    boolean existsByMatchInviteTokenAndId(String inviteToken, UUID matchPlayerId);
 }
