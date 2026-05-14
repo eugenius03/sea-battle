@@ -270,12 +270,12 @@ public class GameServiceImpl implements GameService {
             match.setCurrentPlayerTurnId(randomPlayer.getId());
 
             webSocketService.updateMatchStatus(inviteToken, MatchStatus.IN_PROGRESS, match.getCurrentPlayerTurnId(), null);
+            log.info("All players ready. Match {} is now IN_PROGRESS. First turn: {}", inviteToken, match.getCurrentPlayerTurnId());
         }
 
         UUID opponentId = getOpponentPlayerId(match, player.getId());
 
         webSocketService.sendPlayerReadyMessage(inviteToken, opponentId);
-        log.info("All players ready. Match {} is now IN_PROGRESS. First turn: {}", inviteToken, match.getCurrentPlayerTurnId());
         return match;
     }
 

@@ -1,6 +1,7 @@
 import {shipTypes, state, unplacedShipOrientations} from './state.js';
 import {$, showMessage} from './utils.js';
-import {moveShip, placeShip} from './api.js';
+import {fireAttackDrone, fireSurveillanceDrone, moveShip, placeShip} from './api.js';
+import {clearDronePreview, showDronePreview} from './ui.js';
 
 export function clearSelection() {
     state.selectedShip = null;
@@ -92,6 +93,72 @@ export function initShips() {
     });
 }
 
+export function initDrones() {
+    const surveillanceDrone = $('surveillanceDrone');
+    if (surveillanceDrone) {
+        surveillanceDrone.addEventListener('click', () => {
+            if (state.surveillanceDroneUsesLeft <= 0) return;
+
+            if (state.draggedDroneType === 'SURVEILLANCE_DRONE') {
+                state.draggedDroneType = null;
+                surveillanceDrone.classList.remove('selected');
+            } else {
+                state.draggedDroneType = 'SURVEILLANCE_DRONE';
+                surveillanceDrone.classList.add('selected');
+                const attackDrone = $('attackDrone');
+                if (attackDrone) attackDrone.classList.remove('selected');
+            }
+        });
+
+        surveillanceDrone.addEventListener('dragstart', (e) => {
+            if (state.surveillanceDroneUsesLeft <= 0) {
+                e.preventDefault();
+                return;
+            }
+            state.draggedDroneType = 'SURVEILLANCE_DRONE';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', 'SURVEILLANCE_DRONE');
+        });
+
+        surveillanceDrone.addEventListener('dragend', () => {
+            state.draggedDroneType = null;
+            clearDronePreview();
+        });
+    }
+
+    const attackDrone = $('attackDrone');
+    if (attackDrone) {
+        attackDrone.addEventListener('click', () => {
+            if (state.attackDroneUsesLeft <= 0) return;
+
+            if (state.draggedDroneType === 'ATTACK_DRONE') {
+                state.draggedDroneType = null;
+                attackDrone.classList.remove('selected');
+            } else {
+                state.draggedDroneType = 'ATTACK_DRONE';
+                attackDrone.classList.add('selected');
+                const surveillanceDrone = $('surveillanceDrone');
+                if (surveillanceDrone) surveillanceDrone.classList.remove('selected');
+            }
+        });
+
+        attackDrone.addEventListener('dragstart', (e) => {
+            if (state.attackDroneUsesLeft <= 0) {
+                e.preventDefault();
+                return;
+            }
+            state.draggedDroneType = 'ATTACK_DRONE';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', 'ATTACK_DRONE');
+        });
+
+        attackDrone.addEventListener('dragend', () => {
+            state.draggedDroneType = null;
+            clearDronePreview();
+        });
+    }
+}
+
 export function rotateOrientation() {
     if (state.isReady) return;
     state.currentOrientation = state.currentOrientation === 'HORIZONTAL' ? 'VERTICAL' : 'HORIZONTAL';
@@ -180,4 +247,31 @@ export async function handleBoardShipDoubleClick(e) {
         size: shipData.size,
         orientation: shipData.orientation === 'HORIZONTAL' ? 'VERTICAL' : 'HORIZONTAL'
     }, shipData.startX, shipData.startY);
+}
+
+export function handleEnemyDragOver(e) {
+    if (!state.draggedDroneType) return;
+    e.preventDefault();
+    showDronePreview(Number.parseInt(e.target.dataset.x), Number.parseInt(e.target.dataset.y));
+}
+
+export function handleEnemyDragLeave() {
+    clearDronePreview();
+}
+
+export function handleEnemyDrop(e) {
+    if (!state.draggedDroneType) return;
+    e.preventDefault();
+    clearDronePreview();
+
+    const px = Number.parseInt(e.target.dataset.x);
+    const py = Number.parseInt(e.target.dataset.y);
+
+    if (state.draggedDroneType === 'ATTACK_DRONE') {
+        fireAttackDrone(px, py);
+    } else {
+        fireSurveillanceDrone(px, py);
+    }
+
+    document.querySelectorAll('.drone-chip').forEach(btn => btn.classList.remove('selected'));
 }

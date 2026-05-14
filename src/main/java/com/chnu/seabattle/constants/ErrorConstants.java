@@ -15,6 +15,7 @@ public final class ErrorConstants {
 
     // --- Authentication / Authorization ---
     public static final String USERNAME_ALREADY_EXISTS = "Username already exists";
+    public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
     public static final String REFRESH_TOKEN_EXPIRED = "Refresh token expired";
     public static final String INVALID_TOKEN = "Invalid token";
     public static final String USER_NOT_AUTHENTICATED = "User is not authenticated";

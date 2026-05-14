@@ -41,6 +41,10 @@ public class AuthServiceImpl implements AuthService {
             log.warn("Failed registration: Username {} already exists.", registrationRequest.username());
             throw new UserAlreadyExistsException(ErrorConstants.USERNAME_ALREADY_EXISTS);
         }
+        if (registrationRequest.email() != null && userService.existsByEmail(registrationRequest.email())) {
+            log.warn("Failed registration: Email {} already exists.", registrationRequest.email());
+            throw new UserAlreadyExistsException(ErrorConstants.EMAIL_ALREADY_EXISTS);
+        }
         if (registrationRequest.password().length() < 6) {
             log.warn("Failed registration: Password is too short.");
             throw new BadRequestException(ErrorConstants.SHORT_PASSWORD);

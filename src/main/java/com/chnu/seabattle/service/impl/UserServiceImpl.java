@@ -46,6 +46,11 @@ public class UserServiceImpl extends AbstractBaseService<User, UUID> implements 
     }
 
     @Override
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    @Override
     public User getAuthenticatedUser() {
         final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

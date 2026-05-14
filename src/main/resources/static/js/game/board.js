@@ -6,7 +6,10 @@ import {
     handleBoardShipDragEnd,
     handleBoardShipDragStart,
     handleDragOver,
-    handleDrop
+    handleDrop,
+    handleEnemyDragLeave,
+    handleEnemyDragOver,
+    handleEnemyDrop
 } from './dragDrop.js';
 import {fireAttackDrone, fireSurveillanceDrone, handleEnemyCellClick, moveShip, placeShip} from './api.js';
 
@@ -86,13 +89,16 @@ export function createCell(x, y, isPlayerBoard) {
                 }
 
                 state.draggedDroneType = null;
-                document.querySelectorAll('.drone-btn').forEach(btn => btn.classList.remove('selected'));
+                document.querySelectorAll('.drone-item').forEach(btn => btn.classList.remove('selected'));
                 return;
             }
-
+            document.querySelectorAll('.drone-item').forEach(btn => btn.classList.remove('selected'));
             handleEnemyCellClick(e);
         });
 
+        cell.addEventListener('dragover', handleEnemyDragOver);
+        cell.addEventListener('dragleave', handleEnemyDragLeave);
+        cell.addEventListener('drop', handleEnemyDrop);
     }
     return cell;
 }

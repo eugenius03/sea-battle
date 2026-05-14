@@ -1,7 +1,7 @@
 import {state} from './state.js';
 import {$, showMessage} from './utils.js';
 import {initBoards} from './board.js';
-import {initShips, rotateOrientation} from './dragDrop.js';
+import {initDrones, initShips, rotateOrientation} from './dragDrop.js';
 import {generateRandomShips, markReady, requestRematch} from './api.js';
 import {connectWs} from './websocket.js';
 import {hideMatchEndModal, lockEnemyBoard, showMatchEndModal} from './ui.js';
@@ -28,38 +28,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     success ? 'Invite link copied to clipboard!' : 'Could not copy invite link. Please copy from the address bar.',
                     success ? 'success' : 'error'
                 );
-            }
-        });
-    }
-
-    const surveillanceDrone = $('surveillanceDrone');
-    if (surveillanceDrone) {
-        surveillanceDrone.addEventListener('click', () => {
-            if (state.surveillanceDroneUsesLeft <= 0) return;
-
-            if (state.draggedDroneType === 'SURVEILLANCE_DRONE') {
-                state.draggedDroneType = null;
-                surveillanceDrone.classList.remove('selected');
-            } else {
-                state.draggedDroneType = 'SURVEILLANCE_DRONE';
-                surveillanceDrone.classList.add('selected');
-                if (attackDrone) attackDrone.classList.remove('selected'); // Deselect the other
-            }
-        });
-    }
-
-    const attackDrone = $('attackDrone');
-    if (attackDrone) {
-        attackDrone.addEventListener('click', () => {
-            if (state.attackDroneUsesLeft <= 0) return;
-
-            if (state.draggedDroneType === 'ATTACK_DRONE') {
-                state.draggedDroneType = null;
-                attackDrone.classList.remove('selected');
-            } else {
-                state.draggedDroneType = 'ATTACK_DRONE';
-                attackDrone.classList.add('selected');
-                if (surveillanceDrone) surveillanceDrone.classList.remove('selected');
             }
         });
     }
@@ -106,6 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initBoards();
     initShips();
+    initDrones();
     lockEnemyBoard();
 
     connectWs().catch(err => {
