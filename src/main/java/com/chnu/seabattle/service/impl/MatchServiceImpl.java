@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -67,6 +68,23 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
         return update(match);
     }
 
+    @Transactional
+    @Override
+    public Match createMatch(UUID player1Id, UUID player2Id) {
+        Match match = new Match();
+        match.setStatus(MatchStatus.WAITING);
+        match.setInviteToken(generateInviteToken());
+
+        match = create(match);
+
+        MatchPlayer matchPlayer1 = createMatchPlayer(match, player1Id);
+        MatchPlayer matchPlayer2 = createMatchPlayer(match, player2Id);
+
+        match.getPlayers().addAll(List.of(matchPlayer1, matchPlayer2));
+        match.setStatus(MatchStatus.PLANNING);
+        return update(match);
+    }
+
     @Override
     public Optional<Match> findByInviteTokenForGame(String inviteToken) {
         return matchRepository.findByInviteTokenForGame(inviteToken);
@@ -80,7 +98,7 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
 
         MatchUtils.requireStatuses(match, MatchStatus.WAITING);
 
-        if (match.getPlayers().getFirst().getUserId().equals(userId)) {
+        if (matchPlayerService.findByMatchInviteTokenAndUserId(inviteToken, userId).isPresent()) {
             throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_IN_MATCH);
         }
 
@@ -92,7 +110,12 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
         MatchPlayer matchPlayer = createMatchPlayer(match, userId);
 
         match.getPlayers().add(matchPlayer);
-        match.setStatus(MatchStatus.PLANNING);
+        if (match.getPlayers().size() == 2) {
+            match.setStatus(MatchStatus.PLANNING);
+            UUID opponentId = MatchUtils.getOpponentPlayerId(match, matchPlayer.getId());
+            webSocketService.handleOpponentConnected(inviteToken, opponentId);
+        }
+
 
         log.info("Player {} joined match {}", userId, inviteToken);
         return match;

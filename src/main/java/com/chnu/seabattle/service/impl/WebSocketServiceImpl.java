@@ -1,6 +1,7 @@
 package com.chnu.seabattle.service.impl;
 
 import com.chnu.seabattle.dto.match.MatchStatusMessage;
+import com.chnu.seabattle.dto.match.MatchmakingStatusResponse;
 import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.dto.ship.ShipResponse;
 import com.chnu.seabattle.dto.ws.MoveMessage;
@@ -34,6 +35,10 @@ public class WebSocketServiceImpl implements WebSocketService {
 
     private String privateQueue(String inviteToken) {
         return "/queue/match/" + inviteToken;
+    }
+
+    private String matchmakingTopic(String matchmakingId) {
+        return "/topic/matchmaking/" + matchmakingId;
     }
 
     @Override
@@ -137,6 +142,22 @@ public class WebSocketServiceImpl implements WebSocketService {
                         .inviteToken(newInviteToken)
                         .at(Instant.now())
                         .build()
+        );
+    }
+
+    @Override
+    public void sendQueuePosition(String matchmakingId, Long position) {
+        messagingTemplate.convertAndSend(
+                matchmakingTopic(matchmakingId),
+                new MatchmakingStatusResponse(position, null)
+        );
+    }
+
+    @Override
+    public void sendMatchFound(String matchmakingId, String inviteToken) {
+        messagingTemplate.convertAndSend(
+                matchmakingTopic(matchmakingId),
+                new MatchmakingStatusResponse(null, inviteToken)
         );
     }
 }

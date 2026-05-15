@@ -13,4 +13,6 @@ public interface UserService extends BaseService<User, UUID> {
     boolean existsByEmail(String email);
 
     User getAuthenticatedUser();
+
+    boolean existsById(UUID id);
 }

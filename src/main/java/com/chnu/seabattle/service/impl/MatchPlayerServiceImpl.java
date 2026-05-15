@@ -29,6 +29,16 @@ public class MatchPlayerServiceImpl extends AbstractBaseService<MatchPlayer, UUI
     }
 
     @Override
+    public Optional<MatchPlayer> findByMatchInviteTokenAndId(String inviteToken, UUID matchPlayerId) {
+        return matchPlayerRepository.findByMatchInviteTokenAndId(inviteToken, matchPlayerId);
+    }
+
+    @Override
+    public boolean existsByMatchInviteTokenAndId(String inviteToken, UUID matchPlayerId) {
+        return matchPlayerRepository.existsByMatchInviteTokenAndId(inviteToken, matchPlayerId);
+    }
+
+    @Override
     protected void beforeCreate(MatchPlayer matchPlayer) {
         if (matchPlayerRepository.existsByMatchIdAndUserId(matchPlayer.getMatch().getId(), matchPlayer.getUserId())) {
             throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_IN_MATCH);

@@ -29,9 +29,7 @@ public interface GameService {
     void handleDisconnect(String inviteToken, UUID matchPlayerId);
 
     void handleReconnect(Match match, MatchPlayer player);
-
-    UUID getOpponentPlayerId(Match match, UUID playerId);
-
+    
     GameInfoResponse getMatchInfo(Match match, MatchPlayer matchPlayer);
 
 }

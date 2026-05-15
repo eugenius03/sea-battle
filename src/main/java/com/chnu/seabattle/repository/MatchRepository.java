@@ -18,5 +18,4 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
 
     @EntityGraph(attributePaths = {"players"})
     Optional<Match> findByInviteToken(String inviteToken);
-
 }

@@ -65,5 +65,10 @@ public class UserServiceImpl extends AbstractBaseService<User, UUID> implements 
                 ));
 
     }
+
+    @Override
+    public boolean existsById(UUID id) {
+        return userRepository.existsById(id);
+    }
 }
 

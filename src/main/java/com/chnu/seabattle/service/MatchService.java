@@ -10,6 +10,8 @@ public interface MatchService extends BaseService<Match, Long> {
 
     Match createMatch(UUID userId);
 
+    Match createMatch(UUID player1Id, UUID player2Id);
+
     Optional<Match> findByInviteTokenForGame(String inviteToken);
 
     Match joinMatch(UUID userId, String inviteToken);
