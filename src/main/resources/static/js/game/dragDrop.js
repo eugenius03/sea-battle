@@ -62,7 +62,7 @@ export function initShips() {
             shipVisual.addEventListener('click', (e) => {
                 if (state.isReady || shipVisual.classList.contains('placed')) return;
 
-                if (state.selectedShip && state.selectedShip.element === shipVisual) {
+                if (state.selectedShip?.element === shipVisual) {
                     clearSelection();
                     return;
                 }

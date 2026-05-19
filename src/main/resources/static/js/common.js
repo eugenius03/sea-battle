@@ -1,20 +1,17 @@
 function extractErrorMessage(text) {
     if (text == null) return '';
     const str = String(text);
-    const match = str.match(/\{[\s\S]*\}/);
+    const match = new RegExp(/\{[\s\S]*}/).exec(str);
     if (!match) return str;
-    try {
-        const obj = JSON.parse(match[0]);
-        if (obj && typeof obj.message === 'string' && obj.message) {
-            return str.slice(0, match.index) + obj.message;
-        }
-    } catch (_) { /* not JSON, fall through */
+    const obj = JSON.parse(match[0]);
+    if (obj && typeof obj.message === 'string' && obj.message) {
+        return str.slice(0, match.index) + obj.message;
     }
     return str;
 }
 
 function escapeHtml(str) {
-    return String(str).replace(/[&<>"']/g, (c) => ({
+    return String(str).replaceAll(/[&<>"']/g, (c) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
 }

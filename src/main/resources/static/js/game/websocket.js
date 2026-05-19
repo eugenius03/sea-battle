@@ -52,7 +52,7 @@ function onWsConnected(frame, wsMatchId) {
 
 function onWsError(err) {
     clearSubs();
-    if (typeof showMessage !== 'undefined') {
+    if (err === undefined) {
         showMessage('WebSocket error (check token & match id)', 'error');
     }
     lockEnemyBoard();

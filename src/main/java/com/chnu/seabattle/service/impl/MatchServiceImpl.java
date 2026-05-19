@@ -55,10 +55,7 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
     @Transactional
     @Override
     public Match createMatch(UUID userId) {
-        Match match = new Match();
-        match.setStatus(MatchStatus.WAITING);
-        match.setInviteToken(generateInviteToken());
-
+        Match match = buildMatch();
         match = create(match);
 
         MatchPlayer matchPlayer = createMatchPlayer(match, userId);
@@ -71,9 +68,7 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
     @Transactional
     @Override
     public Match createMatch(UUID player1Id, UUID player2Id) {
-        Match match = new Match();
-        match.setStatus(MatchStatus.WAITING);
-        match.setInviteToken(generateInviteToken());
+        Match match = buildMatch();
 
         match = create(match);
 
@@ -96,30 +91,7 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
         Match match = matchRepository.findByInviteToken(inviteToken)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
 
-        MatchUtils.requireStatuses(match, MatchStatus.WAITING);
-
-        if (matchPlayerService.findByMatchInviteTokenAndUserId(inviteToken, userId).isPresent()) {
-            throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_IN_MATCH);
-        }
-
-        if (match.getPlayers().size() == 2) {
-            log.warn("Failed join attempt: Player {} tried to join full match {}", userId, inviteToken);
-            throw new GameRuleViolationException(ErrorConstants.MATCH_NOT_JOINABLE);
-        }
-
-        MatchPlayer matchPlayer = createMatchPlayer(match, userId);
-
-        match.getPlayers().add(matchPlayer);
-        if (match.getPlayers().size() == 2) {
-            match.setStatus(MatchStatus.PLANNING);
-            UUID opponentId = MatchUtils.getOpponentPlayerId(match, matchPlayer.getId());
-            webSocketService.handleOpponentConnected(inviteToken, opponentId);
-        }
-
-
-        log.info("Player {} joined match {}", userId, inviteToken);
-        return match;
-
+        return doJoinMatch(match, userId, inviteToken);
     }
 
     @Override
@@ -132,7 +104,8 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
     @Transactional
     @Override
     public Optional<MatchResponse> processRematch(String inviteToken, UUID userId) {
-        Match oldMatch = getByInviteToken(inviteToken);
+        Match oldMatch = matchRepository.findByInviteToken(inviteToken)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
 
         MatchUtils.requireStatuses(oldMatch, MatchStatus.FINISHED);
 
@@ -167,8 +140,13 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
             return Optional.empty();
         }
 
-        Match newMatch = createMatch(requester.getUserId());
-        Match joinedMatch = joinMatch(opponent.getUserId(), newMatch.getInviteToken());
+        Match newMatch = buildMatch();
+        MatchPlayer p1 = createMatchPlayer(newMatch, requester.getUserId());
+        newMatch.getPlayers().add(p1);
+        update(newMatch);
+
+        Match joinedMatch = doJoinMatch(newMatch, opponent.getUserId(), newMatch.getInviteToken());
+
 
         webSocketService.sendRematchAgreed(inviteToken, joinedMatch.getInviteToken());
         log.info("Players {} and {} agreed on rematch new match {} created",
@@ -178,5 +156,36 @@ public class MatchServiceImpl extends AbstractBaseService<Match, Long> implement
                 joinedMatch.getInviteToken(),
                 requester.getUserId()
         ));
+    }
+
+    private Match buildMatch() {
+        Match match = new Match();
+        match.setStatus(MatchStatus.WAITING);
+        match.setInviteToken(generateInviteToken());
+        return create(match);
+    }
+
+    private Match doJoinMatch(Match match, UUID userId, String inviteToken) {
+        MatchUtils.requireStatuses(match, MatchStatus.WAITING);
+
+        if (matchPlayerService.findByMatchInviteTokenAndUserId(inviteToken, userId).isPresent()) {
+            throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_IN_MATCH);
+        }
+
+        if (match.getPlayers().size() == 2) {
+            throw new GameRuleViolationException(ErrorConstants.MATCH_NOT_JOINABLE);
+        }
+
+        MatchPlayer matchPlayer = createMatchPlayer(match, userId);
+        match.getPlayers().add(matchPlayer);
+
+        if (match.getPlayers().size() == 2) {
+            match.setStatus(MatchStatus.PLANNING);
+            UUID opponentId = MatchUtils.getOpponentPlayerId(match, matchPlayer.getId());
+            webSocketService.handleOpponentConnected(inviteToken, opponentId);
+        }
+
+        log.info("Player {} joined match {}", userId, inviteToken);
+        return match;
     }
 }

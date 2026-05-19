@@ -1,6 +1,7 @@
 package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.entity.User;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -15,4 +16,6 @@ public interface UserService extends BaseService<User, UUID> {
     User getAuthenticatedUser();
 
     boolean existsById(UUID id);
+
+    UserDetails toUserDetails(User user);
 }
