@@ -8,9 +8,11 @@ import com.chnu.seabattle.service.JwtService;
 import com.chnu.seabattle.service.RefreshTokenService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -29,10 +31,15 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     public void revokeToken(String jti, Instant expiresAt) {
-        revokedTokenRepository.save(new RevokedToken(UUID.fromString(jti), expiresAt));
+        try {
+            revokedTokenRepository.save(new RevokedToken(UUID.fromString(jti), expiresAt));
+        } catch (DataIntegrityViolationException e) {
+            throw new UnauthorizedException(ErrorConstants.INVALID_TOKEN);
+        }
     }
 
     @Override
+    @Transactional
     public UserDetails validateAndRotateRefreshToken(String refreshToken) {
         Claims claims = jwtService.validateAndExtractClaims(refreshToken, "refresh");
 

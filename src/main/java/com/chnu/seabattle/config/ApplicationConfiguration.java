@@ -55,4 +55,14 @@ public class ApplicationConfiguration {
         return strategies.stream()
                 .collect(Collectors.toMap(MoveStrategy::getType, s -> s));
     }
+
+    @Bean
+    public List<String> permittedEndpoints() {
+        return List.of(
+                "/css/**", "/js/**", "/img/**",
+                "/api/auth/**",
+                "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**",
+                "/login", "/register", "/logout"
+        );
+    }
 }
