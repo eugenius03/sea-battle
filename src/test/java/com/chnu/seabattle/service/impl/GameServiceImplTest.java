@@ -150,9 +150,10 @@ class GameServiceImplTest {
         @DisplayName("Should throw exception when player not found")
         void shouldThrowExceptionWhenPlayerNotFound() {
             when(matchPlayerService.findById(any(UUID.class))).thenReturn(Optional.empty());
+            ShipRequest shipRequest = new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL);
 
             assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL))
+                    gameService.placeShip(INVITE_TOKEN, playerId1, shipRequest)
             );
         }
 
@@ -161,9 +162,11 @@ class GameServiceImplTest {
         void shouldThrowExceptionWhenMatchNotFound() {
             when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
             when(matchService.findByInviteTokenForGame(anyString())).thenReturn(Optional.empty());
+            ShipRequest shipRequest = new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL);
+
 
             assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL))
+                    gameService.placeShip(INVITE_TOKEN, playerId1, shipRequest)
             );
         }
 
@@ -173,9 +176,10 @@ class GameServiceImplTest {
             player1.setReady(true);
             when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
             when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+            ShipRequest shipRequest = new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL))
+                    gameService.placeShip(INVITE_TOKEN, playerId1, shipRequest)
             );
 
             assertEquals("Action unsupported: player is already ready", exception.getMessage());
@@ -191,9 +195,10 @@ class GameServiceImplTest {
 
             when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
             when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+            ShipRequest shipRequest = new ShipRequest(ShipType.QUADRO_DECK, 0, 5, Orientation.HORIZONTAL);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.QUADRO_DECK, 0, 5, Orientation.HORIZONTAL))
+                    gameService.placeShip(INVITE_TOKEN, playerId1, shipRequest)
             );
 
             assertTrue(exception.getMessage().contains("Ship limit reached for type"));
@@ -387,9 +392,11 @@ class GameServiceImplTest {
         @DisplayName("Should throw exception when match not found")
         void shouldThrowExceptionWhenMatchNotFound() {
             when(matchService.findByInviteTokenForGame(anyString())).thenReturn(Optional.empty());
+            MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.STANDARD);
+
 
             assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD))
+                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
             );
         }
 
@@ -398,9 +405,10 @@ class GameServiceImplTest {
         void shouldThrowExceptionWhenNotPlayersTurn() {
             match.setCurrentPlayerTurnId(playerId2);
             when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+            MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.STANDARD);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD))
+                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
             );
 
             assertEquals("It's not the player's turn", exception.getMessage());
@@ -411,9 +419,10 @@ class GameServiceImplTest {
         void shouldThrowExceptionWhenNotInProgressStatus() {
             match.setStatus(MatchStatus.PLANNING);
             when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+            MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.STANDARD);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD))
+                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
             );
 
             assertTrue(exception.getMessage().contains("Action not allowed in match state"));
@@ -423,9 +432,10 @@ class GameServiceImplTest {
         @DisplayName("Should throw exception when firing coordinates are out of bounds")
         void shouldThrowExceptionWhenFiringOutOfBounds() {
             when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
+            MoveRequest moveRequest = new MoveRequest(10, 10, MoveType.STANDARD);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(10, 10, MoveType.STANDARD))
+                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
             );
 
             assertEquals("Coordinates out of bounds", exception.getMessage());
@@ -436,9 +446,9 @@ class GameServiceImplTest {
         void shouldThrowExceptionWhenFiringAtSameCoordinatesTwice() {
             when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             when(moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(1L, playerId1, 5, 5, MoveType.STANDARD)).thenReturn(true);
-
+            MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.STANDARD);
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD))
+                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
             );
 
             assertEquals("Cannot fire at the same coordinates twice", exception.getMessage());
@@ -500,7 +510,7 @@ class GameServiceImplTest {
         @DisplayName("Should throw exception when player not in match")
         void shouldThrowWhenPlayerNotInMatch() {
             assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.moveShip(INVITE_TOKEN, UUID.randomUUID(), 10L, 5, 5, Orientation.VERTICAL)
+                    gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL)
             );
         }
 

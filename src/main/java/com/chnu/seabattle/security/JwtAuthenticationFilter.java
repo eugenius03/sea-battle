@@ -1,6 +1,10 @@
 package com.chnu.seabattle.security;
 
 import com.chnu.seabattle.service.JwtService;
+import com.chnu.seabattle.service.RefreshTokenService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -14,7 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -27,8 +31,8 @@ import java.util.Arrays;
 @Log4j2
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     protected void doFilterInternal(
@@ -42,30 +46,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwt == null) {
                 tryRefresh(request, response);
-            } else if (jwtService.isTokenExpired(jwt)) {
-                log.warn("Access token expired, attempting silent refresh");
-                tryRefresh(request, response);
             } else {
-                final String userLogin = jwtService.getUsernameFromToken(jwt);
+                Claims claims = jwtService.validateAndExtractClaims(jwt, "access");
+                String username = claims.getSubject();
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-                if (userLogin != null && authentication == null) {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(userLogin);
+                if (username != null && authentication == null) {
 
-                    if (jwtService.isTokenValid(jwt, userDetails)) {
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities()
-                        );
-                        authToken.setDetails(new WebAuthenticationDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
-                    } else {
-                        jwtService.clearAuthCookies(response);
-                    }
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            username, null, null
+                    );
+                    authToken.setDetails(new WebAuthenticationDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (Exception e) {
-            log.error("JWT auth failed {}", e.getMessage());
-            SecurityContextHolder.clearContext();
+        } catch (ExpiredJwtException e) {
+            tryRefresh(request, response);
+        } catch (JwtException e) {
+            log.warn("Invalid JWT: {}", e.getMessage());
             jwtService.clearAuthCookies(response);
         }
 
@@ -74,27 +72,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private void tryRefresh(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = extractCookie(request, "refreshToken");
-        if (refreshToken == null || jwtService.isTokenExpired(refreshToken)) {
-            log.warn("Refresh token missing or expired, user must re-login");
+        if (refreshToken == null) {
             return;
         }
-
-        String username = jwtService.getUsernameFromToken(refreshToken);
-        if (username == null) {
-            log.warn("Could not extract username from refresh token");
-            return;
-        }
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        if (jwtService.isTokenValid(refreshToken, userDetails)) {
+        try {
+            UserDetails userDetails = refreshTokenService.validateAndRotateRefreshToken(refreshToken);
 
             response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createAccessCookie(userDetails).toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createRefreshCookie(userDetails).toString());
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities()
             );
             authToken.setDetails(new WebAuthenticationDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authToken);
-            log.info("Silently refreshed access token for user: {}", username);
+            log.info("Silently refreshed access token for user: {}", userDetails.getUsername());
+        } catch (UsernameNotFoundException e) {
+            log.warn("User no longer exists, clearing cookies");
+            jwtService.clearAuthCookies(response);
+        } catch (ExpiredJwtException e) {
+            log.warn("Refresh token expired, user must re-login");
+            jwtService.clearAuthCookies(response);
+        } catch (JwtException e) {
+            log.warn("Invalid refresh token: {}", e.getMessage());
+            jwtService.clearAuthCookies(response);
         }
     }
 

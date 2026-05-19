@@ -2,12 +2,12 @@ package com.chnu.seabattle.service.impl;
 
 import com.chnu.seabattle.service.JwtService;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,9 +18,10 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class JwtServiceImpl implements JwtService {
 
     @Value("${jwt.secret}")
@@ -35,9 +36,7 @@ public class JwtServiceImpl implements JwtService {
     @Value("${app.cookie.secure:true}")
     private boolean cookieSecure;
 
-    public String getUsernameFromToken(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
+    private String sameSite = "Strict";
 
     @Override
     public ResponseCookie createRefreshCookie(UserDetails user) {
@@ -45,7 +44,7 @@ public class JwtServiceImpl implements JwtService {
         return ResponseCookie.from("refreshToken", token)
                 .httpOnly(true)
                 .secure(cookieSecure)
-                .sameSite("Strict")
+                .sameSite(sameSite)
                 .path("/")
                 .maxAge(Duration.ofMillis(refreshTokenExpirationInMs))
                 .build();
@@ -57,7 +56,7 @@ public class JwtServiceImpl implements JwtService {
         return ResponseCookie.from("accessToken", token)
                 .httpOnly(true)
                 .secure(cookieSecure)
-                .sameSite("Strict")
+                .sameSite(sameSite)
                 .path("/")
                 .maxAge(Duration.ofMillis(accessTokenExpirationInMs))
                 .build();
@@ -68,7 +67,7 @@ public class JwtServiceImpl implements JwtService {
                 ResponseCookie.from("accessToken", "")
                         .httpOnly(true)
                         .secure(cookieSecure)
-                        .sameSite("Strict")
+                        .sameSite(sameSite)
                         .path("/")
                         .maxAge(0)
                         .build().toString());
@@ -77,7 +76,7 @@ public class JwtServiceImpl implements JwtService {
                 ResponseCookie.from("refreshToken", "")
                         .httpOnly(true)
                         .secure(cookieSecure)
-                        .sameSite("Strict")
+                        .sameSite(sameSite)
                         .path("/")
                         .maxAge(0)
                         .build().toString());
@@ -90,24 +89,27 @@ public class JwtServiceImpl implements JwtService {
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
-        return generateToken(userDetails, refreshTokenExpirationInMs);
+        return generateToken(userDetails, "refresh", refreshTokenExpirationInMs);
     }
 
     public String generateAccessToken(UserDetails userDetails) {
 
-        return generateToken(userDetails, accessTokenExpirationInMs);
+        return generateToken(userDetails, "access", accessTokenExpirationInMs);
     }
 
     private String generateToken(
             UserDetails userDetails,
+            String audience,
             long expirationMs) {
         Map<String, Object> claims = new HashMap<>();
-        return generateToken(claims, userDetails, expirationMs);
+        return generateToken(claims, audience, userDetails, expirationMs);
     }
 
-    private String generateToken(Map<String, Object> extraClaims, UserDetails user, long expirationMs) {
+    private String generateToken(Map<String, Object> extraClaims, String audience, UserDetails user, long expirationMs) {
         return Jwts.builder()
                 .setClaims(extraClaims)
+                .setId(UUID.randomUUID().toString())
+                .setAudience(audience)
                 .setSubject(user.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
@@ -115,35 +117,10 @@ public class JwtServiceImpl implements JwtService {
                 .compact();
     }
 
-    public boolean isTokenExpired(String token) {
-        try {
-            return extractExpiration(token).before(new Date());
-        } catch (JwtException e) {
-            return true;
-        }
-    }
-
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        if (!isTokenExpired(token)) {
-            final String email = getUsernameFromToken(token);
-            return (email.equals(userDetails.getUsername()));
-        }
-        return false;
-    }
-
-    private <T> T extractClaim(String token, Function<Claims, T> claimsResolvers) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolvers.apply(claims);
-    }
-
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
-
-    private Claims extractAllClaims(String token) {
-        return Jwts
-                .parserBuilder()
+    public Claims validateAndExtractClaims(String token, String audience) {
+        return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
+                .requireAudience(audience)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

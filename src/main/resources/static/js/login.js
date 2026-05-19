@@ -12,22 +12,19 @@ document.addEventListener('DOMContentLoaded', function () {
             password: document.getElementById('password').value
         };
 
-        try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(formData)
-            });
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        });
 
-            if (response.ok) {
-                const redirectInput = document.getElementById('redirectUrl');
-                globalThis.location.href = redirectInput ? redirectInput.value : '/game';
-            } else {
-                await response.text();
-                showError('Invalid username or password');
-            }
-        } catch (error) {
-            showError('An error occurred. Please try again.');
+        if (response.ok) {
+            const redirectInput = document.getElementById('redirectUrl');
+            globalThis.location.href = redirectInput ? redirectInput.value : '/game';
+        } else {
+            await response.text();
+            showError('Invalid username or password');
         }
+
     });
 });

@@ -6,11 +6,14 @@ import com.chnu.seabattle.dto.auth.UserResponse;
 import com.chnu.seabattle.entity.User;
 import com.chnu.seabattle.service.AuthService;
 import com.chnu.seabattle.service.JwtService;
+import com.chnu.seabattle.service.RefreshTokenService;
 import com.chnu.seabattle.service.UserService;
-import com.chnu.seabattle.service.impl.UserDetailsServiceImpl;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,12 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
-    private final UserDetailsServiceImpl userDetailsServiceImpl;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @GetMapping("/me")
     public UserResponse getCurrentUser() {
@@ -42,7 +46,7 @@ public class AuthController {
     public void register(@Valid @RequestBody UserRegistrationRequest registrationRequest,
                          HttpServletResponse response) {
         User user = authService.register(registrationRequest);
-        UserDetails userDetails = userDetailsServiceImpl.convertToUserDetails(user);
+        UserDetails userDetails = userService.toUserDetails(user);
         response.addHeader(HttpHeaders.SET_COOKIE,
                 jwtService.createRefreshCookie(userDetails).toString()
         );
@@ -62,8 +66,19 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse response) {
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response) {
         jwtService.clearAuthCookies(response);
+        if (refreshToken != null) {
+            try {
+                Claims claims = jwtService.validateAndExtractClaims(refreshToken, "refresh");
+                refreshTokenService.revokeToken(claims.getId(), claims.getExpiration().toInstant());
+            } catch (JwtException e) {
+                log.warn("Invalid token on logout: {}", e.getMessage());
+            }
+        }
+
         return ResponseEntity.ok().build();
     }
 
@@ -72,7 +87,10 @@ public class AuthController {
             @CookieValue("refreshToken") String refreshToken,
             HttpServletResponse response
     ) {
-        response.addHeader(HttpHeaders.SET_COOKIE,
-                authService.refresh(refreshToken).toString());
+        UserDetails userDetails = refreshTokenService.validateAndRotateRefreshToken(refreshToken);
+
+        log.info("Refreshed access token for user: {}", userDetails.getUsername());
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createAccessCookie(userDetails).toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createRefreshCookie(userDetails).toString());
     }
 }
