@@ -1,4 +1,4 @@
-package com.chnu.seabattle.service.impl;
+package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.User;

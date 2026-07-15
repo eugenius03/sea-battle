@@ -17,6 +17,7 @@ import com.chnu.seabattle.entity.ShipType;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
 import com.chnu.seabattle.repository.ShipRepository;
+import com.chnu.seabattle.service.GameService;
 import com.chnu.seabattle.service.MatchPlayerService;
 import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.MoveService;
@@ -52,7 +53,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GameServiceImpl Tests")
-class GameServiceImplTest {
+class GameServiceTest {
 
     @Mock
     private MatchService matchService;
@@ -72,7 +73,7 @@ class GameServiceImplTest {
     private Map<MoveType, MoveStrategy> strategies;
 
     @InjectMocks
-    private GameServiceImpl gameService;
+    private GameService gameService;
 
     private static final String INVITE_TOKEN = "token1";
 
@@ -509,6 +510,8 @@ class GameServiceImplTest {
         @Test
         @DisplayName("Should throw exception when player not in match")
         void shouldThrowWhenPlayerNotInMatch() {
+            when(matchPlayerService.findById(playerId1)).thenReturn(Optional.empty());
+
             assertThrows(ResourceNotFoundException.class, () ->
                     gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL)
             );

@@ -1,21 +1,75 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.User;
+import com.chnu.seabattle.exception.ResourceNotFoundException;
+import com.chnu.seabattle.exception.UnauthorizedException;
+import com.chnu.seabattle.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.UUID;
 
-public interface UserService extends BaseService<User, UUID> {
-    Optional<User> findByUsername(String username);
+@Service
+@RequiredArgsConstructor
+public class UserService extends AbstractBaseService<User, UUID> {
 
-    boolean existsByUsername(String username);
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    boolean existsByEmail(String email);
+    @Override
+    protected JpaRepository<User, UUID> getRepository() {
+        return userRepository;
+    }
 
-    User getAuthenticatedUser();
+    @Override
+    protected void beforeCreate(User entity) {
+        entity.setPasswordHash(passwordEncoder.encode(entity.getPasswordHash()));
+    }
 
-    boolean existsById(UUID id);
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
 
-    UserDetails toUserDetails(User user);
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    public User getAuthenticatedUser() {
+        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            throw new UnauthorizedException(ErrorConstants.USER_NOT_AUTHENTICATED);
+        }
+
+        String username = authentication.getName();
+        return this.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorConstants.AUTHENTICATED_USER_NOT_FOUND
+                ));
+
+    }
+
+    public boolean existsById(UUID id) {
+        return userRepository.existsById(id);
+    }
+
+    public UserDetails toUserDetails(User user) {
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getUsername())
+                .password(user.getPasswordHash())
+                .build();
+    }
 }
+
