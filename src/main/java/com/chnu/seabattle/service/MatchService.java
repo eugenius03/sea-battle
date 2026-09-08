@@ -78,18 +78,16 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         return matchRepository.findByInviteTokenForGame(inviteToken);
     }
 
+    public Optional<Match> findByInviteTokenForUpdate(String inviteToken) {
+        return matchRepository.findByInviteTokenForUpdate(inviteToken);
+    }
+
     @Transactional
     public Match joinMatch(UUID userId, String inviteToken) {
         Match match = matchRepository.findByInviteToken(inviteToken)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
 
         return doJoinMatch(match, userId, inviteToken);
-    }
-
-    @Transactional(readOnly = true)
-    public Match getByInviteToken(String inviteToken) {
-        return matchRepository.findByInviteToken(inviteToken)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
     }
 
     @Transactional

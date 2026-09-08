@@ -16,9 +16,7 @@ import com.chnu.seabattle.entity.Ship;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
 import com.chnu.seabattle.service.GameService;
 import com.chnu.seabattle.service.MatchPlayerService;
-import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.UserService;
-import com.chnu.seabattle.service.WebSocketService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,8 +36,6 @@ import java.util.UUID;
 public class GameController {
 
     private final GameService gameService;
-    private final WebSocketService webSocketService;
-    private final MatchService matchService;
     private final MatchPlayerService matchPlayerService;
     private final UserService userService;
     private final MoveConverter moveConverter;
@@ -56,15 +52,15 @@ public class GameController {
             @PathVariable String inviteToken,
             @RequestBody @Valid ShipRequest shipRequest
     ) {
-        UUID playerId = resolveMatchPlayer(inviteToken).getId();
-        Ship ship = gameService.placeShip(inviteToken, playerId, shipRequest);
+        MatchPlayer player = resolveMatchPlayer(inviteToken);
+        Ship ship = gameService.placeShip(player, shipRequest);
         return ship.getId();
     }
 
     @PostMapping("/{inviteToken}/generate-random-ships")
     public List<ShipResponse> generateRandomShips(@PathVariable String inviteToken) {
-        UUID playerId = resolveMatchPlayer(inviteToken).getId();
-        return gameService.generateRandomShips(inviteToken, playerId)
+        MatchPlayer player = resolveMatchPlayer(inviteToken);
+        return gameService.generateRandomShips(player)
                 .stream().map(shipConverter::toResponse).toList();
     }
 
@@ -76,15 +72,15 @@ public class GameController {
             @RequestParam int startY,
             @RequestParam Orientation orientation
     ) {
-        UUID playerId = resolveMatchPlayer(inviteToken).getId();
-        gameService.moveShip(inviteToken, playerId, shipId, startX, startY, orientation);
+        MatchPlayer player = resolveMatchPlayer(inviteToken);
+        gameService.moveShip(player, shipId, startX, startY, orientation);
         return shipId;
     }
 
     @PostMapping("/{inviteToken}/mark-ready")
     public void markReady(@PathVariable String inviteToken) {
         MatchPlayer player = resolveMatchPlayer(inviteToken);
-        gameService.markReady(inviteToken, player);
+        gameService.markReady(player);
     }
 
     @PostMapping("/{inviteToken}/fire")
@@ -92,16 +88,16 @@ public class GameController {
             @PathVariable String inviteToken,
             @Valid @RequestBody MoveRequest moveRequest
     ) {
-        UUID shooterId = resolveMatchPlayer(inviteToken).getId();
-        return gameService.executeMove(inviteToken, shooterId, moveRequest).stream()
+        MatchPlayer shooter = resolveMatchPlayer(inviteToken);
+        return gameService.executeMove(shooter, moveRequest).stream()
                 .map(moveConverter::toResponse)
                 .toList();
     }
 
     @GetMapping("{inviteToken}/info")
     public GameInfoResponse info(@PathVariable String inviteToken) {
-        Match match = matchService.getByInviteToken(inviteToken);
         MatchPlayer matchPlayer = resolveMatchPlayer(inviteToken);
+        Match match = matchPlayer.getMatch();
 
         if (MatchStatus.IN_PROGRESS.equals(match.getStatus())) {
             gameService.handleReconnect(match, matchPlayer);

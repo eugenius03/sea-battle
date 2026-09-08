@@ -5,7 +5,6 @@ import com.chnu.seabattle.converter.UserConverter;
 import com.chnu.seabattle.dto.auth.UserLoginRequest;
 import com.chnu.seabattle.dto.auth.UserRegistrationRequest;
 import com.chnu.seabattle.entity.User;
-import com.chnu.seabattle.exception.BadRequestException;
 import com.chnu.seabattle.exception.UserAlreadyExistsException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +35,6 @@ public class AuthService {
         if (registrationRequest.email() != null && userService.existsByEmail(registrationRequest.email())) {
             log.warn("Failed registration: Email {} already exists.", registrationRequest.email());
             throw new UserAlreadyExistsException(ErrorConstants.EMAIL_ALREADY_EXISTS);
-        }
-        if (registrationRequest.password().length() < 6) {
-            log.warn("Failed registration: Password is too short.");
-            throw new BadRequestException(ErrorConstants.SHORT_PASSWORD);
         }
 
         User user = userConverter.toEntity(registrationRequest);

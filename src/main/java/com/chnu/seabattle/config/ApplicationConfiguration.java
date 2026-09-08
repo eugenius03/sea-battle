@@ -60,9 +60,9 @@ public class ApplicationConfiguration {
     public List<String> permittedEndpoints() {
         return List.of(
                 "/css/**", "/js/**", "/img/**",
-                "/api/auth/**",
+                "/api/auth/login", "/api/auth/register", "/api/auth/refresh",
                 "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**",
-                "/login", "/register", "/logout"
+                "/login", "/register", "/logout" // UI routes
         );
     }
 }

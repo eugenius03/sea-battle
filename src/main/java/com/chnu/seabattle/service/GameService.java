@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -52,7 +53,6 @@ public class GameService {
 
     private final MatchService matchService;
     private final ShipRepository shipRepository;
-    private final MatchPlayerService matchPlayerService;
     private final MoveConverter moveConverter;
     private final ShipConverter shipConverter;
     private final WebSocketService webSocketService;
@@ -61,32 +61,21 @@ public class GameService {
     private final MoveService moveService;
     private final DroneConfig droneConfig;
 
-
-    private MatchPlayer getMatchPlayer(Match match, UUID playerId) {
-        return match.getPlayers()
-                .stream()
-                .filter(mp -> mp.getId().equals(playerId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND));
-    }
-
     private boolean isPlayerTurn(Match match, UUID playerId) {
         return match.getCurrentPlayerTurnId().equals(playerId);
     }
 
-
     @Transactional
-    public Ship placeShip(String inviteToken, UUID playerId, ShipRequest shipRequest) {
-        MatchPlayer player = validateAndGetPlayer(inviteToken, playerId);
-
-        List<Ship> updatedShips = player.getShips();
+    public Ship placeShip(MatchPlayer matchPlayer, ShipRequest shipRequest) {
+        MatchUtils.requireCanModifyShips(matchPlayer);
+        List<Ship> updatedShips = matchPlayer.getShips();
 
         if (!BoardUtils.isValidPlacement(updatedShips, shipRequest.shipType(), shipRequest.startX(),
                 shipRequest.startY(), shipRequest.orientation())) {
             throw new GameRuleViolationException(ErrorConstants.INVALID_SHIP_PLACEMENT);
         }
 
-        Map<ShipType, Long> shipTypeCount = player.getShips().stream()
+        Map<ShipType, Long> shipTypeCount = matchPlayer.getShips().stream()
                 .collect(
                         Collectors.groupingBy(Ship::getShipType, counting())
                 );
@@ -98,7 +87,7 @@ public class GameService {
         }
 
         Ship ship = shipConverter.toEntity(shipRequest);
-        ship.setMatchPlayer(player);
+        ship.setMatchPlayer(matchPlayer);
 
         ship = shipRepository.save(ship);
 
@@ -108,31 +97,14 @@ public class GameService {
     }
 
     @Transactional
-    public List<Ship> generateRandomShips(String inviteToken, UUID playerId) {
-        MatchPlayer player = validateAndGetPlayer(inviteToken, playerId);
+    public List<Ship> generateRandomShips(MatchPlayer matchPlayer) {
+        MatchUtils.requireCanModifyShips(matchPlayer);
+        List<Ship> generatedBoard = generateValidBoardLayout(matchPlayer);
 
-        List<Ship> generatedBoard = generateValidBoardLayout(player);
+        updateOrSaveExistingShips(matchPlayer, generatedBoard);
 
-        updateOrSaveExistingShips(player, generatedBoard);
-
-        return player.getShips().stream()
+        return matchPlayer.getShips().stream()
                 .toList();
-    }
-
-    private MatchPlayer validateAndGetPlayer(String inviteToken, UUID playerId) {
-        MatchPlayer player = matchPlayerService.findById(playerId)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND));
-
-        Match match = matchService.findByInviteTokenForGame(inviteToken)
-                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
-
-        MatchUtils.requireStatuses(match, MatchStatus.WAITING, MatchStatus.PLANNING);
-
-        if (player.isReady()) {
-            throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_READY);
-        }
-
-        return player;
     }
 
     private void updateOrSaveExistingShips(MatchPlayer player, List<Ship> generatedBoard) {
@@ -221,11 +193,10 @@ public class GameService {
     }
 
     @Transactional
-    public Ship moveShip(String inviteToken, UUID playerId, Long shipId, int x, int y, Orientation orientation) {
+    public Ship moveShip(MatchPlayer matchPlayer, Long shipId, int x, int y, Orientation orientation) {
+        MatchUtils.requireCanModifyShips(matchPlayer);
 
-        MatchPlayer player = validateAndGetPlayer(inviteToken, playerId);
-
-        List<Ship> ships = player.getShips();
+        List<Ship> ships = matchPlayer.getShips();
         Ship ship = ships.stream().filter(s -> s.getId().equals(shipId)).findFirst().orElseThrow(
                 () -> new ResourceNotFoundException(ErrorConstants.SHIP_NOT_FOUND)
         );
@@ -244,8 +215,8 @@ public class GameService {
     }
 
     @Transactional
-    public Match markReady(String inviteToken, MatchPlayer player) {
-        Match match = matchService.getByInviteToken(inviteToken);
+    public void markReady(MatchPlayer player) {
+        Match match = player.getMatch();
         MatchUtils.requireStatuses(match, MatchStatus.PLANNING);
 
         if (player.isReady()) {
@@ -260,52 +231,51 @@ public class GameService {
             MatchPlayer randomPlayer = match.getPlayers().get(random.nextInt(match.getPlayers().size()));
             match.setCurrentPlayerTurnId(randomPlayer.getId());
 
-            webSocketService.updateMatchStatus(inviteToken, MatchStatus.IN_PROGRESS, match.getCurrentPlayerTurnId(), null);
-            log.info("All players ready. Match {} is now IN_PROGRESS. First turn: {}", inviteToken, match.getCurrentPlayerTurnId());
+            webSocketService.updateMatchStatus(match.getInviteToken(), MatchStatus.IN_PROGRESS, match.getCurrentPlayerTurnId(), null);
+            log.info("All players ready. Match {} is now IN_PROGRESS. First turn: {}", match.getInviteToken(), match.getCurrentPlayerTurnId());
         }
 
         UUID opponentId = MatchUtils.getOpponentPlayerId(match, player.getId());
 
-        webSocketService.sendPlayerReadyMessage(inviteToken, opponentId);
-        return match;
+        webSocketService.sendPlayerReadyMessage(match.getInviteToken(), opponentId);
     }
 
     @Transactional
-    public List<Move> executeMove(String inviteToken, UUID shooterId, MoveRequest moveRequest) {
-        Match match = matchService.findByInviteTokenForGame(inviteToken).orElseThrow(
-                () -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND)
-        );
+    public List<Move> executeMove(MatchPlayer shooter, MoveRequest moveRequest) {
+        Match match = matchService.findByInviteTokenForUpdate(shooter.getMatch().getInviteToken())
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
+
         MatchUtils.requireStatuses(match, MatchStatus.IN_PROGRESS);
-        if (!isPlayerTurn(match, shooterId)) {
+        if (!isPlayerTurn(match, shooter.getId())) {
             log.warn("Rule violation: Player {} attempted to fire out of turn in match {}",
-                    shooterId, match.getInviteToken());
+                    shooter.getId(), match.getInviteToken());
             throw new GameRuleViolationException(ErrorConstants.NOT_PLAYERS_TURN);
         }
 
         if (!BoardUtils.isWithinBounds(moveRequest.x(), moveRequest.y())) {
             log.warn("Rule violation: Player {} attempted to fire out of bounds in match {}",
-                    shooterId, match.getInviteToken());
+                    shooter.getId(), match.getInviteToken());
             throw new GameRuleViolationException(ErrorConstants.COORDINATES_OUT_OF_BOUNDS);
         }
 
         if (moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(
-                match.getId(), shooterId, moveRequest.x(), moveRequest.y(), moveRequest.moveType())) {
+                match.getId(), shooter.getId(), moveRequest.x(), moveRequest.y(), moveRequest.moveType())) {
             log.warn("Rule violation: Player {} attempted to fire at the same coordinates with the same MoveType {}",
-                    shooterId, moveRequest.moveType());
+                    shooter.getId(), moveRequest.moveType());
             throw new GameRuleViolationException(ErrorConstants.DUPLICATE_FIRE);
         }
 
         MoveStrategy strategy = strategies.get(moveRequest.moveType());
         if (strategy == null) {
             log.warn("Rule violation: Player {} attempted to fire with unknown MoveType {}",
-                    shooterId, moveRequest.moveType());
+                    shooter.getId(), moveRequest.moveType());
             throw new GameRuleViolationException(
                     String.format(ErrorConstants.UNKNOWN_MOVE_TYPE, moveRequest.moveType())
             );
         }
 
-        List<Move> result = strategy.execute(match, shooterId, moveRequest);
-        UUID opponentId = MatchUtils.getOpponentPlayerId(match, shooterId);
+        List<Move> result = strategy.execute(match, shooter.getId(), moveRequest);
+        UUID opponentId = MatchUtils.getOpponentPlayerId(match, shooter.getId());
 
         boolean isItOpponentsTurn = opponentId.equals(match.getCurrentPlayerTurnId());
 
@@ -316,18 +286,18 @@ public class GameService {
         );
 
         log.info("Player {} fired at [{}, {}] in match {} using moveType {}",
-                shooterId, moveRequest.x(), moveRequest.y(), match.getInviteToken(), moveRequest.moveType()
+                shooter.getId(), moveRequest.x(), moveRequest.y(), match.getInviteToken(), moveRequest.moveType()
         );
 
         if (MatchStatus.FINISHED.equals(match.getStatus())) {
-            List<ShipResponse> winnerShips = getMatchPlayer(match, shooterId).getShips().stream()
+            List<ShipResponse> winnerShips = shooter.getShips().stream()
                     .map(shipConverter::toResponse)
                     .toList();
 
             webSocketService.updateMatchStatus(
                     match.getInviteToken(), MatchStatus.FINISHED,
                     match.getCurrentPlayerTurnId(), winnerShips);
-            log.info("Match {} FINISHED. Winner: {}", match.getInviteToken(), shooterId);
+            log.info("Match {} FINISHED. Winner: {}", match.getInviteToken(), shooter.getId());
         }
         return result;
     }
@@ -337,7 +307,11 @@ public class GameService {
         Match match = matchService.findByInviteTokenForGame(inviteToken).orElseThrow(
                 () -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND)
         );
-        MatchPlayer player = getMatchPlayer(match, matchPlayerId);
+        MatchPlayer player = match.getPlayers()
+                .stream()
+                .filter(mp -> mp.getId().equals(matchPlayerId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND));
         player.setConnected(false);
         player.setLastSeenAt(Instant.now());
         log.info("Player {} disconnected from match {}", matchPlayerId, inviteToken);
@@ -358,28 +332,43 @@ public class GameService {
                 .map(shipConverter::toResponse)
                 .toList();
 
-        Map<MoveType, Long> uses = Arrays.stream(MoveType.values())
-                .filter(val -> !MoveType.STANDARD.equals(val))
-                .collect(Collectors.toMap(
-                                val -> val,
-                                val ->
-                                        droneConfig.getMaxUsagesFor(val) -
-                                                moveService.countUsagesForMoveType(match.getId(), matchPlayer.getId(), val)
-                        )
-                );
-
         if (MatchStatus.WAITING.equals(match.getStatus()) || MatchStatus.PLANNING.equals(match.getStatus())) {
+            Map<MoveType, Long> initialDroneUsage = Arrays.stream(MoveType.values())
+                    .filter(val -> !MoveType.STANDARD.equals(val))
+                    .collect(Collectors.toMap(
+                            val -> val,
+                            val -> (long) droneConfig.getMaxUsagesFor(val)
+                    ));
+
             return GameInfoResponse.builder()
                     .playerShips(playerShips)
                     .matchStatus(match.getStatus())
                     .matchPlayerId(matchPlayer.getId())
                     .isItMyTurn(false)
-                    .droneUsage(uses)
+                    .droneUsage(initialDroneUsage)
                     .build();
         }
-        boolean isItMyTurn = match.getCurrentPlayerTurnId().equals(matchPlayer.getId());
 
         List<Move> allMoves = match.getMoves().stream().toList();
+
+        Map<MoveType, Long> uses = Arrays.stream(MoveType.values())
+                .filter(val -> !MoveType.STANDARD.equals(val))
+                .collect(Collectors.toMap(
+                        val -> val,
+                        val -> {
+                            long used = allMoves.stream()
+                                    .filter(m -> m.getShooterId().equals(matchPlayer.getId())
+                                            && m.getMoveType() == val
+                                            && m.isMoveOrigin())
+                                    .count();
+                            return droneConfig.getMaxUsagesFor(val) - used;
+                        }
+                ));
+
+        boolean isItMyTurn = Optional.ofNullable(match.getCurrentPlayerTurnId())
+                .map(playerId -> playerId.equals(matchPlayer.getId()))
+                .orElse(false);
+
         List<MoveResponse> playerMoves = allMoves.stream()
                 .filter(m -> m.getShooterId().equals(matchPlayer.getId()))
                 .map(moveConverter::toResponse)

@@ -3,9 +3,10 @@ package com.chnu.seabattle.service;
 import com.chnu.seabattle.entity.Match;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -18,22 +19,46 @@ public class MatchmakingService {
 
     private static final String QUEUE_KEY = "matchmaking:queue";
 
-    public void joinQueue(UUID userId) {
-        UUID opponentId = Optional.of(redisTemplate.opsForList().rightPop(QUEUE_KEY))
-                .map(UUID::fromString)
-                .orElse(null);
+    /**
+     * Atomically peeks at the front of the queue and pops the opponent only if they are
+     * a different player. Returns the opponent's ID string, or null if the queue is empty
+     * or the only entry is the requesting player themselves.
+     * <p>
+     * This Lua script runs as a single Redis command, eliminating the race condition.
+     */
+    private static final DefaultRedisScript<String> PAIR_SCRIPT = new DefaultRedisScript<>(
+            """
+                    local front = redis.call('LINDEX', KEYS[1], 0)
+                    if front == false then
+                        return nil
+                    end
+                    if front ~= ARGV[1] then
+                        redis.call('LPOP', KEYS[1])
+                        return front
+                    end
+                    return nil
+                    """,
+            String.class
+    );
 
-        if (opponentId != null) {
-            if (opponentId.equals(userId)) {
-                redisTemplate.opsForList().rightPush(QUEUE_KEY, userId.toString());
-                Long position = redisTemplate.opsForList().size(QUEUE_KEY);
-                webSocketService.sendQueuePosition(userId.toString(), position);
-                return;
-            }
+    public void joinQueue(UUID userId) {
+        String opponentIdStr = redisTemplate.execute(
+                PAIR_SCRIPT,
+                List.of(QUEUE_KEY),
+                userId.toString()
+        );
+
+        if (opponentIdStr != null) {
+            UUID opponentId = UUID.fromString(opponentIdStr);
             notifyMatchFound(userId, opponentId);
         } else {
-            redisTemplate.opsForList().rightPush(QUEUE_KEY, userId.toString());
-
+            // Only push if the user isn't already in the queue
+            boolean alreadyQueued = redisTemplate.opsForList()
+                    .range(QUEUE_KEY, 0, -1)
+                    .contains(userId.toString());
+            if (!alreadyQueued) {
+                redisTemplate.opsForList().rightPush(QUEUE_KEY, userId.toString());
+            }
             Long position = redisTemplate.opsForList().size(QUEUE_KEY);
             webSocketService.sendQueuePosition(userId.toString(), position);
         }
@@ -41,8 +66,7 @@ public class MatchmakingService {
 
     public void leaveQueue(UUID userId) {
         redisTemplate.opsForList().remove(QUEUE_KEY, 0, userId.toString());
-
-        Thread.startVirtualThread(this::updateQueuePosition);
+        updateQueuePosition();
     }
 
     private void notifyMatchFound(UUID player1Id, UUID player2Id) {
@@ -50,12 +74,11 @@ public class MatchmakingService {
         String inviteToken = match.getInviteToken();
         webSocketService.sendMatchFound(player1Id.toString(), inviteToken);
         webSocketService.sendMatchFound(player2Id.toString(), inviteToken);
-
-        Thread.startVirtualThread(this::updateQueuePosition);
+        updateQueuePosition();
     }
 
     private void updateQueuePosition() {
-        java.util.List<String> usersInQueue = redisTemplate.opsForList().range(QUEUE_KEY, 0, -1);
+        List<String> usersInQueue = redisTemplate.opsForList().range(QUEUE_KEY, 0, -1);
         if (usersInQueue != null) {
             for (int i = 0; i < usersInQueue.size(); i++) {
                 webSocketService.sendQueuePosition(usersInQueue.get(i), (long) (i + 1));

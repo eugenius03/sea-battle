@@ -28,6 +28,14 @@ public class MatchUtils {
         }
     }
 
+    public static void requireCanModifyShips(MatchPlayer matchPlayer) {
+        MatchUtils.requireStatuses(matchPlayer.getMatch(), MatchStatus.WAITING, MatchStatus.PLANNING);
+
+        if (matchPlayer.isReady()) {
+            throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_READY);
+        }
+    }
+
     public static UUID getOpponentPlayerId(Match match, UUID playerId) {
         List<MatchPlayer> players = match.getPlayers();
         if (players.size() != 2) {

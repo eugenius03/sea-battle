@@ -123,8 +123,6 @@ class GameServiceTest {
         @Test
         @DisplayName("Should successfully place a ship")
         void shouldSuccessfullyPlaceShip() {
-            when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             when(shipRepository.save(any())).thenReturn(Ship.builder()
                     .id(1L)
                     .matchPlayer(player1)
@@ -136,7 +134,7 @@ class GameServiceTest {
 
             when(shipConverter.toEntity(any(ShipRequest.class))).thenReturn(Ship.builder().build());
 
-            Ship placedShip = gameService.placeShip(INVITE_TOKEN, playerId1, new ShipRequest(ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL));
+            Ship placedShip = gameService.placeShip(player1, new ShipRequest(ShipType.QUADRO_DECK, 0, 0, Orientation.HORIZONTAL));
 
             assertEquals(1, player1.getShips().size());
             assertEquals(ShipType.QUADRO_DECK, placedShip.getShipType());
@@ -148,39 +146,13 @@ class GameServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when player not found")
-        void shouldThrowExceptionWhenPlayerNotFound() {
-            when(matchPlayerService.findById(any(UUID.class))).thenReturn(Optional.empty());
-            ShipRequest shipRequest = new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL);
-
-            assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.placeShip(INVITE_TOKEN, playerId1, shipRequest)
-            );
-        }
-
-        @Test
-        @DisplayName("Should throw exception when match not found")
-        void shouldThrowExceptionWhenMatchNotFound() {
-            when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
-            when(matchService.findByInviteTokenForGame(anyString())).thenReturn(Optional.empty());
-            ShipRequest shipRequest = new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL);
-
-
-            assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.placeShip(INVITE_TOKEN, playerId1, shipRequest)
-            );
-        }
-
-        @Test
         @DisplayName("Should throw exception when player is already ready")
         void shouldThrowExceptionWhenPlayerAlreadyReady() {
             player1.setReady(true);
-            when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             ShipRequest shipRequest = new ShipRequest(ShipType.SINGLE_DECK, 0, 0, Orientation.HORIZONTAL);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.placeShip(INVITE_TOKEN, playerId1, shipRequest)
+                    gameService.placeShip(player1, shipRequest)
             );
 
             assertEquals("Action unsupported: player is already ready", exception.getMessage());
@@ -194,12 +166,10 @@ class GameServiceTest {
                     .startX(0).startY(0).orientation(Orientation.HORIZONTAL)
                     .hits(0).isSunk(false).build());
 
-            when(matchPlayerService.findById(playerId1)).thenReturn(Optional.of(player1));
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             ShipRequest shipRequest = new ShipRequest(ShipType.QUADRO_DECK, 0, 5, Orientation.HORIZONTAL);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.placeShip(INVITE_TOKEN, playerId1, shipRequest)
+                    gameService.placeShip(player1, shipRequest)
             );
 
             assertTrue(exception.getMessage().contains("Ship limit reached for type"));
@@ -213,31 +183,19 @@ class GameServiceTest {
         @Test
         @DisplayName("Should successfully mark player as ready")
         void shouldSuccessfullyMarkPlayerAsReady() {
-            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
-            gameService.markReady(INVITE_TOKEN, player1);
+            gameService.markReady(player1);
 
             assertTrue(player1.isReady());
-        }
-
-        @Test
-        @DisplayName("Should throw exception when match not found")
-        void shouldThrowExceptionWhenMatchNotFound() {
-            when(matchService.getByInviteToken(anyString())).thenThrow(ResourceNotFoundException.class);
-
-            assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.markReady(INVITE_TOKEN, player1)
-            );
         }
 
         @Test
         @DisplayName("Should throw exception when match is not in PLANNING status")
         void shouldThrowExceptionWhenNotInPlanningStatus() {
             match.setStatus(MatchStatus.IN_PROGRESS);
-            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.markReady(INVITE_TOKEN, player1)
+                    gameService.markReady(player1)
             );
 
             assertTrue(exception.getMessage().contains("Action not allowed in match state"));
@@ -247,19 +205,17 @@ class GameServiceTest {
         @DisplayName("Should throw exception when player is already ready")
         void shouldThrowWhenPlayerAlreadyReady() {
             player1.setReady(true);
-            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
             assertThrows(GameRuleViolationException.class, () ->
-                    gameService.markReady(INVITE_TOKEN, player1)
+                    gameService.markReady(player1)
             );
         }
 
         @Test
         @DisplayName("Match stays PLANNING when only first player is ready")
         void matchStaysPlanningWhenOnlyOnePlayerReady() {
-            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
-            gameService.markReady(INVITE_TOKEN, player1);
+            gameService.markReady(player1);
 
             assertEquals(MatchStatus.PLANNING, match.getStatus());
         }
@@ -268,9 +224,8 @@ class GameServiceTest {
         @DisplayName("Match transitions to IN_PROGRESS when both players are ready")
         void matchTransitionsToInProgressWhenBothPlayersReady() {
             player2.setReady(true);
-            when(matchService.getByInviteToken(INVITE_TOKEN)).thenReturn(match);
 
-            gameService.markReady(INVITE_TOKEN, player1);
+            gameService.markReady(player1);
 
             assertEquals(MatchStatus.IN_PROGRESS, match.getStatus());
             assertTrue(
@@ -300,6 +255,7 @@ class GameServiceTest {
             player2.getShips().add(ship);
 
             StandardAttackStrategy standardStrategy = new StandardAttackStrategy(moveService, moveConverter);
+            lenient().when(matchService.findByInviteTokenForUpdate(anyString())).thenReturn(Optional.of(match));
             lenient().when(strategies.get(MoveType.STANDARD)).thenReturn(standardStrategy);
             lenient().when(moveService.create(any(Move.class))).thenAnswer(inv -> inv.getArgument(0));
             lenient().when(moveConverter.toResponse(any(Move.class))).thenAnswer(inv -> {
@@ -311,9 +267,7 @@ class GameServiceTest {
         @Test
         @DisplayName("Should successfully fire and hit a ship")
         void shouldSuccessfullyFireAndHitShip() {
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
-
-            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+            List<Move> result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
 
             assertEquals(MoveResult.HIT, result.getFirst().getMoveResult());
             verify(moveService).create(any(Move.class));
@@ -324,9 +278,7 @@ class GameServiceTest {
         @Test
         @DisplayName("Should successfully fire and miss")
         void shouldSuccessfullyFireAndMiss() {
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
-
-            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(0, 0, MoveType.STANDARD));
+            List<Move> result = gameService.executeMove(player1, new MoveRequest(0, 0, MoveType.STANDARD));
 
             assertEquals(MoveResult.MISS, result.getFirst().getMoveResult());
             verify(moveService).create(any(Move.class));
@@ -338,9 +290,7 @@ class GameServiceTest {
         void shouldSuccessfullyFireAndSinkShip() {
             player2.getShips().getFirst().setHits(2);
 
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
-
-            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+            List<Move> result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
 
             assertEquals(MoveResult.FINISHED, result.getFirst().getMoveResult());
             verify(moveService, atLeastOnce()).create(any(Move.class));
@@ -353,9 +303,7 @@ class GameServiceTest {
         void shouldEndGameWhenAllShipsSunk() {
             player2.getShips().getFirst().setHits(2);
 
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
-
-            gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+            gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
 
             assertEquals(MatchStatus.FINISHED, match.getStatus());
             assertEquals(playerId1, match.getWinnerId());
@@ -365,9 +313,7 @@ class GameServiceTest {
         @Test
         @DisplayName("Turn stays with shooter after a hit")
         void turnStaysWithShooterAfterHit() {
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
-
-            gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+            gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
 
             assertEquals(playerId1, match.getCurrentPlayerTurnId());
         }
@@ -381,35 +327,32 @@ class GameServiceTest {
                     .startX(0).startY(0).orientation(Orientation.HORIZONTAL)
                     .hits(0).isSunk(false).build());
 
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
-
-            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(5, 5, MoveType.STANDARD));
+            List<Move> result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
 
             assertTrue(result.stream().anyMatch(m -> MoveResult.SUNK.equals(m.getMoveResult())));
             assertEquals(MatchStatus.IN_PROGRESS, match.getStatus());
         }
 
         @Test
-        @DisplayName("Should throw exception when match not found")
-        void shouldThrowExceptionWhenMatchNotFound() {
-            when(matchService.findByInviteTokenForGame(anyString())).thenReturn(Optional.empty());
-            MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.STANDARD);
+        @DisplayName("Should throw exception when move type is unknown")
+        void shouldThrowExceptionWhenUnknownMoveType() {
+            MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.ATTACK_DRONE);
 
-
-            assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
+            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
+                    gameService.executeMove(player1, moveRequest)
             );
+
+            assertTrue(exception.getMessage().contains("Unknown or unimplemented move type"));
         }
 
         @Test
         @DisplayName("Should throw exception when not player's turn")
         void shouldThrowExceptionWhenNotPlayersTurn() {
             match.setCurrentPlayerTurnId(playerId2);
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.STANDARD);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
+                    gameService.executeMove(player1, moveRequest)
             );
 
             assertEquals("It's not the player's turn", exception.getMessage());
@@ -419,11 +362,10 @@ class GameServiceTest {
         @DisplayName("Should throw exception when match is not in IN_PROGRESS status")
         void shouldThrowExceptionWhenNotInProgressStatus() {
             match.setStatus(MatchStatus.PLANNING);
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.STANDARD);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
+                    gameService.executeMove(player1, moveRequest)
             );
 
             assertTrue(exception.getMessage().contains("Action not allowed in match state"));
@@ -432,11 +374,10 @@ class GameServiceTest {
         @Test
         @DisplayName("Should throw exception when firing coordinates are out of bounds")
         void shouldThrowExceptionWhenFiringOutOfBounds() {
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             MoveRequest moveRequest = new MoveRequest(10, 10, MoveType.STANDARD);
 
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
+                    gameService.executeMove(player1, moveRequest)
             );
 
             assertEquals("Coordinates out of bounds", exception.getMessage());
@@ -445,11 +386,10 @@ class GameServiceTest {
         @Test
         @DisplayName("Should throw exception when firing at same coordinates twice")
         void shouldThrowExceptionWhenFiringAtSameCoordinatesTwice() {
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
             when(moveService.existsByMatchIdAndShooterIdAndTargetXAndTargetYAndMoveType(1L, playerId1, 5, 5, MoveType.STANDARD)).thenReturn(true);
             MoveRequest moveRequest = new MoveRequest(5, 5, MoveType.STANDARD);
             GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
-                    gameService.executeMove(INVITE_TOKEN, playerId1, moveRequest)
+                    gameService.executeMove(player1, moveRequest)
             );
 
             assertEquals("Cannot fire at the same coordinates twice", exception.getMessage());
@@ -464,9 +404,7 @@ class GameServiceTest {
                     .startX(3).startY(3).orientation(Orientation.VERTICAL)
                     .hits(0).isSunk(false).build());
 
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
-
-            List<Move> result = gameService.executeMove(INVITE_TOKEN, playerId1, new MoveRequest(3, 4, MoveType.STANDARD));
+            List<Move> result = gameService.executeMove(player1, new MoveRequest(3, 4, MoveType.STANDARD));
 
             assertEquals(MoveResult.HIT, result.getFirst().getMoveResult());
             assertEquals(1, player2.getShips().getFirst().getHits());
@@ -490,7 +428,7 @@ class GameServiceTest {
         @Test
         @DisplayName("Should successfully move a ship to a new position")
         void shouldSuccessfullyMoveShip() {
-            Ship result = gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL);
+            Ship result = gameService.moveShip(player1, 10L, 5, 5, Orientation.VERTICAL);
 
             assertEquals(5, result.getStartX());
             assertEquals(5, result.getStartY());
@@ -498,43 +436,21 @@ class GameServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw exception when match not found")
-        void shouldThrowWhenMatchNotFound() {
-            when(matchService.findByInviteTokenForGame(anyString())).thenReturn(Optional.empty());
-
-            assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL)
-            );
-        }
-
-        @Test
-        @DisplayName("Should throw exception when player not in match")
-        void shouldThrowWhenPlayerNotInMatch() {
-            when(matchPlayerService.findById(playerId1)).thenReturn(Optional.empty());
-
-            assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL)
-            );
-        }
-
-        @Test
         @DisplayName("Should throw exception when player is already ready")
         void shouldThrowWhenPlayerAlreadyReady() {
             player1.setReady(true);
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
 
             assertThrows(GameRuleViolationException.class, () ->
-                    gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.VERTICAL)
+                    gameService.moveShip(player1, 10L, 5, 5, Orientation.VERTICAL)
             );
         }
 
         @Test
         @DisplayName("Should throw exception when ship not found")
         void shouldThrowWhenShipNotFound() {
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
 
             assertThrows(ResourceNotFoundException.class, () ->
-                    gameService.moveShip(INVITE_TOKEN, playerId1, 999L, 5, 5, Orientation.VERTICAL)
+                    gameService.moveShip(player1, 999L, 5, 5, Orientation.VERTICAL)
             );
         }
 
@@ -545,10 +461,9 @@ class GameServiceTest {
                     .id(11L).matchPlayer(player1).shipType(ShipType.SINGLE_DECK)
                     .startX(5).startY(5).orientation(Orientation.HORIZONTAL)
                     .hits(0).isSunk(false).build());
-            when(matchService.findByInviteTokenForGame(INVITE_TOKEN)).thenReturn(Optional.of(match));
 
             assertThrows(GameRuleViolationException.class, () ->
-                    gameService.moveShip(INVITE_TOKEN, playerId1, 10L, 5, 5, Orientation.HORIZONTAL)
+                    gameService.moveShip(player1, 10L, 5, 5, Orientation.HORIZONTAL)
             );
         }
     }
