@@ -1,24 +1,129 @@
 package com.chnu.seabattle.service;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 
-public interface JwtService {
+import javax.crypto.SecretKey;
+import java.time.Duration;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
-    String getUsernameFromToken(String token);
+@Service
+@RequiredArgsConstructor
+public class JwtService {
 
-    ResponseCookie createRefreshCookie(UserDetails user);
+    @Value("${jwt.secret}")
+    private String jwtSecret;
 
-    ResponseCookie createAccessCookie(UserDetails user);
+    @Value("${refresh.token.expiration}")
+    private long refreshTokenExpirationInMs;
 
-    void clearAuthCookies(HttpServletResponse response);
+    @Value("${access.token.expiration}")
+    private long accessTokenExpirationInMs;
 
-    String generateRefreshToken(UserDetails userDetails);
+    @Value("${app.cookie.secure:true}")
+    private boolean cookieSecure;
 
-    String generateAccessToken(UserDetails userDetails);
+    private static final String SAME_SITE = "Strict";
 
-    boolean isTokenExpired(String token);
+    public ResponseCookie createRefreshCookie(UserDetails user) {
+        String token = generateRefreshToken(user);
+        return ResponseCookie.from("refreshToken", token)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite(SAME_SITE)
+                .path("/")
+                .maxAge(Duration.ofMillis(refreshTokenExpirationInMs))
+                .build();
+    }
 
-    boolean isTokenValid(String token, UserDetails userDetails);
+    public ResponseCookie createAccessCookie(UserDetails user) {
+        String token = generateAccessToken(user);
+        return ResponseCookie.from("accessToken", token)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite(SAME_SITE)
+                .path("/")
+                .maxAge(Duration.ofMillis(accessTokenExpirationInMs))
+                .build();
+    }
+
+    public void clearAuthCookies(HttpServletResponse response) {
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE,
+                ResponseCookie.from("accessToken", "")
+                        .httpOnly(true)
+                        .secure(cookieSecure)
+                        .sameSite(SAME_SITE)
+                        .path("/")
+                        .maxAge(0)
+                        .build().toString());
+
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE,
+                ResponseCookie.from("refreshToken", "")
+                        .httpOnly(true)
+                        .secure(cookieSecure)
+                        .sameSite(SAME_SITE)
+                        .path("/")
+                        .maxAge(0)
+                        .build().toString());
+
+        response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE,
+                ResponseCookie.from("JSESSIONID", "")
+                        .path("/")
+                        .maxAge(0)
+                        .build().toString());
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        return generateToken(userDetails, "refresh", refreshTokenExpirationInMs);
+    }
+
+    public String generateAccessToken(UserDetails userDetails) {
+
+        return generateToken(userDetails, "access", accessTokenExpirationInMs);
+    }
+
+    private String generateToken(
+            UserDetails userDetails,
+            String audience,
+            long expirationMs) {
+        Map<String, Object> claims = new HashMap<>();
+        return generateToken(claims, audience, userDetails, expirationMs);
+    }
+
+    private String generateToken(Map<String, Object> extraClaims, String audience, UserDetails user, long expirationMs) {
+        return Jwts.builder()
+                .claims(extraClaims)
+                .id(UUID.randomUUID().toString())
+                .audience().add(audience).and()
+                .subject(user.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public Claims validateAndExtractClaims(String token, String audience) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .requireAudience(audience)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 }

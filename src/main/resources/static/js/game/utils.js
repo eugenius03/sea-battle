@@ -3,7 +3,7 @@ export function $(id) {
 }
 
 export function showMessage(message, type, duration = 3000) {
-    if (typeof window.showMessage === 'function') window.showMessage(message, type, duration);
+    if (typeof globalThis.showMessage === 'function') globalThis.showMessage(message, type, duration);
 }
 
 export function safeJson(s) {

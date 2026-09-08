@@ -1,5 +1,6 @@
 package com.chnu.seabattle.config;
 
+import com.chnu.seabattle.security.MatchmakingInterceptor;
 import com.chnu.seabattle.security.StompMatchPlayerAuthInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final StompMatchPlayerAuthInterceptor stompMatchPlayerAuthInterceptor;
+    private final MatchmakingInterceptor matchmakingInterceptor;
 
     @Value("${websocket.allowed-origins}")
     private String allowedOrigins;
@@ -36,6 +38,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(stompMatchPlayerAuthInterceptor);
+        registration.interceptors(stompMatchPlayerAuthInterceptor, matchmakingInterceptor);
     }
 }

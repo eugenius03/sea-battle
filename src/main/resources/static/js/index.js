@@ -40,4 +40,64 @@ document.addEventListener('DOMContentLoaded', function () {
             if (errorDiv) errorDiv.style.display = 'none';
         });
     }
+
+    const findGameBtn = document.getElementById('findGameBtn');
+    if (findGameBtn) {
+        findGameBtn.addEventListener('click', async function () {
+                findGameBtn.disabled = true;
+                findGameBtn.innerText = 'Finding...';
+
+                const response = await fetch('/api/auth/me', {
+                    method: 'GET',
+                    headers: {'Accept': 'application/json'}
+                });
+
+                let userId;
+                if (response.ok) {
+                    const data = await response.json();
+                    document.cookie = `nav_username=${data.username}; path=/; max-age=86400`;
+                    userId = data.id;
+                }
+
+                if (!userId) {
+                    if (typeof showMessage !== 'undefined') showMessage("User ID not found, please log in again.", "error");
+                    findGameBtn.disabled = false;
+                    findGameBtn.innerText = 'Find Game';
+                    return;
+                }
+
+                const socket = new SockJS('/ws');
+                const stompClient = Stomp.over(socket);
+
+                stompClient.debug = null;
+
+                stompClient.connect({'X-User-Id': userId}, function () {
+                    stompClient.subscribe('/topic/matchmaking/' + userId, function (message) {
+                        const data = JSON.parse(message.body);
+                        if (data.inviteToken) {
+                            stompClient.disconnect();
+
+                            globalThis.location.href = `/game/${data.inviteToken}`;
+                        } else if (data.queuePosition !== undefined && data.queuePosition !== null) {
+                            findGameBtn.innerText = `Finding... (Position: ${data.queuePosition})`;
+                        }
+                    });
+
+                    fetch('/api/match/find', {
+                        method: 'POST',
+                        credentials: 'same-origin'
+                    }).catch(err => {
+                        if (typeof showMessage !== 'undefined') showMessage(`Error: ${err.message}`, 'error');
+                        findGameBtn.disabled = false;
+                        findGameBtn.innerText = 'Find Game';
+                    });
+                }, function (error) {
+                    if (typeof showMessage !== 'undefined') showMessage(`Connection error: ${error}`, 'error');
+                    findGameBtn.disabled = false;
+                    findGameBtn.innerText = 'Find Game';
+                });
+            }
+        )
+        ;
+    }
 });

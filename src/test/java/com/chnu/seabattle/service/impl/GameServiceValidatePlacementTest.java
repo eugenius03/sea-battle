@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("GameServiceImpl - validatePlacement Tests")
-class GameServiceImplValidatePlacementTest {
+class GameServiceValidatePlacementTest {
 
     private MatchPlayer createMatchPlayer(UUID playerId) {
         Match match = new Match();

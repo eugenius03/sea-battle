@@ -1,17 +1,19 @@
-FROM maven:3.9-eclipse-temurin-21-alpine AS builder
+FROM eclipse-temurin:21-jdk-alpine AS builder
 
 WORKDIR /usr/src/app
 
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+COPY gradlew .
+COPY gradle ./gradle
+COPY build.gradle.kts settings.gradle.kts ./
+RUN ./gradlew dependencies --no-daemon || true
 
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN ./gradlew bootJar --no-daemon -x test
 
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
-COPY --from=builder /usr/src/app/target/*.jar app.jar
+COPY --from=builder /usr/src/app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 

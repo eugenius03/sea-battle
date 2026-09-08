@@ -185,8 +185,8 @@ export async function handleEnemyCellClick(e) {
         } else {
             showMessage(hasSunk ? 'Sunk!' : 'Hit!', 'success');
         }
-    } catch (e2) {
-        showMessage(`Error firing: ${e2.message}`, 'error');
+    } catch (error) {
+        showMessage(`Error firing: ${error.message}`, 'error');
     }
 }
 

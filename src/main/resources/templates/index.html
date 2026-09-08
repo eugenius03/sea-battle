@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sea Battle - Home</title>
     <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/index.css">
 </head>
@@ -37,6 +39,10 @@
         <form id="createMatchForm">
             <button type="submit" class="btn btn--success">Create New Match</button>
         </form>
+
+        <div class="divider">OR</div>
+
+        <button id="findGameBtn" class="btn" style="width: 100%; margin-bottom: 20px;">Find Game</button>
 
         <div class="divider">OR</div>
 

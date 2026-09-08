@@ -11,17 +11,15 @@ import java.util.UUID;
 @Repository
 public interface MatchPlayerRepository extends JpaRepository<MatchPlayer, UUID> {
 
-    @EntityGraph(attributePaths = {
-            "ships"
-    })
     Optional<MatchPlayer> findByMatchInviteTokenAndId(
             String inviteToken, UUID matchPlayerId
     );
 
-    Optional<MatchPlayer> findByMatchIdAndUserId(Long matchId, UUID userId);
+    boolean existsByMatchInviteTokenAndId(String inviteToken, UUID matchPlayerId);
 
+    @EntityGraph(attributePaths = {"ships", "match"})
     Optional<MatchPlayer> findByMatchInviteTokenAndUserId(String inviteToken, UUID userId);
 
-    boolean existsByMatchIdAndUserId(Long matchId, UUID matchPlayerId);
+    boolean existsByMatchIdAndUserId(Long matchId, UUID userId);
 
 }

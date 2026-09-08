@@ -1,3 +1,18 @@
+# Gradle & Maven build outputs
+build/
+.gradle/
 target/
+
+# Version control & documentation
 .git/
 *.md
+docs/
+
+# IDE configs
+.idea/
+*.iml
+
+# Docker files
+Dockerfile
+docker-compose*.yml
+podman-compose*.yml
