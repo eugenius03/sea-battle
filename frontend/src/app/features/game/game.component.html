@@ -1,0 +1,752 @@
+<div
+  (click)="onMainClick($event)"
+  (keydown.enter)="onMainClick($event)"
+  (keydown.space)="onMainClick($event)"
+  tabindex="0"
+  class="flex-1 flex flex-col px-3 sm:px-6 lg:px-8 pt-2 sm:pt-3 lg:pt-4 pb-28 md:pb-3 lg:pb-4 w-full max-w-[2400px] 3xl:max-w-[2800px] mx-auto min-h-0"
+>
+  @if (gameState.matchStatus() === 'WAITING') {
+    <div class="mb-3 flex flex-wrap items-center justify-start gap-2.5">
+      <div
+        class="inline-flex items-center gap-2 bg-white border-2 border-black px-3 py-1.5 shadow-[2px_2px_0px_#000] text-xs font-mono font-bold"
+      >
+        <span class="text-neutral-500 uppercase">Room:</span>
+        <span class="text-black font-extrabold">{{ gameState.inviteToken() }}</span>
+        <button
+          type="button"
+          (click)="copyToken()"
+          class="p-1.5 sm:p-1 hover:bg-neutral-100 active:bg-neutral-200 cursor-pointer border border-black/30 flex items-center justify-center min-w-[28px] min-h-[28px]"
+          title="Copy code"
+        >
+          <app-icon name="copy" [size]="14"></app-icon>
+        </button>
+      </div>
+
+      <app-button
+        variant="secondary"
+        size="sm"
+        (clicked)="openInviteModal()"
+        title="Invite opponent with link and QR code"
+      >
+        <span class="flex items-center gap-1.5">
+          <app-icon name="qrcode" [size]="14"></app-icon>
+          INVITE / QR CODE
+        </span>
+      </app-button>
+    </div>
+  }
+
+  @if (gameState.matchStatus() === 'WAITING' || gameState.matchStatus() === 'PLANNING') {
+    <div
+      class="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-10 2xl:gap-16 items-center animate-fade-in max-w-6xl xl:max-w-7xl 2xl:max-w-[2000px] 3xl:max-w-[2600px] mx-auto my-auto w-full"
+    >
+      <div class="lg:col-span-7 xl:col-span-7 2xl:col-span-8 flex justify-center w-full">
+        <app-board
+          boardId="player-board"
+          title="Your Board"
+          subtitle="Place your fleet"
+          [badge]="
+            gameState.isPlayerReady()
+              ? 'Ready'
+              : gameState.allShipsPlaced()
+                ? 'All Placed'
+                : 'Placing'
+          "
+          [badgeType]="
+            gameState.isPlayerReady()
+              ? 'success'
+              : gameState.allShipsPlaced()
+                ? 'accent'
+                : 'neutral'
+          "
+          [cells]="gameState.playerCells()"
+          [isPlayerBoard]="true"
+          [isReady]="gameState.isPlayerReady()"
+          [isLocked]="gameState.isPlayerReady()"
+          [selectedPlacedShipId]="gameState.selectedPlacedShipId()"
+          [hasShipToPlace]="!!gameState.selectedShipToPlace()"
+          (cellClick)="onPlacementCellClick($event)"
+          (cellDblClick)="onPlacementCellDblClick($event)"
+          (cellMouseEnter)="onCellMouseEnter($event, false)"
+          (cellMouseLeave)="onCellMouseLeave(false)"
+          (cellDragStart)="onCellDragStart($event.event, $event.cell)"
+          (cellDragOver)="onCellDragOver($event.event, $event.cell)"
+          (cellDragLeave)="onCellDragLeave($event)"
+          (cellDragEnd)="onCellDragEnd()"
+          (cellDrop)="onCellDrop($event.event, $event.cell)"
+          class="w-full flex justify-center"
+        ></app-board>
+      </div>
+
+      <div
+        class="lg:col-span-5 xl:col-span-5 2xl:col-span-4 space-y-4 max-w-lg xl:max-w-xl mx-auto lg:mx-0 w-full"
+      >
+        <div
+          class="placement-tray-card border-2 border-black shadow-[4px_4px_0px_#000] p-5 2xl:p-8 bg-white"
+        >
+          <div class="flex items-center justify-between mb-4 pb-2 border-b-2 border-black">
+            <div>
+              <h3 class="text-sm font-extrabold uppercase tracking-wider text-black">
+                Ships To Place
+              </h3>
+              <p class="text-xs text-neutral-500 mt-0.5">Click or drag onto your board</p>
+            </div>
+
+            @if (!gameState.isPlayerReady()) {
+              <app-button
+                variant="secondary"
+                size="sm"
+                className="text-xs"
+                (clicked)="onRotateClicked()"
+                title="Rotate Orientation"
+              >
+                <span class="flex items-center gap-1.5">
+                  <app-icon name="rotate-cw" [size]="16"></app-icon>
+                  {{ gameState.placementOrientation() === 'HORIZONTAL' ? 'HORIZ' : 'VERT' }}
+                </span>
+              </app-button>
+            }
+          </div>
+
+          @if (gameState.selectedPlacedShipId() != null) {
+            <div
+              class="mb-3.5 p-2 bg-sky-50 border-2 border-black flex items-center justify-between gap-2 shadow-[2px_2px_0px_#000] text-xs font-bold text-sky-950 animate-fade-in"
+            >
+              <span class="flex items-center gap-1.5 min-w-0 truncate">
+                <app-icon name="target" [size]="14"></app-icon>
+                <span class="truncate">Moving ship: click empty space to place</span>
+              </span>
+              <button
+                type="button"
+                (click)="gameState.resetPlacementInteraction()"
+                class="px-2 py-0.5 bg-white border border-black hover:bg-neutral-100 active:bg-neutral-200 text-[10px] font-mono font-extrabold uppercase whitespace-nowrap cursor-pointer shadow-[1px_1px_0px_#000]"
+              >
+                CANCEL
+              </button>
+            </div>
+          }
+
+          <div class="space-y-2.5 mb-5">
+            @for (entry of shipEntries; track entry.type) {
+              @let remaining = gameState.remainingShipsToPlace()[entry.type];
+              <div
+                class="border-2 border-black p-2.5 flex items-center justify-between transition-colors"
+                [class.bg-neutral-100]="gameState.selectedShipToPlace() === entry.type"
+                [class.shadow-[2px_2px_0px_#000]]="gameState.selectedShipToPlace() === entry.type"
+                [class.cursor-pointer]="remaining > 0 && !gameState.isPlayerReady()"
+                [class.opacity-50]="remaining === 0 || gameState.isPlayerReady()"
+                (click)="
+                  remaining > 0 && !gameState.isPlayerReady() ? selectShipType(entry.type) : null
+                "
+                (keydown.enter)="
+                  remaining > 0 && !gameState.isPlayerReady() ? selectShipType(entry.type) : null
+                "
+                tabindex="0"
+                [draggable]="remaining > 0 && !gameState.isPlayerReady()"
+                (dragstart)="onTrayShipDragStart($event, entry.type)"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="flex gap-1">
+                    @for (cell of [].constructor(entry.def.size); track $index) {
+                      <div class="w-3.5 h-3.5 bg-black"></div>
+                    }
+                  </div>
+                  <span class="text-xs font-bold uppercase text-black">
+                    {{ entry.def.name }}
+                  </span>
+                </div>
+
+                <span class="text-xs font-mono font-bold px-2 py-0.5 border border-black bg-white">
+                  {{ remaining }} left
+                </span>
+              </div>
+            }
+          </div>
+
+          @if (!gameState.isPlayerReady()) {
+            <div class="space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <app-button
+                  variant="secondary"
+                  size="md"
+                  className="w-full justify-center"
+                  (clicked)="gameState.randomizeShips()"
+                  title="Randomize all ship placements"
+                >
+                  <span class="flex items-center justify-center gap-1.5">
+                    <app-icon name="shuffle" [size]="16"></app-icon>
+                    RANDOMIZE
+                  </span>
+                </app-button>
+
+                <app-button
+                  variant="secondary"
+                  size="md"
+                  className="w-full justify-center"
+                  (clicked)="resetFleet()"
+                  title="Reset moving ship and reload fleet layout"
+                >
+                  <span class="flex items-center justify-center gap-1.5">
+                    <app-icon name="rotate-cw" [size]="16"></app-icon>
+                    RESET
+                  </span>
+                </app-button>
+              </div>
+
+              <app-button
+                variant="primary"
+                size="lg"
+                class="w-full"
+                className="w-full"
+                [disabled]="!gameState.canMarkReady()"
+                (clicked)="gameState.markReady()"
+                title="Lock in fleet and prepare for battle"
+              >
+                <span class="flex items-center justify-center gap-2">
+                  <app-icon name="check" [size]="18"></app-icon>
+                  READY FOR BATTLE
+                </span>
+              </app-button>
+
+              @if (gameState.allShipsPlaced() && gameState.matchStatus() === 'WAITING') {
+                <p class="text-[11px] font-bold text-amber-800 text-center uppercase tracking-wide">
+                  Waiting for opponent to join
+                </p>
+              }
+            </div>
+          } @else {
+            <div class="border-2 border-black bg-emerald-100 p-3.5 text-center">
+              <p class="text-xs font-extrabold uppercase text-emerald-900 tracking-wider">
+                Fleet Locked & Ready
+              </p>
+              <p class="text-xs text-neutral-600 mt-1">
+                @if (gameState.isOpponentReady()) {
+                  Opponent is ready! Starting battle...
+                } @else {
+                  Waiting for opponent to finish placing ships...
+                }
+              </p>
+            </div>
+          }
+        </div>
+
+        @if (gameState.matchStatus() === 'WAITING') {
+          <div
+            class="border-2 border-black bg-amber-50 p-4 shadow-[2px_2px_0px_#000] flex flex-col gap-3"
+          >
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-black mb-1">
+                Waiting for Opponent
+              </p>
+              <p class="text-xs text-neutral-600">
+                Share the room code or invite link with a friend. You can place and reposition your
+                ships while waiting!
+              </p>
+            </div>
+            <app-button
+              variant="primary"
+              size="sm"
+              className="w-full justify-center"
+              (clicked)="openInviteModal()"
+            >
+              <span class="flex items-center justify-center gap-2">
+                <app-icon name="qrcode" [size]="16"></app-icon>
+                INVITE LINK &amp; QR CODE
+              </span>
+            </app-button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (gameState.matchStatus() === 'IN_PROGRESS' || gameState.matchStatus() === 'FINISHED') {
+    <div
+      class="combat-arena w-fit max-w-full mx-auto my-auto flex flex-col items-center gap-5 lg:gap-6 animate-fade-in"
+    >
+      @if (gameState.matchStatus() === 'FINISHED') {
+        <div
+          class="match-over-bar w-full border-2 border-black bg-white p-3 sm:p-4 shadow-[4px_4px_0px_#000] flex flex-wrap items-center justify-between gap-3 order-last md:order-first sticky md:static bottom-2 z-20"
+        >
+          <div class="flex items-center gap-2.5 sm:gap-3">
+            <span
+              class="px-2.5 py-1 text-xs font-black uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000]"
+              [class.bg-emerald-400]="gameState.isWinner()"
+              [class.bg-red-500]="!gameState.isWinner()"
+              [class.text-black]="gameState.isWinner()"
+              [class.text-white]="!gameState.isWinner()"
+            >
+              {{ gameState.isWinner() ? 'VICTORY' : 'DEFEAT' }}
+            </span>
+            <span class="text-xs sm:text-sm font-bold text-neutral-800">
+              {{
+                gameState.isWinner()
+                  ? 'All enemy vessels destroyed!'
+                  : 'All your ships were sunk. Opponent fleet revealed.'
+              }}
+            </span>
+            @if (gameState.rematchRequestedByOpponent() && !myRematchRequested()) {
+              <span
+                class="inline-flex items-center gap-1 text-xs font-black uppercase px-2 py-0.5 bg-amber-300 border-2 border-black animate-pulse shadow-[1px_1px_0px_#000]"
+              >
+                <app-icon name="zap" [size]="14"></app-icon>
+                Opponent wants rematch!
+              </span>
+            }
+          </div>
+
+          <div class="flex items-center gap-2">
+            <app-button
+              variant="primary"
+              size="sm"
+              [loading]="myRematchRequested()"
+              (clicked)="requestRematch()"
+              title="Request or accept rematch"
+            >
+              <span class="flex items-center gap-1.5">
+                <app-icon name="rotate-cw" [size]="14"></app-icon>
+                {{
+                  myRematchRequested()
+                    ? 'WAITING...'
+                    : gameState.rematchRequestedByOpponent()
+                      ? 'ACCEPT REMATCH'
+                      : 'REMATCH'
+                }}
+              </span>
+            </app-button>
+
+            <app-button
+              variant="secondary"
+              size="sm"
+              (clicked)="exitMatch()"
+              title="Return to lobby"
+            >
+              <span class="flex items-center gap-1.5">
+                <app-icon name="log-out" [size]="14"></app-icon>
+                LOBBY
+              </span>
+            </app-button>
+          </div>
+        </div>
+      } @else {
+        <div
+          class="drones-console w-full border-2 border-black bg-white p-3 sm:p-4 2xl:p-5 shadow-[4px_4px_0px_#000] flex flex-col gap-2.5 sm:gap-3 2xl:gap-4 order-last md:order-first sticky md:static bottom-2 z-20"
+        >
+          <div
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 pb-2.5 border-b border-black/15"
+          >
+            <div class="drones-title flex items-center gap-2">
+              <app-icon name="plane" [size]="16" class="text-black"></app-icon>
+              <span
+                class="text-xs sm:text-sm 2xl:text-base font-extrabold uppercase tracking-wider text-black"
+              >
+                Drones
+              </span>
+            </div>
+
+            <div
+              class="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 2xl:gap-3.5 w-full sm:w-auto"
+            >
+              <button
+                type="button"
+                (click)="gameState.isItMyTurn() ? selectWeapon('STANDARD') : null"
+                [disabled]="!gameState.isItMyTurn()"
+                [class.bg-black]="gameState.selectedMoveType() === 'STANDARD'"
+                [class.text-white]="gameState.selectedMoveType() === 'STANDARD'"
+                [class.bg-neutral-100]="gameState.selectedMoveType() !== 'STANDARD'"
+                [class.text-black]="gameState.selectedMoveType() !== 'STANDARD'"
+                [class.opacity-50]="!gameState.isItMyTurn()"
+                [class.cursor-not-allowed]="!gameState.isItMyTurn()"
+                class="drone-btn border-2 border-black px-2 sm:px-3.5 2xl:px-5 py-1.5 2xl:py-2.5 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-colors shadow-[2px_2px_0px_#000]"
+                title="Single cell shot"
+              >
+                <app-icon name="crosshair" [size]="15"></app-icon>
+                <div class="flex flex-col text-left">
+                  <span class="btn-label text-xs 2xl:text-sm font-bold uppercase leading-tight"
+                    >Fire</span
+                  >
+                  <span
+                    class="btn-sub text-[0.6875rem] 2xl:text-xs font-mono opacity-80 leading-tight"
+                    >1 Cell</span
+                  >
+                </div>
+              </button>
+
+              <button
+                type="button"
+                (click)="
+                  gameState.isItMyTurn() && gameState.surveillanceRemaining() > 0
+                    ? selectWeapon('SURVEILLANCE_DRONE')
+                    : null
+                "
+                [disabled]="!gameState.isItMyTurn() || gameState.surveillanceRemaining() === 0"
+                [class.bg-cyan-600]="gameState.selectedMoveType() === 'SURVEILLANCE_DRONE'"
+                [class.text-white]="gameState.selectedMoveType() === 'SURVEILLANCE_DRONE'"
+                [class.bg-neutral-100]="gameState.selectedMoveType() !== 'SURVEILLANCE_DRONE'"
+                [class.text-black]="gameState.selectedMoveType() !== 'SURVEILLANCE_DRONE'"
+                [class.opacity-40]="
+                  !gameState.isItMyTurn() || gameState.surveillanceRemaining() === 0
+                "
+                [class.cursor-not-allowed]="
+                  !gameState.isItMyTurn() || gameState.surveillanceRemaining() === 0
+                "
+                class="drone-btn border-2 border-black px-2 sm:px-3.5 2xl:px-5 py-1.5 2xl:py-2.5 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-colors shadow-[2px_2px_0px_#000]"
+                title="Reveals ships in a 3×3 area"
+              >
+                <app-icon name="radar" [size]="15"></app-icon>
+                <div class="flex flex-col text-left">
+                  <span class="btn-label text-xs 2xl:text-sm font-bold uppercase leading-tight"
+                    >Radar</span
+                  >
+                  <span
+                    class="btn-sub text-[0.6875rem] 2xl:text-xs font-mono font-bold leading-tight"
+                  >
+                    {{ gameState.surveillanceRemaining() }} left
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                (click)="
+                  gameState.isItMyTurn() && gameState.attackDronesRemaining() > 0
+                    ? selectWeapon('ATTACK_DRONE')
+                    : null
+                "
+                [disabled]="!gameState.isItMyTurn() || gameState.attackDronesRemaining() === 0"
+                [class.bg-red-600]="gameState.selectedMoveType() === 'ATTACK_DRONE'"
+                [class.text-white]="gameState.selectedMoveType() === 'ATTACK_DRONE'"
+                [class.bg-neutral-100]="gameState.selectedMoveType() !== 'ATTACK_DRONE'"
+                [class.text-black]="gameState.selectedMoveType() !== 'ATTACK_DRONE'"
+                [class.opacity-40]="
+                  !gameState.isItMyTurn() || gameState.attackDronesRemaining() === 0
+                "
+                [class.cursor-not-allowed]="
+                  !gameState.isItMyTurn() || gameState.attackDronesRemaining() === 0
+                "
+                class="drone-btn border-2 border-black px-2 sm:px-3.5 2xl:px-5 py-1.5 2xl:py-2.5 flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-colors shadow-[2px_2px_0px_#000]"
+                title="Airstrikes random cells in a 3×3 area"
+              >
+                <app-icon name="flame" [size]="15"></app-icon>
+                <div class="flex flex-col text-left">
+                  <span class="btn-label text-xs 2xl:text-sm font-bold uppercase leading-tight"
+                    >Attack</span
+                  >
+                  <span
+                    class="btn-sub text-[0.6875rem] 2xl:text-xs font-mono font-bold leading-tight"
+                  >
+                    {{ gameState.attackDronesRemaining() }} left
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="drones-desc px-3.5 2xl:px-5 py-2 2xl:py-3 border-2 text-xs sm:text-sm 2xl:text-base font-mono transition-all flex items-center gap-2.5"
+            [ngClass]="{
+              'bg-neutral-100 border-black text-black shadow-[2px_2px_0px_#000]':
+                gameState.selectedMoveType() === 'STANDARD',
+              'bg-cyan-50 border-cyan-600 text-cyan-950 shadow-[2px_2px_0px_#0891b2]':
+                gameState.selectedMoveType() === 'SURVEILLANCE_DRONE',
+              'bg-red-50 border-red-600 text-red-950 shadow-[2px_2px_0px_#dc2626]':
+                gameState.selectedMoveType() === 'ATTACK_DRONE',
+            }"
+          >
+            @switch (gameState.selectedMoveType()) {
+              @case ('STANDARD') {
+                <span
+                  class="font-bold uppercase tracking-wider flex items-center gap-1.5 text-black"
+                >
+                  <app-icon name="crosshair" [size]="14"></app-icon>
+                  Standard Fire:
+                </span>
+                <span class="text-neutral-700">
+                  Single-target strike (1 cell). Directly attacks the targeted coordinate.
+                </span>
+              }
+              @case ('SURVEILLANCE_DRONE') {
+                <span
+                  class="font-bold uppercase tracking-wider flex items-center gap-1.5 text-cyan-800"
+                >
+                  <app-icon name="radar" [size]="14"></app-icon>
+                  Surveillance Drone:
+                </span>
+                <span class="text-cyan-900">
+                  Reconnaissance scan across a 3×3 area. Reveals any enemy vessels in the sector
+                  without damaging cells.
+                </span>
+              }
+              @case ('ATTACK_DRONE') {
+                <span
+                  class="font-bold uppercase tracking-wider flex items-center gap-1.5 text-red-800"
+                >
+                  <app-icon name="flame" [size]="14"></app-icon>
+                  Attack Drone:
+                </span>
+                <span class="text-red-900">
+                  Tactical airstrike across a 3×3 area. Bombards coordinates within the targeted
+                  sector.
+                </span>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <div
+        class="combat-boards-row flex flex-col md:flex-row items-center justify-center gap-6 lg:gap-8 xl:gap-12 w-full order-first md:order-last"
+      >
+        <div class="w-full flex flex-col items-center">
+          <app-board
+            boardId="player-board-combat"
+            title="Your Board"
+            subtitle="Defending fleet"
+            [badge]="
+              gameState.matchStatus() === 'FINISHED'
+                ? gameState.isWinner()
+                  ? 'Fleet Survived'
+                  : 'Fleet Lost'
+                : 'Defense'
+            "
+            [badgeType]="
+              gameState.matchStatus() === 'FINISHED' && !gameState.isWinner() ? 'danger' : 'neutral'
+            "
+            [cells]="gameState.playerCells()"
+            [isPlayerBoard]="true"
+            [isLocked]="true"
+            class="w-full flex justify-center"
+          ></app-board>
+        </div>
+
+        <div class="w-full flex flex-col items-center">
+          <app-board
+            boardId="enemy-board"
+            title="Enemy Board"
+            [subtitle]="
+              gameState.matchStatus() === 'FINISHED' ? 'Enemy waters revealed' : 'Target waters'
+            "
+            [badge]="
+              gameState.matchStatus() === 'FINISHED'
+                ? gameState.isWinner()
+                  ? 'Fleet Destroyed'
+                  : 'Opponent Fleet Revealed'
+                : gameState.isItMyTurn()
+                  ? 'Your Turn to Attack'
+                  : 'Opponent\'s Turn'
+            "
+            [badgeType]="
+              gameState.matchStatus() === 'FINISHED'
+                ? 'neutral'
+                : gameState.isItMyTurn()
+                  ? 'accent'
+                  : 'neutral'
+            "
+            [cells]="gameState.enemyCells()"
+            [isPlayerBoard]="false"
+            [isLocked]="gameState.matchStatus() === 'FINISHED' || !gameState.isItMyTurn()"
+            [isTurn]="gameState.matchStatus() === 'IN_PROGRESS' && gameState.isItMyTurn()"
+            (cellClick)="onEnemyCellClick($event)"
+            (cellMouseEnter)="onCellMouseEnter($event, true)"
+            (cellMouseLeave)="onCellMouseLeave(true)"
+            class="w-full flex justify-center"
+          ></app-board>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (gameState.matchStatus() === 'FINISHED' && showResultModal()) {
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      (click)="closeResultModal()"
+      (keydown.enter)="closeResultModal()"
+      tabindex="0"
+    >
+      <div
+        class="relative w-full max-w-lg p-6 sm:p-8 bg-white border-4 border-black shadow-[8px_8px_0px_#000] animate-scale-up text-black text-center"
+        (click)="$event.stopPropagation()"
+        (keydown.enter)="$event.stopPropagation()"
+        tabindex="0"
+      >
+        <button
+          type="button"
+          (click)="closeResultModal()"
+          class="absolute top-3 right-3 w-8 h-8 bg-neutral-100 hover:bg-neutral-200 border-2 border-black flex items-center justify-center font-black text-sm cursor-pointer shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_#000] transition-colors"
+          title="Close and view boards"
+        >
+          <app-icon name="close" [size]="14"></app-icon>
+        </button>
+
+        @if (gameState.isWinner()) {
+          <div
+            class="w-16 h-16 bg-emerald-400 border-2 border-black flex items-center justify-center mx-auto mb-4 shadow-[4px_4px_0px_#000]"
+          >
+            <app-icon name="award" [size]="32" class="text-black"></app-icon>
+          </div>
+          <div class="flex items-center justify-center gap-2">
+            <app-icon name="pixel-bracket-left" [size]="28" class="text-black"></app-icon>
+            <h2 class="text-3xl font-black uppercase tracking-tight text-black">YOU WIN!</h2>
+            <app-icon name="pixel-bracket-right" [size]="28" class="text-black"></app-icon>
+          </div>
+          <p class="text-sm text-neutral-600 font-bold mt-2">
+            All opponent ships were destroyed. Tactical victory achieved!
+          </p>
+        } @else {
+          <div
+            class="w-16 h-16 bg-red-500 border-2 border-black flex items-center justify-center mx-auto mb-4 shadow-[4px_4px_0px_#000]"
+          >
+            <app-icon name="pixel-skull" [size]="32" class="text-white"></app-icon>
+          </div>
+          <div class="flex items-center justify-center gap-2">
+            <app-icon name="pixel-bracket-left" [size]="28" class="text-black"></app-icon>
+            <h2 class="text-3xl font-black uppercase tracking-tight text-black">YOU LOSE</h2>
+            <app-icon name="pixel-bracket-right" [size]="28" class="text-black"></app-icon>
+          </div>
+          <p class="text-sm text-neutral-600 font-bold mt-2">
+            All your ships were destroyed. Close this overlay to inspect the boards and opponent
+            fleet.
+          </p>
+        }
+
+        @if (gameState.rematchRequestedByOpponent() && !myRematchRequested()) {
+          <div
+            class="mt-5 bg-amber-200 border-2 border-black p-2.5 font-extrabold text-black uppercase text-xs animate-pulse shadow-[2px_2px_0px_#000] flex items-center justify-center gap-1.5"
+          >
+            <app-icon name="zap" [size]="14"></app-icon>
+            <span>Opponent wants a rematch! Click Rematch to accept.</span>
+          </div>
+        }
+
+        <div
+          class="mt-6 pt-6 border-t-2 border-black flex flex-col sm:flex-row gap-3 justify-center"
+        >
+          <app-button
+            variant="primary"
+            size="md"
+            className="w-full sm:w-auto"
+            [loading]="myRematchRequested()"
+            (clicked)="requestRematch()"
+          >
+            <span class="flex items-center gap-1.5 justify-center">
+              <app-icon name="rotate-cw" [size]="16"></app-icon>
+              {{
+                myRematchRequested()
+                  ? 'WAITING FOR OPPONENT...'
+                  : gameState.rematchRequestedByOpponent()
+                    ? 'ACCEPT REMATCH'
+                    : 'REMATCH'
+              }}
+            </span>
+          </app-button>
+
+          <app-button
+            variant="secondary"
+            size="md"
+            className="w-full sm:w-auto"
+            (clicked)="closeResultModal()"
+            title="Inspect game boards"
+          >
+            <span class="flex items-center gap-1.5 justify-center">
+              <app-icon name="target" [size]="16"></app-icon>
+              VIEW BOARDS
+            </span>
+          </app-button>
+
+          <app-button
+            variant="secondary"
+            size="md"
+            className="w-full sm:w-auto"
+            (clicked)="exitMatch()"
+            title="Return to lobby"
+          >
+            <span class="flex items-center gap-1.5 justify-center">
+              <app-icon name="log-out" [size]="16"></app-icon>
+              LOBBY
+            </span>
+          </app-button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <app-modal [isOpen]="showInviteModal()" title="Invite Opponent" (closed)="closeInviteModal()">
+    <div class="flex flex-col gap-5">
+      <div
+        class="flex flex-col items-center justify-center p-4 bg-neutral-50 border-2 border-black shadow-[3px_3px_0px_#000]"
+      >
+        <div
+          [innerHTML]="qrCodeSvg()"
+          class="w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center"
+        ></div>
+        <p class="mt-2 text-[11px] font-mono font-bold text-neutral-600 uppercase tracking-wider">
+          Scan QR Code to join match
+        </p>
+      </div>
+
+      <div>
+        <label
+          for="inviteUrl"
+          class="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5"
+        >
+          Invite Link
+        </label>
+        <div class="flex items-stretch gap-2">
+          <input
+            id="inviteUrl"
+            type="text"
+            readonly
+            [value]="inviteUrl()"
+            class="flex-1 bg-neutral-100 border-2 border-black px-3 py-2 font-mono text-xs text-black focus:outline-none select-all truncate"
+          />
+          <app-button
+            variant="primary"
+            size="sm"
+            (clicked)="copyInviteLink()"
+            title="Copy invite link"
+          >
+            <span class="flex items-center gap-1.5 whitespace-nowrap">
+              <app-icon [name]="linkCopied() ? 'check' : 'copy'" [size]="14"></app-icon>
+              {{ linkCopied() ? 'COPIED' : 'COPY' }}
+            </span>
+          </app-button>
+        </div>
+      </div>
+
+      <div>
+        <label
+          for="roomCode"
+          class="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5"
+        >
+          Room Code
+        </label>
+        <div class="flex items-stretch gap-2">
+          <input
+            id="roomCode"
+            type="text"
+            readonly
+            [value]="gameState.inviteToken()"
+            class="flex-1 bg-neutral-100 border-2 border-black px-3 py-2 font-mono text-xs font-bold tracking-widest text-black focus:outline-none select-all uppercase"
+          />
+          <app-button
+            variant="secondary"
+            size="sm"
+            (clicked)="copyRoomCode()"
+            title="Copy room code"
+          >
+            <span class="flex items-center gap-1.5 whitespace-nowrap">
+              <app-icon [name]="codeCopied() ? 'check' : 'copy'" [size]="14"></app-icon>
+              {{ codeCopied() ? 'COPIED' : 'COPY' }}
+            </span>
+          </app-button>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t-2 border-black/20 flex justify-end">
+        <app-button variant="secondary" size="sm" (clicked)="closeInviteModal()">
+          CLOSE
+        </app-button>
+      </div>
+    </div>
+  </app-modal>
+</div>

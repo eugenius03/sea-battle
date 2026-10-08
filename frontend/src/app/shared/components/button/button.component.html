@@ -1,0 +1,16 @@
+<button
+  [type]="type()"
+  [disabled]="disabled() || loading()"
+  (click)="onClick($event)"
+  [class]="buttonClasses()"
+  class="cursor-pointer inline-flex items-center justify-center select-none focus:outline-none focus-visible:outline-2 focus-visible:outline-black focus-visible:outline-offset-2"
+>
+  @if (loading()) {
+    <app-icon
+      name="spinner"
+      [size]="16"
+      class="animate-pixel-spin -ml-1 mr-2 text-current"
+    ></app-icon>
+  }
+  <ng-content></ng-content>
+</button>

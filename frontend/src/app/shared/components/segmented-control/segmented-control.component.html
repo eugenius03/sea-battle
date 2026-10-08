@@ -1,0 +1,16 @@
+<div class="inline-flex border-2 border-black bg-neutral-100 p-0.5 select-none w-full">
+  @for (opt of options(); track opt.value) {
+    <button
+      type="button"
+      (click)="selectOption(opt.value)"
+      [class.bg-black]="selected() === opt.value"
+      [class.text-white]="selected() === opt.value"
+      [class.font-bold]="selected() === opt.value"
+      [class.text-neutral-600]="selected() !== opt.value"
+      [class.hover:text-black]="selected() !== opt.value"
+      class="flex-1 cursor-pointer py-2 px-3 text-xs sm:text-sm uppercase tracking-wider transition-colors text-center flex items-center justify-center gap-1.5 focus:outline-none"
+    >
+      {{ opt.label }}
+    </button>
+  }
+</div>

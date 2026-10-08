@@ -171,6 +171,7 @@ public class MatchService extends AbstractBaseService<Match, Long> {
             match.setStatus(MatchStatus.PLANNING);
             UUID opponentId = MatchUtils.getOpponentPlayerId(match, matchPlayer.getId());
             webSocketService.handleOpponentConnected(inviteToken, opponentId);
+            webSocketService.updateMatchStatus(inviteToken, MatchStatus.PLANNING, null, null);
         }
 
         log.info("Player {} joined match {}", userId, inviteToken);

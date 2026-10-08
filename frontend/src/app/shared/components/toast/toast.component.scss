@@ -1,0 +1,18 @@
+:host {
+  display: contents;
+}
+
+.toast-item {
+  animation: toast-drop 0.15s steps(4) forwards;
+}
+
+@keyframes toast-drop {
+  from {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

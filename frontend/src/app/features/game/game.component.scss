@@ -1,0 +1,69 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+@media (min-width: 2560px) {
+  .combat-arena {
+    gap: 32px !important;
+
+    .drones-console {
+      padding: 24px 36px !important;
+      border-width: 3.5px !important;
+      box-shadow: 8px 8px 0px #000000 !important;
+
+      .drones-title {
+        font-size: 24px !important;
+        gap: 12px !important;
+
+        app-icon svg {
+          transform: scale(1.6) !important;
+        }
+      }
+
+      .drone-btn {
+        padding: 14px 28px !important;
+        border-width: 3px !important;
+        box-shadow: 4px 4px 0px #000000 !important;
+        gap: 14px !important;
+
+        app-icon svg {
+          transform: scale(1.5) !important;
+        }
+
+        .btn-label {
+          font-size: 18px !important;
+        }
+
+        .btn-sub {
+          font-size: 13px !important;
+        }
+      }
+
+      .drones-desc {
+        padding: 16px 24px !important;
+        font-size: 17px !important;
+        border-width: 3px !important;
+        box-shadow: 4px 4px 0px #000000 !important;
+        gap: 14px !important;
+
+        app-icon svg {
+          transform: scale(1.5) !important;
+        }
+      }
+    }
+
+    .combat-boards-row {
+      gap: 56px !important;
+    }
+  }
+
+  .placement-tray-card {
+    padding: 32px !important;
+    border-width: 3.5px !important;
+    box-shadow: 8px 8px 0px #000000 !important;
+  }
+}

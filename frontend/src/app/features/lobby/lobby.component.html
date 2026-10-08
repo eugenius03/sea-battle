@@ -1,0 +1,142 @@
+<div
+  class="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-5xl 2xl:max-w-6xl mx-auto w-full min-h-0"
+>
+  <header class="mb-10 text-center animate-fade-in">
+    <div
+      class="inline-flex items-center justify-center p-3 mb-4 bg-black text-white shadow-[3px_3px_0px_#000]"
+    >
+      <app-icon name="pixel-ship" [size]="48" class="text-white"></app-icon>
+    </div>
+
+    <div class="flex items-center justify-center gap-2">
+      <app-icon name="pixel-bracket-left" [size]="28" class="text-black hidden sm:block"></app-icon>
+      <h1 class="text-3xl sm:text-4xl font-extrabold uppercase tracking-tight text-black">
+        Sea Battle
+      </h1>
+      <app-icon
+        name="pixel-bracket-right"
+        [size]="28"
+        class="text-black hidden sm:block"
+      ></app-icon>
+    </div>
+
+    <p class="text-sm font-medium text-neutral-600 mt-2">Select a game mode to start playing</p>
+  </header>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl 2xl:max-w-5xl mx-auto">
+    <section
+      class="border-2 border-black shadow-[4px_4px_0px_#000] p-6 sm:p-8 flex flex-col justify-between bg-white relative animate-fade-in"
+    >
+      <div>
+        <div class="flex items-center gap-3 mb-3">
+          <div class="p-2 bg-black text-white">
+            <app-icon name="swords" [size]="20"></app-icon>
+          </div>
+          <h2 class="text-xl font-bold uppercase tracking-tight text-black">Quick Match</h2>
+        </div>
+        <p class="text-sm text-neutral-600 mb-6 leading-relaxed">
+          Find a random online opponent to play against.
+        </p>
+
+        @if (isSearching()) {
+          <div
+            class="bg-amber-100 border-2 border-black p-3.5 mb-6 flex items-center justify-between"
+          >
+            <div class="flex items-center gap-2.5">
+              <div class="w-2.5 h-2.5 bg-black animate-pulse"></div>
+              <span class="text-xs font-bold uppercase tracking-wider text-black"
+                >Searching...</span
+              >
+            </div>
+            <span class="text-xs font-mono font-bold text-black">
+              Position: {{ queuePosition() ?? '1' }}
+            </span>
+          </div>
+        }
+      </div>
+
+      <app-button
+        variant="primary"
+        size="lg"
+        class="w-full"
+        className="w-full"
+        [loading]="isSearching()"
+        [disabled]="joiningMatch()"
+        (clicked)="isSearching() ? cancelMatchmaking() : startMatchmaking()"
+      >
+        <span class="flex items-center gap-2 justify-center">
+          @if (!isSearching()) {
+            <app-icon name="swords" [size]="18"></app-icon>
+            FIND OPPONENT
+          } @else {
+            CANCEL SEARCH
+          }
+        </span>
+      </app-button>
+    </section>
+
+    <section
+      class="border-2 border-black shadow-[4px_4px_0px_#000] p-6 sm:p-8 flex flex-col justify-between bg-white relative animate-fade-in"
+    >
+      <div>
+        <div class="flex items-center gap-3 mb-3">
+          <div class="p-2 bg-black text-white">
+            <app-icon name="users" [size]="20"></app-icon>
+          </div>
+          <h2 class="text-xl font-bold uppercase tracking-tight text-black">Play with Friend</h2>
+        </div>
+        <p class="text-sm text-neutral-600 mb-6 leading-relaxed">
+          Create a private game room and share the invite code.
+        </p>
+      </div>
+
+      <app-button
+        variant="secondary"
+        size="lg"
+        class="w-full"
+        className="w-full"
+        [loading]="creatingMatch()"
+        [disabled]="isSearching() || joiningMatch()"
+        (clicked)="createPrivateMatch()"
+      >
+        <span class="flex items-center gap-2 justify-center">
+          <app-icon name="plus" [size]="18"></app-icon>
+          CREATE ROOM
+        </span>
+      </app-button>
+    </section>
+  </div>
+
+  <section class="max-w-4xl mx-auto mt-6 animate-fade-in">
+    <div
+      class="border-2 border-black shadow-[4px_4px_0px_#000] p-4 flex flex-col sm:flex-row gap-3 items-center bg-white"
+    >
+      <div class="flex items-center gap-3 flex-1 w-full">
+        <div class="p-2 bg-black text-white shrink-0">
+          <app-icon name="link" [size]="18"></app-icon>
+        </div>
+        <input
+          id="inviteInput"
+          type="text"
+          [(ngModel)]="inviteInput"
+          (ngModelChange)="onInviteInputChange($event)"
+          placeholder="Enter room code or paste invite link..."
+          aria-label="Room code or invite link"
+          class="flex-1 rounded-none bg-neutral-50 border-2 border-black px-3.5 py-2 text-sm text-black font-mono placeholder:text-neutral-400 focus:outline-none focus:bg-white w-full"
+          (keyup.enter)="joinPrivateMatch()"
+        />
+      </div>
+      <app-button
+        variant="primary"
+        size="md"
+        class="w-full sm:w-auto shrink-0"
+        className="w-full sm:w-auto"
+        [disabled]="!inviteInput.trim() || isSearching() || creatingMatch()"
+        [loading]="joiningMatch()"
+        (clicked)="joinPrivateMatch()"
+      >
+        JOIN ROOM
+      </app-button>
+    </div>
+  </section>
+</div>

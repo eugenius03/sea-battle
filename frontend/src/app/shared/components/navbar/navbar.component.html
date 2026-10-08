@@ -1,0 +1,41 @@
+<nav class="fixed top-0 inset-x-0 z-50 h-14 border-b-2 border-black bg-white">
+  <div
+    class="h-full px-4 sm:px-6 lg:px-8 max-w-[1920px] 2xl:max-w-[2400px] mx-auto flex items-center justify-between"
+  >
+    <a routerLink="/lobby" class="flex items-center gap-2.5 group">
+      <div
+        class="w-8 h-8 bg-black text-white flex items-center justify-center shadow-[2px_2px_0px_#000] group-hover:translate-x-[1px] group-hover:translate-y-[1px] transition-transform"
+      >
+        <app-icon name="pixel-anchor" [size]="18" class="text-white"></app-icon>
+      </div>
+      <span class="font-extrabold text-black tracking-tight uppercase text-sm sm:text-base">
+        Sea Battle
+      </span>
+    </a>
+
+    <div class="flex items-center gap-2 sm:gap-3">
+      @if (authState.isAuthenticated()) {
+        <div class="flex items-center gap-2 bg-neutral-100 border-2 border-black px-2.5 py-1">
+          <div class="w-5 h-5 bg-black flex items-center justify-center">
+            <span class="text-xs font-bold text-white uppercase">{{
+              authState.username()?.charAt(0)
+            }}</span>
+          </div>
+          <span class="text-xs font-bold text-black uppercase hidden sm:block">
+            {{ authState.username() }}
+          </span>
+        </div>
+
+        <app-button
+          variant="secondary"
+          size="sm"
+          title="Sign Out"
+          className="!p-1.5"
+          (clicked)="onSignOut()"
+        >
+          <app-icon name="log-out" [size]="16"></app-icon>
+        </app-button>
+      }
+    </div>
+  </div>
+</nav>

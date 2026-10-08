@@ -1,0 +1,94 @@
+<div
+  class="pixel-board-wrapper"
+  [class.is-turn]="isTurn"
+  [class.is-locked]="isLocked"
+  (click)="onWrapperClick($event)"
+  (keydown.enter)="onWrapperClick($event)"
+  (keydown.space)="onWrapperClick($event)"
+  tabindex="0"
+>
+  <div class="board-header">
+    <div class="board-title-group">
+      <h3 class="board-title">{{ title }}</h3>
+      @if (badge) {
+        <span class="board-badge" [ngClass]="isLocked ? 'badge--locked' : 'badge--' + badgeType">
+          @if (isLocked) {
+            <app-icon name="pixel-lock" [size]="12"></app-icon>
+          } @else if (isTurn) {
+            <span class="w-1.5 h-1.5 bg-emerald-300 animate-pulse"></span>
+          }
+          <span>{{ badge }}</span>
+        </span>
+      }
+    </div>
+    @if (subtitle) {
+      <div class="board-subtitle">{{ subtitle }}</div>
+    }
+  </div>
+
+  <div class="board-grid-shell">
+    <div class="coords-cols" aria-hidden="true">
+      <div class="coord-corner"></div>
+      @for (col of columns; track col) {
+        <div class="coord-label">{{ col }}</div>
+      }
+    </div>
+
+    <div class="board-body">
+      <div class="coords-rows" aria-hidden="true">
+        @for (row of rows; track row) {
+          <div class="coord-label">{{ row }}</div>
+        }
+      </div>
+
+      <div
+        class="board-matrix"
+        [class.is-holding]="isHoldingShip || isHoldingNewShip || isHoldingDrone"
+        [id]="boardId"
+        role="grid"
+        [attr.aria-label]="title"
+        (mouseleave)="onMatrixMouseLeave()"
+        (dragleave)="onMatrixDragLeave($event)"
+        (touchstart)="onTouchStart($event)"
+        (touchmove)="onTouchMove($event)"
+        (touchend)="onTouchEnd()"
+        (touchcancel)="onTouchCancel()"
+      >
+        @for (cell of cells; track cell.key) {
+          <button
+            type="button"
+            class="cell"
+            [class.ship]="cell.hasShip"
+            [class.hit]="cell.isHit && !cell.isSunk"
+            [class.sunk]="cell.isSunk"
+            [class.miss]="cell.isMiss"
+            [class.surveillance]="cell.isSurveillance"
+            [class.selected]="selectedPlacedShipId === cell.shipId"
+            [class.movable]="isPlayerBoard && !isLocked && !isReady && cell.hasShip"
+            [class.drag-over]="cell.isDragOver"
+            [class.inactive]="cell.isInactive"
+            [class.drone-preview]="cell.isDronePreview"
+            [class.drone-preview-surveillance]="cell.dronePreviewType === 'SURVEILLANCE_DRONE'"
+            [class.drone-preview-attack]="cell.dronePreviewType === 'ATTACK_DRONE'"
+            [class.drone-center]="cell.isDroneCenter"
+            [class.preview-valid]="cell.isPlacementValid"
+            [class.preview-invalid]="cell.isPlacementInvalid"
+            [attr.data-x]="cell.x"
+            [attr.data-y]="cell.y"
+            [attr.draggable]="isPlayerBoard && !isLocked && !isReady && cell.hasShip"
+            [attr.aria-label]="getCellAriaLabel(cell)"
+            (mouseenter)="onCellMouseEnter(cell)"
+            (mouseleave)="onCellMouseLeave(cell)"
+            (dragstart)="onDragStart($event, cell)"
+            (dragover)="onDragOver($event, cell)"
+            (dragleave)="onDragLeave(cell)"
+            (dragend)="onDragEnd($event, cell)"
+            (drop)="onDrop($event, cell)"
+            (dblclick)="onCellDblClick(cell)"
+            (click)="onCellClick(cell)"
+          ></button>
+        }
+      </div>
+    </div>
+  </div>
+</div>
