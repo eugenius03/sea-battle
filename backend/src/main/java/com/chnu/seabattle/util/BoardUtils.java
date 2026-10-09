@@ -1,5 +1,6 @@
 package com.chnu.seabattle.util;
 
+import com.chnu.seabattle.constants.NumericalConstants;
 import com.chnu.seabattle.dto.game.Cell;
 import com.chnu.seabattle.entity.Orientation;
 import com.chnu.seabattle.entity.Ship;
@@ -13,8 +14,6 @@ public final class BoardUtils {
 
     private BoardUtils() {
     }
-
-    private static final int GRID_SIZE = 10;
 
     public static Set<Cell> getOccupiedCells(Ship ship) {
         Set<Cell> cells = new HashSet<>();
@@ -37,12 +36,12 @@ public final class BoardUtils {
     public static boolean isWithinBounds(int x, int y, ShipType type, Orientation orientation) {
         if (x < 0 || y < 0) return false;
         return Orientation.HORIZONTAL.equals(orientation)
-                ? x + type.getSize() <= GRID_SIZE
-                : y + type.getSize() <= GRID_SIZE;
+                ? x + type.getSize() <= NumericalConstants.GRID_SIZE
+                : y + type.getSize() <= NumericalConstants.GRID_SIZE;
     }
 
     public static boolean isWithinBounds(int x, int y) {
-        return x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
+        return x >= 0 && x < NumericalConstants.GRID_SIZE && y >= 0 && y < NumericalConstants.GRID_SIZE;
     }
 
     public static boolean isValidPlacement(List<Ship> ships, ShipType type, int x, int y, Orientation orientation) {

@@ -2,6 +2,7 @@ package com.chnu.seabattle.service.strategy;
 
 import com.chnu.seabattle.config.DroneConfig;
 import com.chnu.seabattle.constants.ErrorConstants;
+import com.chnu.seabattle.constants.NumericalConstants;
 import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.dto.game.Cell;
 import com.chnu.seabattle.dto.move.MoveRequest;
@@ -66,7 +67,8 @@ public class AttackDroneStrategy extends AbstractAttackStrategy {
             }
         }
         Collections.shuffle(validCells);
-        int shotCount = Math.min(validCells.size(), 3 + random.nextInt(4));
+        int shotCount = Math.min(validCells.size(),
+                NumericalConstants.ATTACK_DRONE_BASE_SHOTS + random.nextInt(NumericalConstants.ATTACK_DRONE_RANDOM_SHOTS_BOUND));
 
         List<Cell> targetCells = validCells.stream()
                 .limit(shotCount)

@@ -1,5 +1,6 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.entity.TokenType;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -31,30 +32,26 @@ public class JwtService {
     @Value("${access.token.expiration}")
     private long accessTokenExpirationInMs;
 
+    @Value("${guest.token.expiration}")
+    private long guestTokenExpirationInMs;
+
     @Value("${app.cookie.secure:true}")
     private boolean cookieSecure;
 
     private static final String SAME_SITE = "Strict";
 
-    public ResponseCookie createRefreshCookie(UserDetails user) {
-        String token = generateRefreshToken(user);
-        return ResponseCookie.from("refreshToken", token)
+    public ResponseCookie createCookie(UserDetails user, TokenType tokenType) {
+        String token = createToken(user, tokenType);
+        long expirationMs = switch (tokenType) {
+            case ACCESS -> accessTokenExpirationInMs;
+            case REFRESH -> isGuest(user) ? guestTokenExpirationInMs : refreshTokenExpirationInMs;
+        };
+        return ResponseCookie.from(tokenType.toString().toLowerCase() + "Token", token)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .sameSite(SAME_SITE)
                 .path("/")
-                .maxAge(Duration.ofMillis(refreshTokenExpirationInMs))
-                .build();
-    }
-
-    public ResponseCookie createAccessCookie(UserDetails user) {
-        String token = generateAccessToken(user);
-        return ResponseCookie.from("accessToken", token)
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .sameSite(SAME_SITE)
-                .path("/")
-                .maxAge(Duration.ofMillis(accessTokenExpirationInMs))
+                .maxAge(Duration.ofMillis(expirationMs))
                 .build();
     }
 
@@ -84,33 +81,15 @@ public class JwtService {
                         .build().toString());
     }
 
-    public String generateRefreshToken(UserDetails userDetails) {
-        return generateToken(userDetails, "refresh", refreshTokenExpirationInMs);
-    }
-
-    public String generateAccessToken(UserDetails userDetails) {
-
-        return generateToken(userDetails, "access", accessTokenExpirationInMs);
-    }
-
-    private String generateToken(
+    public String createToken(
             UserDetails userDetails,
-            String audience,
-            long expirationMs) {
+            TokenType audience) {
         Map<String, Object> claims = new HashMap<>();
-        return generateToken(claims, audience, userDetails, expirationMs);
-    }
-
-    private String generateToken(Map<String, Object> extraClaims, String audience, UserDetails user, long expirationMs) {
-        return Jwts.builder()
-                .claims(extraClaims)
-                .id(UUID.randomUUID().toString())
-                .audience().add(audience).and()
-                .subject(user.getUsername())
-                .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(getSigningKey())
-                .compact();
+        long expirationMs = switch (audience) {
+            case ACCESS -> accessTokenExpirationInMs;
+            case REFRESH -> isGuest(userDetails) ? guestTokenExpirationInMs : refreshTokenExpirationInMs;
+        };
+        return createToken(claims, audience.toString().toLowerCase(), userDetails, expirationMs);
     }
 
     public Claims validateAndExtractClaims(String token, String audience) {
@@ -122,8 +101,25 @@ public class JwtService {
                 .getPayload();
     }
 
+    private String createToken(Map<String, Object> extraClaims, String audience, UserDetails user, long expirationMs) {
+        return Jwts.builder()
+                .claims(extraClaims)
+                .id(UUID.randomUUID().toString())
+                .audience().add(audience).and()
+                .subject(user.getUsername())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
     private SecretKey getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private boolean isGuest(UserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+                .anyMatch(auth -> "ROLE_GUEST".equals(auth.getAuthority()));
     }
 }

@@ -61,7 +61,9 @@ public class ApplicationConfiguration {
         return List.of(
                 "/css/**", "/js/**", "/img/**",
                 "/api/auth/login", "/api/auth/register", "/api/auth/refresh",
+                "/api/auth/logout", "/api/auth/guest",
                 "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**",
+                "/ws/**",
                 "/login", "/register", "/logout" // UI routes
         );
     }

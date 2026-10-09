@@ -2,6 +2,7 @@ package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.config.DroneConfig;
 import com.chnu.seabattle.constants.ErrorConstants;
+import com.chnu.seabattle.constants.NumericalConstants;
 import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.converter.ShipConverter;
 import com.chnu.seabattle.dto.game.GameInfoResponse;
@@ -47,8 +48,6 @@ import static java.util.stream.Collectors.counting;
 @Slf4j
 public class GameService {
 
-    private static final int GRID_SIZE = 10;
-    private static final int MAX_PLACEMENT_ATTEMPTS = 100;
     private final SecureRandom random = new SecureRandom();
 
     private final MatchService matchService;
@@ -144,9 +143,7 @@ public class GameService {
                 .sorted(Comparator.comparingInt(ShipType::getSize).reversed())
                 .toList();
 
-        int maxBoardRetries = 50;
-
-        for (int attempt = 0; attempt < maxBoardRetries; attempt++) {
+        for (int attempt = 0; attempt < NumericalConstants.MAX_BOARD_GENERATION_RETRIES; attempt++) {
             List<Ship> board = new ArrayList<>();
 
             if (tryPopulateFullBoard(board, sortedShipTypes, player)) {
@@ -169,9 +166,9 @@ public class GameService {
     }
 
     private boolean tryPlaceSingleShip(List<Ship> board, ShipType type, MatchPlayer player) {
-        for (int attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; attempt++) {
-            int x = random.nextInt(GRID_SIZE);
-            int y = random.nextInt(GRID_SIZE);
+        for (int attempt = 0; attempt < NumericalConstants.MAX_SHIP_PLACEMENT_ATTEMPTS; attempt++) {
+            int x = random.nextInt(NumericalConstants.GRID_SIZE);
+            int y = random.nextInt(NumericalConstants.GRID_SIZE);
             Orientation orientation = random.nextBoolean()
                     ? Orientation.HORIZONTAL : Orientation.VERTICAL;
 

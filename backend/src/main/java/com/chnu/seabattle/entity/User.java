@@ -32,13 +32,17 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(nullable = false)
+    @Column
     private String passwordHash;
 
-    @Column
+    @Column(unique = true)
     private String email;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean isGuest = false;
 }

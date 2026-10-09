@@ -1,5 +1,6 @@
 package com.chnu.seabattle.security;
 
+import com.chnu.seabattle.entity.TokenType;
 import com.chnu.seabattle.service.JwtService;
 import com.chnu.seabattle.service.RefreshTokenService;
 import io.jsonwebtoken.Claims;
@@ -86,8 +87,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             UserDetails userDetails = refreshTokenService.validateAndRotateRefreshToken(refreshToken);
 
-            response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createAccessCookie(userDetails).toString());
-            response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createRefreshCookie(userDetails).toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createCookie(userDetails, TokenType.ACCESS).toString());
+            response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createCookie(userDetails, TokenType.REFRESH).toString());
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities()
@@ -103,6 +104,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             jwtService.clearAuthCookies(response);
         } catch (JwtException e) {
             log.warn("Invalid refresh token: {}", e.getMessage());
+            jwtService.clearAuthCookies(response);
+        } catch (Exception e) {
+            log.warn("Failed to refresh token: {}", e.getMessage());
             jwtService.clearAuthCookies(response);
         }
     }

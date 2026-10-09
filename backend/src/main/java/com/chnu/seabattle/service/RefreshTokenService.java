@@ -27,10 +27,13 @@ public class RefreshTokenService {
     }
 
     public void revokeToken(String jti, Instant expiresAt) {
-        try {
-            revokedTokenRepository.save(new RevokedToken(UUID.fromString(jti), expiresAt));
-        } catch (DataIntegrityViolationException e) {
-            throw new UnauthorizedException(ErrorConstants.INVALID_TOKEN);
+        UUID id = UUID.fromString(jti);
+        if (!revokedTokenRepository.existsById(id)) {
+            try {
+                revokedTokenRepository.saveAndFlush(new RevokedToken(id, expiresAt));
+            } catch (DataIntegrityViolationException ignored) {
+                // Token already revoked concurrently; revoke operation is idempotent
+            }
         }
     }
 

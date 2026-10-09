@@ -11,5 +11,6 @@ public interface UserConverter {
     @Mapping(target = "passwordHash", source = "password")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "isGuest", constant = "false")
     User toEntity(UserRegistrationRequest userDto);
 }
