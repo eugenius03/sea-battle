@@ -47,6 +47,7 @@ public class StandardAttackStrategy extends AbstractAttackStrategy {
                 .targetX(moveRequest.x())
                 .targetY(moveRequest.y())
                 .moveType(MoveType.STANDARD)
+                .isMoveOrigin(true)
                 .build();
 
         Set<Cell> targetedCells = collectTargetedCells(match, shooterId);

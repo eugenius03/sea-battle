@@ -21,6 +21,7 @@ import com.chnu.seabattle.service.GameService;
 import com.chnu.seabattle.service.MatchPlayerService;
 import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.MoveService;
+import com.chnu.seabattle.service.UserService;
 import com.chnu.seabattle.service.WebSocketService;
 import com.chnu.seabattle.service.strategy.MoveStrategy;
 import com.chnu.seabattle.service.strategy.StandardAttackStrategy;
@@ -69,6 +70,8 @@ class GameServiceTest {
     private ShipConverter shipConverter;
     @Mock
     private WebSocketService webSocketService;
+    @Mock
+    private UserService userService;
     @Mock
     private Map<MoveType, MoveStrategy> strategies;
 

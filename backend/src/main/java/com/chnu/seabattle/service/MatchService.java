@@ -1,20 +1,33 @@
 package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.constants.ErrorConstants;
+import com.chnu.seabattle.converter.MoveConverter;
+import com.chnu.seabattle.converter.ShipConverter;
+import com.chnu.seabattle.dto.match.MatchHistoryResponse;
+import com.chnu.seabattle.dto.match.MatchInviteResponse;
+import com.chnu.seabattle.dto.match.MatchParticipantResponse;
 import com.chnu.seabattle.dto.match.MatchResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
+import com.chnu.seabattle.entity.Move;
+import com.chnu.seabattle.enums.MatchResult;
+import com.chnu.seabattle.exception.BadRequestException;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
 import com.chnu.seabattle.repository.MatchRepository;
+import com.chnu.seabattle.repository.UserRepository;
 import com.chnu.seabattle.util.MatchUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,6 +41,9 @@ public class MatchService extends AbstractBaseService<Match, Long> {
     private final MatchRepository matchRepository;
     private final MatchPlayerService matchPlayerService;
     private final WebSocketService webSocketService;
+    private final ShipConverter shipConverter;
+    private final MoveConverter moveConverter;
+    private final UserRepository userRepository;
 
     @Override
     protected MatchRepository getRepository() {
@@ -82,6 +98,56 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         return matchRepository.findByInviteTokenForUpdate(inviteToken);
     }
 
+    public List<Match> findAllByPlayersUserIdAndStatusOrderByCreatedAtDesc(UUID userId, MatchStatus status, Pageable pageable) {
+        return matchRepository.findAllByPlayersUserIdAndStatusOrderByCreatedAtDesc(userId, status, pageable);
+    }
+
+    public List<MatchHistoryResponse> getMatchHistory(UUID userId, Pageable pageable) {
+        List<Match> matches = matchRepository.findAllByPlayersUserIdAndStatusOrderByCreatedAtDesc(userId, MatchStatus.FINISHED, pageable);
+        return matches.stream().map(match ->
+                MatchHistoryResponse.builder()
+                        .id(match.getInviteToken())
+                        .durationSeconds(Duration.between(match.getCreatedAt(), match.getFinishedAt()).toSeconds())
+                        .playedAt(match.getCreatedAt())
+                        .result(MatchUtils.isWinner(match, userId) ? MatchResult.WON : MatchResult.LOST)
+                        .build()
+        ).toList();
+    }
+
+    @Cacheable(value = "matches", key = "#inviteToken")
+    @Transactional(readOnly = true)
+    public MatchResponse getMatch(String inviteToken) {
+
+        Match match = matchRepository.findByInviteToken(inviteToken)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
+
+        if (!match.getStatus().equals(MatchStatus.FINISHED)) {
+            throw new BadRequestException(String.format(ErrorConstants.INVALID_MATCH_STATE, match.getStatus()));
+        }
+
+        List<MatchParticipantResponse> participants = match.getPlayers().stream().map(player ->
+                        MatchParticipantResponse.builder()
+                                .ships(player.getShips().stream().map(shipConverter::toResponse).toList())
+                                .isWinner(player.getId().equals(match.getWinnerId()))
+                                .username(userRepository.findById(player.getUserId()).orElseThrow(
+                                        () -> new ResourceNotFoundException(ErrorConstants.USER_NOT_FOUND)
+                                ).getUsername())
+                                .build())
+                .toList();
+
+        return MatchResponse.builder()
+                .inviteToken(match.getInviteToken())
+                .players(participants)
+                .moves(match.getMoves().stream()
+                        .sorted(Comparator.comparing(Move::getCreatedAt))
+                        .map(moveConverter::toReplayResponse)
+                        .toList())
+                .status(match.getStatus())
+                .createdAt(match.getCreatedAt())
+                .finishedAt(match.getFinishedAt())
+                .build();
+    }
+
     @Transactional
     public Match joinMatch(UUID userId, String inviteToken) {
         Match match = matchRepository.findByInviteToken(inviteToken)
@@ -91,7 +157,7 @@ public class MatchService extends AbstractBaseService<Match, Long> {
     }
 
     @Transactional
-    public Optional<MatchResponse> processRematch(String inviteToken, UUID userId) {
+    public Optional<MatchInviteResponse> processRematch(String inviteToken, UUID userId) {
         Match oldMatch = matchRepository.findByInviteToken(inviteToken)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
 
@@ -140,7 +206,7 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         log.info("Players {} and {} agreed on rematch new match {} created",
                 requester.getUserId(), opponent.getUserId(), newMatch.getInviteToken()
         );
-        return Optional.of(new MatchResponse(
+        return Optional.of(new MatchInviteResponse(
                 joinedMatch.getInviteToken(),
                 requester.getUserId()
         ));

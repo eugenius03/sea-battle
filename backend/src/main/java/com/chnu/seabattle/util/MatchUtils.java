@@ -48,4 +48,9 @@ public class MatchUtils {
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.PLAYER_NOT_FOUND))
                 .getId();
     }
+
+    public static boolean isWinner(Match match, UUID userId) {
+        return match.getPlayers().stream()
+                .anyMatch(p -> p.getUserId().equals(userId) && p.getId().equals(match.getWinnerId()));
+    }
 }

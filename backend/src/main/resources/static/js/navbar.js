@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setAuthUI(usernameDisplay, userSection, guestSection, brandLink, homeLink, cachedUsername);
     } else {
         try {
-            const response = await fetch('/api/auth/me', {
+            const response = await fetch('/api/user/me', {
                 method: 'GET',
                 headers: {'Accept': 'application/json'}
             });

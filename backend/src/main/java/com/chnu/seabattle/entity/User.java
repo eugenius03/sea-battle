@@ -45,4 +45,8 @@ public class User {
     @Builder.Default
     @Column(nullable = false)
     private boolean isGuest = false;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean isEmailVerified = false;
 }

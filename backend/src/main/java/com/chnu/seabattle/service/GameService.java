@@ -59,6 +59,7 @@ public class GameService {
     private final Map<MoveType, MoveStrategy> strategies;
     private final MoveService moveService;
     private final DroneConfig droneConfig;
+    private final UserService userService;
 
     private boolean isPlayerTurn(Match match, UUID playerId) {
         return match.getCurrentPlayerTurnId().equals(playerId);
@@ -295,6 +296,7 @@ public class GameService {
                     match.getInviteToken(), MatchStatus.FINISHED,
                     match.getCurrentPlayerTurnId(), winnerShips);
             log.info("Match {} FINISHED. Winner: {}", match.getInviteToken(), shooter.getId());
+            match.getPlayers().forEach(p -> userService.evictStats(p.getUserId()));
         }
         return result;
     }

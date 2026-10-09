@@ -1,5 +1,6 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.dto.move.ShootingStatsProjection;
 import com.chnu.seabattle.entity.Move;
 import com.chnu.seabattle.entity.MoveType;
 import com.chnu.seabattle.repository.MoveRepository;
@@ -34,5 +35,9 @@ public class MoveService extends AbstractBaseService<Move, Long> {
 
     public long countUsagesForMoveType(Long matchId, UUID shooterId, MoveType moveType) {
         return moveRepository.countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(matchId, shooterId, moveType);
+    }
+
+    public ShootingStatsProjection getShootingStats(UUID userId) {
+        return moveRepository.getShootingStats(userId);
     }
 }

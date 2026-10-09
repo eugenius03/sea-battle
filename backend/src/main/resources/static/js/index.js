@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 findGameBtn.disabled = true;
                 findGameBtn.innerText = 'Finding...';
 
-                const response = await fetch('/api/auth/me', {
+                const response = await fetch('/api/user/me', {
                     method: 'GET',
                     headers: {'Accept': 'application/json'}
                 });

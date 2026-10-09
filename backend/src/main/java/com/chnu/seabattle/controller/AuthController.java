@@ -2,9 +2,8 @@ package com.chnu.seabattle.controller;
 
 import com.chnu.seabattle.dto.auth.UserLoginRequest;
 import com.chnu.seabattle.dto.auth.UserRegistrationRequest;
-import com.chnu.seabattle.dto.auth.UserResponse;
-import com.chnu.seabattle.entity.TokenType;
 import com.chnu.seabattle.entity.User;
+import com.chnu.seabattle.enums.TokenType;
 import com.chnu.seabattle.service.AuthService;
 import com.chnu.seabattle.service.JwtService;
 import com.chnu.seabattle.service.RefreshTokenService;
@@ -20,7 +19,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,13 +34,6 @@ public class AuthController {
     private final UserService userService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
-
-    @GetMapping("/me")
-    public UserResponse getCurrentUser() {
-        User user = userService.getAuthenticatedUser();
-
-        return new UserResponse(user.getId(), user.getUsername());
-    }
 
     @PostMapping("/register")
     public void register(@Valid @RequestBody UserRegistrationRequest registrationRequest,

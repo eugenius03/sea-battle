@@ -24,6 +24,7 @@ services:
     depends_on:
       - postgres
       - redis
+    pull_policy: build
     environment:
       SPRING_PROFILES_ACTIVE: prod
       PORT: 8080

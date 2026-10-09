@@ -1,6 +1,6 @@
 package com.chnu.seabattle.service;
 
-import com.chnu.seabattle.entity.TokenType;
+import com.chnu.seabattle.enums.TokenType;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;

@@ -1,6 +1,7 @@
 package com.chnu.seabattle.converter;
 
 import com.chnu.seabattle.dto.move.MoveResponse;
+import com.chnu.seabattle.dto.move.ReplayMoveResponse;
 import com.chnu.seabattle.entity.Move;
 import org.mapstruct.Mapper;
 
@@ -8,4 +9,6 @@ import org.mapstruct.Mapper;
 public interface MoveConverter {
 
     MoveResponse toResponse(Move entity);
+
+    ReplayMoveResponse toReplayResponse(Move entity);
 }

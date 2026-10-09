@@ -1,4 +1,4 @@
-package com.chnu.seabattle.entity;
+package com.chnu.seabattle.enums;
 
 public enum TokenType {
     ACCESS,

@@ -12,7 +12,7 @@ export class AuthService {
   private readonly baseUrl = `${environment.apiUrl}/auth`;
 
   getCurrentUser(): Observable<UserResponse> {
-    return this.http.get<UserResponse>(`${this.baseUrl}/me`, {
+    return this.http.get<UserResponse>(`${environment.apiUrl}/user/me`, {
       withCredentials: true,
     });
   }

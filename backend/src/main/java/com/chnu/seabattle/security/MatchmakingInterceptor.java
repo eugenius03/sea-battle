@@ -2,8 +2,9 @@ package com.chnu.seabattle.security;
 
 import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.exception.BadRequestException;
-import com.chnu.seabattle.service.UserService;
+import com.chnu.seabattle.repository.UserRepository;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -16,15 +17,12 @@ import java.util.Map;
 import java.util.UUID;
 
 @Component
+@RequiredArgsConstructor
 public class MatchmakingInterceptor implements ChannelInterceptor {
 
     private static final String H_USER_ID = "X-User-Id";
     private static final String MATCHMAKING_TOPIC_PREFIX = "/topic/matchmaking/";
-    private final UserService userService;
-
-    public MatchmakingInterceptor(UserService userService) {
-        this.userService = userService;
-    }
+    private final UserRepository userRepository;
 
     @Override
     public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
@@ -49,7 +47,7 @@ public class MatchmakingInterceptor implements ChannelInterceptor {
             return;
         }
 
-        if (!userService.existsById(UUID.fromString(userId))) {
+        if (!userRepository.existsById(UUID.fromString(userId))) {
             throw new BadRequestException(ErrorConstants.USER_NOT_FOUND);
         }
 
