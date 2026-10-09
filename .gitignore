@@ -44,3 +44,11 @@ frontend/.angular/
 .stash/
 .vibe-wise/
 
+### Secrets & Environment Files ###
+.env
+.env.*
+!.env.example
+*.local.properties
+secrets.sh
+
+

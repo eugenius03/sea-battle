@@ -1,43 +1,33 @@
 package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.constants.ErrorConstants;
-import com.chnu.seabattle.entity.RevokedToken;
 import com.chnu.seabattle.exception.UnauthorizedException;
-import com.chnu.seabattle.repository.RevokedTokenRepository;
+import com.chnu.seabattle.repository.redis.TokenBlacklistRedisRepository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class RefreshTokenService {
-    private final RevokedTokenRepository revokedTokenRepository;
+    private final TokenBlacklistRedisRepository tokenBlacklistRedisRepository;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
     public boolean revokedTokenExists(String jti) {
-        return revokedTokenRepository.existsById(UUID.fromString(jti));
+        return tokenBlacklistRedisRepository.isBlacklisted(jti);
     }
 
     public void revokeToken(String jti, Instant expiresAt) {
-        UUID id = UUID.fromString(jti);
-        if (!revokedTokenRepository.existsById(id)) {
-            try {
-                revokedTokenRepository.saveAndFlush(new RevokedToken(id, expiresAt));
-            } catch (DataIntegrityViolationException ignored) {
-                // Token already revoked concurrently; revoke operation is idempotent
-            }
-        }
+        Duration ttl = Duration.between(Instant.now(), expiresAt);
+        tokenBlacklistRedisRepository.blacklist(jti, ttl);
     }
 
-    @Transactional
     public UserDetails validateAndRotateRefreshToken(String refreshToken) {
         Claims claims = jwtService.validateAndExtractClaims(refreshToken, "refresh");
 

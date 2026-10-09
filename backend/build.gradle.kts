@@ -44,6 +44,7 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
     implementation("io.jsonwebtoken:jjwt-api:$jjwtVersion")
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
     // runtimeOnly
     runtimeOnly("org.postgresql:postgresql")
