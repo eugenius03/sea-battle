@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { catchError, Observable, of, switchMap, tap } from 'rxjs';
 import { UserLoginRequest, UserRegistrationRequest, UserResponse } from '@core/models/auth.model';
 import { AuthService } from '@core/services/auth.service';
+import { isAuthRejection } from '@core/utils/http-error.util';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +14,8 @@ export class AuthState {
 
   readonly user = signal<UserResponse | null>(null);
   readonly isLoading = signal<boolean>(false);
+  /** True when the last session check failed for a reason other than 401/403 (e.g. backend down). */
+  readonly backendUnavailable = signal<boolean>(false);
   readonly isAuthenticated = computed(() => this.user() !== null);
   readonly username = computed(() => this.user()?.username ?? '');
   readonly userId = computed(() => this.user()?.id ?? '');
@@ -27,15 +30,21 @@ export class AuthState {
     this.isLoading.set(true);
     return this.authService.getCurrentUser().pipe(
       tap((userData) => {
+        this.backendUnavailable.set(false);
         this.user.set(userData);
         this.isLoading.set(false);
         this.hasChecked = true;
       }),
-      catchError(() => {
-        this.user.set(null);
+      catchError((error) => {
         this.isLoading.set(false);
-        this.hasChecked = true;
-        return of(null);
+        if (isAuthRejection(error)) {
+          this.backendUnavailable.set(false);
+          this.user.set(null);
+          this.hasChecked = true;
+        } else {
+          this.backendUnavailable.set(true);
+        }
+        return of(this.user());
       }),
     );
   }
@@ -74,7 +83,8 @@ export class AuthState {
         this.hasChecked = true;
         this.router.navigate(['/auth']);
       },
-      error: () => {
+      error: (error) => {
+        if (!isAuthRejection(error)) return;
         this.user.set(null);
         this.hasChecked = true;
         this.router.navigate(['/auth']);

@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '@core/services/auth.service';
 import { AuthState } from '@core/state/auth.state';
+import { isAuthRejection } from '@core/utils/http-error.util';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
@@ -24,7 +25,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return authService.refresh().pipe(
           switchMap(() => next(authReq)),
           catchError((refreshError) => {
-            authState.user.set(null);
+            if (isAuthRejection(refreshError)) {
+              authState.user.set(null);
+            }
             return throwError(() => refreshError);
           }),
         );

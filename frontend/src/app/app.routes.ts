@@ -13,6 +13,11 @@ export const routes: Routes = [
     loadComponent: () => import('@features/auth/auth.component').then((m) => m.AuthComponent),
   },
   {
+    path: 'unavailable',
+    loadComponent: () =>
+      import('@features/unavailable/unavailable.component').then((m) => m.UnavailableComponent),
+  },
+  {
     path: 'lobby',
     canActivate: [authGuard],
     loadComponent: () => import('@features/lobby/lobby.component').then((m) => m.LobbyComponent),

@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthState } from '@core/state/auth.state';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -10,6 +10,7 @@ import {
 } from '@shared/components/segmented-control/segmented-control.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { UserRegistrationRequest } from '@core/models/auth.model';
+import { safeReturnUrl } from '@core/utils/return-url.util';
 import { generateGuestNickname } from '@shared/utils/guest-nickname.util';
 
 type AuthMode = 'login' | 'register';
@@ -23,6 +24,7 @@ type AuthMode = 'login' | 'register';
 export class AuthComponent implements OnInit {
   private readonly authState = inject(AuthState);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
 
   readonly mode = signal<AuthMode>('login');
@@ -33,6 +35,10 @@ export class AuthComponent implements OnInit {
   password = '';
   email = '';
   guestNickname = '';
+
+  private returnUrl(): string {
+    return safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+  }
 
   get isEmailInvalid(): boolean {
     const trimmed = this.email.trim();
@@ -76,7 +82,7 @@ export class AuthComponent implements OnInit {
         this.guestLoading.set(false);
         if (user) {
           this.toast.success(`Welcome aboard, ${user.username}!`);
-          this.router.navigate(['/lobby']);
+          this.router.navigateByUrl(this.returnUrl());
         } else {
           this.toast.error('Failed to establish guest session.');
         }
@@ -107,7 +113,7 @@ export class AuthComponent implements OnInit {
         next: () => {
           this.loading.set(false);
           this.toast.success('Welcome back, Commander!');
-          this.router.navigate(['/lobby']);
+          this.router.navigateByUrl(this.returnUrl());
         },
         error: (err) => {
           this.loading.set(false);
@@ -128,7 +134,7 @@ export class AuthComponent implements OnInit {
         next: () => {
           this.loading.set(false);
           this.toast.success('Commission accepted! Logged in.');
-          this.router.navigate(['/lobby']);
+          this.router.navigateByUrl(this.returnUrl());
         },
         error: (err) => {
           this.loading.set(false);
