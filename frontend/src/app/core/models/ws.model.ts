@@ -21,7 +21,7 @@ export interface MoveMessage {
   recipientMatchPlayerId: string;
   moveResponses: MoveResponse[];
   at: string;
-  isItMyTurn: boolean;
+  currentTurnPlayerId: string | null;
 }
 
 export interface MatchStatusMessage {

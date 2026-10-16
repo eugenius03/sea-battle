@@ -1,9 +1,9 @@
 :host {
   display: block;
   width: fit-content;
-  max-width: 100%;
-  --cell-size: clamp(34px, min(3.6vw, 4.8vh), 42px);
-  --coord-size: clamp(18px, calc(var(--cell-size) * 0.5), 22px);
+  min-width: fit-content;
+  --cell-size: clamp(36px, min(3.8vw, 5.2vh), 48px);
+  --coord-size: clamp(18px, calc(var(--cell-size) * 0.5), 24px);
   --cross-scale: calc(var(--cell-size) / 28px);
 }
 
@@ -15,6 +15,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: fit-content;
+  min-width: fit-content;
+  box-sizing: border-box;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
@@ -196,6 +199,8 @@
 .board-grid-shell {
   display: flex;
   flex-direction: column;
+  width: fit-content;
+  min-width: fit-content;
 }
 
 .coords-cols {
@@ -395,6 +400,12 @@
       transform: scale(var(--cross-scale, calc(var(--cell-size) / 28px)));
       image-rendering: pixelated;
     }
+  }
+
+  &.recent-move {
+    outline: 2px solid #eab308 !important;
+    outline-offset: -2px;
+    z-index: 4;
   }
 
   &.drone-preview {
@@ -647,10 +658,32 @@
   }
 }
 
-@media (min-width: 1025px) and (max-width: 1399px) {
+@media (min-width: 1200px) and (max-width: 1399px) {
   :host {
-    --cell-size: clamp(32px, min(3.2vw, 4.2vh), 40px);
-    --coord-size: clamp(16px, calc(var(--cell-size) * 0.46), 20px);
+    --cell-size: clamp(40px, min(3.7vw, 5.2vh), 48px);
+    --coord-size: clamp(20px, calc(var(--cell-size) * 0.5), 24px);
+  }
+
+  .pixel-board-wrapper {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1199px) {
+  :host {
+    --cell-size: clamp(36px, min(3.6vw, 4.9vh), 44px);
+    --coord-size: clamp(18px, calc(var(--cell-size) * 0.5), 22px);
+  }
+
+  .pixel-board-wrapper {
+    padding: 11px;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  :host {
+    --cell-size: clamp(32px, min(3.5vw, 4.7vh), 40px);
+    --coord-size: clamp(16px, calc(var(--cell-size) * 0.48), 20px);
   }
 
   .pixel-board-wrapper {
@@ -658,17 +691,10 @@
   }
 }
 
-@media (max-width: 1024px) and (min-width: 769px) {
-  :host {
-    --cell-size: clamp(30px, 3.4vw, 36px);
-    --coord-size: 18px;
-  }
-}
-
 @media (max-width: 768px) and (min-width: 641px) {
   :host {
-    --cell-size: clamp(28px, 4vw, 34px);
-    --coord-size: 16px;
+    --cell-size: clamp(32px, 5.2vw, 38px);
+    --coord-size: 18px;
   }
 }
 

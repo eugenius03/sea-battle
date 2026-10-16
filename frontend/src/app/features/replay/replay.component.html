@@ -1,0 +1,285 @@
+<div class="w-full max-w-[2400px] 3xl:max-w-[2800px] mx-auto px-3 sm:px-6 lg:px-8 py-1 sm:py-1.5 lg:py-1 animate-fade-in">
+  @if (loading()) {
+    <div class="border-2 border-black bg-white p-8 sm:p-12 text-center shadow-[4px_4px_0px_#000]">
+      <app-icon name="spinner" [size]="32" class="animate-spin text-black mb-3"></app-icon>
+      <p class="font-extrabold uppercase tracking-wider text-sm text-neutral-600">
+        Loading Tactical Replay...
+      </p>
+    </div>
+  } @else if (error()) {
+    <div class="border-2 border-black bg-rose-50 p-6 sm:p-8 text-center shadow-[4px_4px_0px_#000]">
+      <app-icon name="warning" [size]="32" class="text-rose-600 mb-3"></app-icon>
+      <p class="font-black uppercase tracking-wider text-sm text-rose-700 mb-4">{{ error() }}</p>
+      <a
+        routerLink="/lobby"
+        class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-black uppercase tracking-wider bg-black text-white border-2 border-black shadow-[2px_2px_0px_#000]"
+      >
+        Return to Lobby
+      </a>
+    </div>
+  } @else if (match(); as m) {
+    <!-- Compact Unified Header Bar -->
+    <header
+      class="replay-header border-2 border-black bg-white p-2 sm:p-2.5 lg:p-2 shadow-[3px_3px_0px_#000] mb-2 sm:mb-2.5 md:mb-2"
+    >
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <!-- Left: Back Button + Replay Badge + Winner + Metadata -->
+        <div class="flex flex-wrap items-center gap-2">
+          @if (focusUsername(); as focus) {
+            <a
+              [routerLink]="['/profile', focus]"
+              class="replay-back-btn inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-bold uppercase tracking-wider bg-white text-black border-2 border-black shadow-[2px_2px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] transition-transform shrink-0"
+            >
+              <app-icon name="pixel-bracket-left" [size]="16"></app-icon>
+              <span>Back</span>
+            </a>
+          } @else {
+            <a
+              routerLink="/lobby"
+              class="replay-back-btn inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-bold uppercase tracking-wider bg-white text-black border-2 border-black shadow-[2px_2px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] transition-transform shrink-0"
+            >
+              <app-icon name="pixel-bracket-left" [size]="16"></app-icon>
+              <span>Back</span>
+            </a>
+          }
+
+          <div
+            class="replay-badge inline-flex items-center gap-1.5 px-2.5 py-1 bg-black text-white font-mono text-xs sm:text-sm font-black uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] shrink-0"
+          >
+            <app-icon name="radar" [size]="14"></app-icon>
+            <span>REPLAY</span>
+          </div>
+
+          @if (player1()?.isWinner) {
+            <span
+              class="replay-winner-badge px-2.5 py-1 bg-emerald-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] shrink-0"
+            >
+              WINNER: {{ player1()?.username }}
+            </span>
+          } @else if (player2()?.isWinner) {
+            <span
+              class="replay-winner-badge px-2.5 py-1 bg-emerald-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] shrink-0"
+            >
+              WINNER: {{ player2()?.username }}
+            </span>
+          }
+
+          <div
+            class="replay-meta hidden sm:inline-flex items-center gap-2 text-xs sm:text-sm text-neutral-500 font-mono font-bold"
+          >
+            <span>{{ formatDate(m.createdAt) }}</span>
+            <span>&bull;</span>
+            <span>{{ formatDuration(m.createdAt, m.finishedAt) }}</span>
+          </div>
+        </div>
+
+        <!-- Right: Current Move Pill -->
+        <div class="flex items-center gap-2 shrink-0">
+          <span
+            class="replay-move-label text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 hidden md:inline"
+            >Move:</span
+          >
+          <div
+            class="replay-move-pill px-3 py-1 bg-neutral-100 border-2 border-black font-mono font-bold text-xs sm:text-sm text-black shadow-[2px_2px_0px_#000]"
+          >
+            {{ lastMoveDescription() }}
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Arena Dual Boards (Locked & Non-Interactive on Hover) -->
+    <div
+      class="replay-boards-row flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-6 lg:gap-8 xl:gap-12 w-full mb-2 sm:mb-2.5 md:mb-2"
+    >
+      <!-- Player 1 Board (Left) -->
+      @if (player1(); as p1) {
+        <div class="w-full flex flex-col items-center pointer-events-none select-none">
+          <app-board
+            boardId="replay-p1"
+            [title]="p1.username"
+            [subtitle]="
+              p1AliveCount() +
+              ' / ' +
+              p1.ships.length +
+              ' SHIPS ALIVE' +
+              (p1.isWinner ? ' • VICTOR' : '')
+            "
+            [badge]="isP1Turn() ? 'ATTACKING' : 'DEFENDING'"
+            [badgeType]="isP1Turn() ? 'accent' : 'neutral'"
+            [isTurn]="isP1Turn()"
+            [isLocked]="true"
+            [isPlayerBoard]="false"
+            [cells]="player1Cells()"
+            class="w-full flex justify-center"
+          ></app-board>
+        </div>
+      }
+
+      <!-- Player 2 Board (Right) -->
+      @if (player2(); as p2) {
+        <div class="w-full flex flex-col items-center pointer-events-none select-none">
+          <app-board
+            boardId="replay-p2"
+            [title]="p2.username"
+            [subtitle]="
+              p2AliveCount() +
+              ' / ' +
+              p2.ships.length +
+              ' SHIPS ALIVE' +
+              (p2.isWinner ? ' • VICTOR' : '')
+            "
+            [badge]="isP2Turn() ? 'ATTACKING' : 'DEFENDING'"
+            [badgeType]="isP2Turn() ? 'accent' : 'neutral'"
+            [isTurn]="isP2Turn()"
+            [isLocked]="true"
+            [isPlayerBoard]="false"
+            [cells]="player2Cells()"
+            class="w-full flex justify-center"
+          ></app-board>
+        </div>
+      }
+    </div>
+
+    <!-- Replay Playback Control Deck (Sticky on mobile like the drone menu, static on desktop) -->
+    <div
+      class="replay-deck border-2 border-black bg-white p-2.5 sm:p-3.5 md:p-3 shadow-[3px_3px_0px_#000] mb-0 sticky md:static bottom-2 z-20"
+    >
+      <!-- Scrubbable Timeline Slider -->
+      <div class="replay-timeline-group mb-2 sm:mb-2.5 md:mb-2">
+        <div
+          class="replay-step-info flex items-center justify-between text-xs sm:text-sm font-mono font-bold uppercase tracking-wider text-neutral-600 mb-1"
+        >
+          <span>Step {{ currentStep() }} / {{ totalMoves() }}</span>
+          <span>{{ nextTurnLabel() }}</span>
+        </div>
+
+        <input
+          type="range"
+          min="0"
+          [max]="totalMoves()"
+          [value]="currentStep()"
+          (input)="onScrub($event)"
+          class="replay-slider w-full h-2.5 sm:h-3 bg-neutral-200 border-2 border-black appearance-none cursor-pointer accent-black"
+        />
+      </div>
+
+      <!-- Controls Transport Bar -->
+      <div class="replay-transport-bar flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3">
+        <!-- Playback Navigation Buttons -->
+        <div class="replay-transport-buttons flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap justify-center">
+          <!-- Jump to Start -->
+          <button
+            type="button"
+            (click)="jumpToStart()"
+            [disabled]="currentStep() === 0"
+            class="replay-transport-btn px-2.5 sm:px-3.5 py-1 sm:py-2 bg-white border-2 border-black text-black font-mono font-black text-xs sm:text-sm uppercase shadow-[2px_2px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:bg-neutral-100 active:not-disabled:translate-x-[1px] active:not-disabled:translate-y-[1px] cursor-pointer"
+            title="Start (Home)"
+          >
+            |&lt;
+          </button>
+
+          <!-- Step Backward -->
+          <button
+            type="button"
+            (click)="stepBackward()"
+            [disabled]="currentStep() === 0"
+            class="replay-transport-btn px-3 sm:px-4 py-1 sm:py-2 bg-white border-2 border-black text-black font-black text-xs sm:text-sm uppercase shadow-[2px_2px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:bg-neutral-100 active:not-disabled:translate-x-[1px] active:not-disabled:translate-y-[1px] cursor-pointer"
+            title="Step Back (Left Arrow)"
+          >
+            &lt; Prev
+          </button>
+
+          <!-- Play / Pause -->
+          <button
+            type="button"
+            (click)="togglePlay()"
+            class="replay-play-btn px-4 sm:px-5 py-1 sm:py-2 bg-black text-white border-2 border-black font-black text-xs sm:text-sm uppercase tracking-wider shadow-[2px_2px_0px_#000] hover:bg-neutral-800 active:translate-x-[1px] active:translate-y-[1px] flex items-center gap-1.5 cursor-pointer"
+            title="Play / Pause (Space)"
+          >
+            @if (isPlaying()) {
+              <app-icon name="pause" [size]="16"></app-icon>
+              <span>Pause</span>
+            } @else {
+              <app-icon name="play" [size]="16"></app-icon>
+              <span>Play</span>
+            }
+          </button>
+
+          <!-- Step Forward -->
+          <button
+            type="button"
+            (click)="stepForward()"
+            [disabled]="currentStep() >= totalMoves()"
+            class="replay-transport-btn px-3 sm:px-4 py-1 sm:py-2 bg-white border-2 border-black text-black font-black text-xs sm:text-sm uppercase shadow-[2px_2px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:bg-neutral-100 active:not-disabled:translate-x-[1px] active:not-disabled:translate-y-[1px] cursor-pointer"
+            title="Step Forward (Right Arrow)"
+          >
+            Next &gt;
+          </button>
+
+          <!-- Jump to End -->
+          <button
+            type="button"
+            (click)="jumpToEnd()"
+            [disabled]="currentStep() >= totalMoves()"
+            class="replay-transport-btn px-2.5 sm:px-3.5 py-1 sm:py-2 bg-white border-2 border-black text-black font-mono font-black text-xs sm:text-sm uppercase shadow-[2px_2px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:bg-neutral-100 active:not-disabled:translate-x-[1px] active:not-disabled:translate-y-[1px] cursor-pointer"
+            title="End (End)"
+          >
+            &gt;|
+          </button>
+        </div>
+
+        <!-- Speed Selector -->
+        <div
+          class="replay-speed-container flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm font-mono font-black justify-center w-full sm:w-auto"
+        >
+          <span class="replay-speed-label text-neutral-500 mr-0.5 uppercase text-[11px] sm:text-xs">Speed:</span>
+          @for (spd of [0.5, 1, 2, 4]; track spd) {
+            <button
+              type="button"
+              (click)="setSpeed(spd)"
+              [class.bg-black]="playbackSpeed() === spd"
+              [class.text-white]="playbackSpeed() === spd"
+              [class.bg-white]="playbackSpeed() !== spd"
+              [class.text-black]="playbackSpeed() !== spd"
+              class="replay-speed-btn px-2 sm:px-3 py-1 sm:py-1.5 border-2 border-black shadow-[1px_1px_0px_#000] uppercase transition-colors text-xs sm:text-sm cursor-pointer"
+            >
+              {{ spd }}x
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Keyboard shortcuts legend (Desktop only) -->
+      <div
+        class="replay-legend hidden md:flex mt-2 pt-1.5 border-t border-neutral-200 items-center justify-between gap-2 text-xs font-mono text-neutral-500"
+      >
+        <div class="flex items-center gap-3">
+          <span
+            ><kbd class="px-1.5 py-0.5 bg-neutral-100 border border-black font-bold text-black"
+              >Space</kbd
+            >
+            Play / Pause</span
+          >
+          <span
+            ><kbd class="px-1.5 py-0.5 bg-neutral-100 border border-black font-bold text-black"
+              >←</kbd
+            >
+            <kbd class="px-1.5 py-0.5 bg-neutral-100 border border-black font-bold text-black">→</kbd>
+            Step</span
+          >
+          <span
+            ><kbd class="px-1.5 py-0.5 bg-neutral-100 border border-black font-bold text-black"
+              >Home</kbd
+            >
+            /
+            <kbd class="px-1.5 py-0.5 bg-neutral-100 border border-black font-bold text-black"
+              >End</kbd
+            >
+            Jump</span
+          >
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -11,7 +11,11 @@ import {
 } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { GameState } from '@core/state/game.state';
+import { BoardViewState } from '@core/state/board-view.state';
+import { GameFlowService } from '@core/state/game-flow.service';
+import { MoveState } from '@core/state/move.state';
+import { MatchState } from '@core/state/match.state';
+import { ShipState } from '@core/state/ship.state';
 import { MatchService } from '@core/services/match.service';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { BoardCell, SHIP_DEFINITIONS, ShipType } from '@core/models/game.model';
@@ -34,7 +38,11 @@ import { NgClass } from '@angular/common';
 })
 export class GameComponent implements OnDestroy {
   readonly inviteToken = input<string>('');
-  readonly gameState = inject(GameState);
+  readonly gameFlow = inject(GameFlowService);
+  readonly moveState = inject(MoveState);
+  readonly boardView = inject(BoardViewState);
+  readonly matchState = inject(MatchState);
+  readonly shipState = inject(ShipState);
   private readonly matchService = inject(MatchService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -47,7 +55,7 @@ export class GameComponent implements OnDestroy {
   readonly linkCopied = signal<boolean>(false);
   readonly codeCopied = signal<boolean>(false);
 
-  readonly inviteUrl = computed<string>(() => buildInviteUrl(this.gameState.inviteToken()));
+  readonly inviteUrl = computed<string>(() => buildInviteUrl(this.matchState.inviteToken()));
 
   readonly qrCodeSvg = computed<SafeHtml>(() => {
     const url = this.inviteUrl();
@@ -69,13 +77,13 @@ export class GameComponent implements OnDestroy {
           this.lastLoadedToken = token;
           this.myRematchRequested.set(false);
           this.showResultModal.set(false);
-          this.gameState.initMatch(token);
+          this.gameFlow.initMatch(token);
         }
       });
     });
 
     effect(() => {
-      const status = this.gameState.matchStatus();
+      const status = this.matchState.matchStatus();
       untracked(() => {
         if (status === 'FINISHED') {
           this.showResultModal.set(true);
@@ -86,7 +94,7 @@ export class GameComponent implements OnDestroy {
     });
 
     effect(() => {
-      const newToken = this.gameState.rematchAgreedToken();
+      const newToken = this.matchState.rematchAgreedToken();
       untracked(() => {
         if (newToken) {
           this.toast.success('Rematch accepted! Starting new game.');
@@ -96,7 +104,7 @@ export class GameComponent implements OnDestroy {
     });
 
     effect(() => {
-      const status = this.gameState.matchStatus();
+      const status = this.matchState.matchStatus();
       untracked(() => {
         if (status !== 'WAITING') {
           this.showInviteModal.set(false);
@@ -106,92 +114,92 @@ export class GameComponent implements OnDestroy {
   }
 
   onPlacementCellClick(cell: BoardCell): void {
-    if (this.gameState.isPlayerReady()) return;
+    if (this.matchState.isPlayerReady()) return;
 
-    const draggedId = this.gameState.draggedShipId();
+    const draggedId = this.shipState.draggedShipId();
     if (draggedId != null) {
-      if (this.gameState.canMoveShipTo(draggedId, cell.x, cell.y)) {
-        this.gameState.moveShipTo(draggedId, cell.x, cell.y);
+      if (this.shipState.canMoveShipTo(draggedId, cell.x, cell.y)) {
+        this.shipState.moveShipTo(draggedId, cell.x, cell.y);
       }
-      this.gameState.resetPlacementInteraction();
+      this.shipState.resetPlacementInteraction();
       return;
     }
 
     if (cell.hasShip && cell.shipId) {
-      if (this.gameState.selectedPlacedShipId() === cell.shipId) {
-        this.gameState.rotateShip(cell.shipId);
-        this.gameState.resetPlacementInteraction();
+      if (this.shipState.selectedPlacedShipId() === cell.shipId) {
+        this.shipState.rotateShip(cell.shipId);
+        this.shipState.resetPlacementInteraction();
       } else {
-        this.gameState.selectPlacedShip(cell.shipId);
-        this.gameState.setHoveredCell(null);
+        this.shipState.selectPlacedShip(cell.shipId);
+        this.shipState.setHoveredCell(null);
       }
       return;
     }
 
-    const selectedPlacedId = this.gameState.selectedPlacedShipId();
+    const selectedPlacedId = this.shipState.selectedPlacedShipId();
     if (selectedPlacedId != null) {
-      if (this.gameState.canMoveShipTo(selectedPlacedId, cell.x, cell.y)) {
-        this.gameState.moveShipTo(selectedPlacedId, cell.x, cell.y);
-        this.gameState.resetPlacementInteraction();
+      if (this.shipState.canMoveShipTo(selectedPlacedId, cell.x, cell.y)) {
+        this.shipState.moveShipTo(selectedPlacedId, cell.x, cell.y);
+        this.shipState.resetPlacementInteraction();
         return;
       } else {
-        this.gameState.resetPlacementInteraction();
+        this.shipState.resetPlacementInteraction();
         return;
       }
     }
 
-    if (this.gameState.selectedShipToPlace()) {
-      const hovered = this.gameState.hoveredCell();
+    if (this.shipState.selectedShipToPlace()) {
+      const hovered = this.shipState.hoveredCell();
       const isSameCell = hovered && hovered.x === cell.x && hovered.y === cell.y;
 
       if (isSameCell || cell.isPlacementValid) {
         if (cell.isPlacementInvalid && isSameCell) {
-          this.gameState.setHoveredCell(null);
+          this.shipState.setHoveredCell(null);
           return;
         }
 
-        this.gameState.placeShipAt(hovered ? hovered.x : cell.x, hovered ? hovered.y : cell.y);
+        this.shipState.placeShipAt(hovered ? hovered.x : cell.x, hovered ? hovered.y : cell.y);
         return;
       }
 
-      this.gameState.setHoveredCell({ x: cell.x, y: cell.y });
+      this.shipState.setHoveredCell({ x: cell.x, y: cell.y });
       return;
     }
   }
 
   onPlacementCellDblClick(cell: BoardCell): void {
-    if (this.gameState.isPlayerReady()) return;
+    if (this.matchState.isPlayerReady()) return;
     if (cell.hasShip && cell.shipId) {
-      this.gameState.rotateShip(cell.shipId);
-      this.gameState.selectPlacedShip(null);
-      this.gameState.setHoveredCell(null);
+      this.shipState.rotateShip(cell.shipId);
+      this.shipState.selectPlacedShip(null);
+      this.shipState.setHoveredCell(null);
     }
   }
 
   onRotateClicked(): void {
-    const selectedPlacedId = this.gameState.selectedPlacedShipId();
+    const selectedPlacedId = this.shipState.selectedPlacedShipId();
     if (selectedPlacedId != null) {
-      this.gameState.rotateShip(selectedPlacedId);
-      this.gameState.selectPlacedShip(null);
-      this.gameState.setHoveredCell(null);
+      this.shipState.rotateShip(selectedPlacedId);
+      this.shipState.selectPlacedShip(null);
+      this.shipState.setHoveredCell(null);
     } else {
-      this.gameState.toggleOrientation();
+      this.shipState.toggleOrientation();
     }
   }
 
   onCellMouseEnter(cell: BoardCell, isEnemy: boolean): void {
     if (isEnemy) {
-      this.gameState.setHoveredEnemyCell({ x: cell.x, y: cell.y });
+      this.moveState.setHoveredEnemyCell({ x: cell.x, y: cell.y });
     } else {
-      this.gameState.setHoveredCell({ x: cell.x, y: cell.y });
+      this.shipState.setHoveredCell({ x: cell.x, y: cell.y });
     }
   }
 
   onCellMouseLeave(isEnemy: boolean): void {
     if (isEnemy) {
-      this.gameState.setHoveredEnemyCell(null);
+      this.moveState.setHoveredEnemyCell(null);
     } else {
-      this.gameState.setHoveredCell(null);
+      this.shipState.setHoveredCell(null);
     }
   }
 
@@ -202,15 +210,15 @@ export class GameComponent implements OnDestroy {
       !target.closest('button') &&
       !target.closest('.cursor-pointer')
     ) {
-      this.gameState.resetPlacementInteraction();
-      this.gameState.setHoveredEnemyCell(null);
+      this.shipState.resetPlacementInteraction();
+      this.moveState.setHoveredEnemyCell(null);
     }
   }
 
   onCellDragStart(event: DragEvent, cell: BoardCell): void {
-    if (this.gameState.isPlayerReady()) return;
+    if (this.matchState.isPlayerReady()) return;
     if (cell.hasShip && cell.shipId) {
-      this.gameState.setDraggedShipId(cell.shipId);
+      this.shipState.setDraggedShipId(cell.shipId);
       if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', String(cell.shipId));
@@ -219,25 +227,25 @@ export class GameComponent implements OnDestroy {
   }
 
   onCellDragOver(event: DragEvent, cell: BoardCell): void {
-    if (this.gameState.isPlayerReady()) return;
+    if (this.matchState.isPlayerReady()) return;
     event.preventDefault();
-    this.gameState.setDraggedOverKey(cell.key);
-    this.gameState.setHoveredCell({ x: cell.x, y: cell.y });
+    this.shipState.setDraggedOverKey(cell.key);
+    this.shipState.setHoveredCell({ x: cell.x, y: cell.y });
   }
 
   onCellDragLeave(cell: BoardCell): void {
-    this.gameState.setDraggedOverKey(null);
+    this.shipState.setDraggedOverKey(null);
   }
 
   onCellDragEnd(): void {
-    this.gameState.resetPlacementInteraction();
+    this.shipState.resetPlacementInteraction();
   }
 
   @HostListener('window:dragend')
   @HostListener('window:mouseup')
   onWindowPointerUp(): void {
-    if (this.gameState.draggedShipId() != null) {
-      this.gameState.resetPlacementInteraction();
+    if (this.shipState.draggedShipId() != null) {
+      this.shipState.resetPlacementInteraction();
     }
   }
 
@@ -248,38 +256,38 @@ export class GameComponent implements OnDestroy {
     } else if (this.showInviteModal()) {
       this.closeInviteModal();
     } else {
-      this.gameState.resetPlacementInteraction();
+      this.shipState.resetPlacementInteraction();
     }
   }
 
   resetFleet(): void {
-    this.gameState.reloadFleet();
+    this.shipState.reloadFleet();
     this.toast.info('Fleet placement reset.');
   }
 
   onCellDrop(event: DragEvent, cell: BoardCell): void {
-    if (this.gameState.isPlayerReady()) return;
+    if (this.matchState.isPlayerReady()) return;
     event.preventDefault();
 
-    const draggedShipId = this.gameState.draggedShipId();
-    this.gameState.resetPlacementInteraction();
+    const draggedShipId = this.shipState.draggedShipId();
+    this.shipState.resetPlacementInteraction();
 
     if (draggedShipId != null) {
-      if (this.gameState.canMoveShipTo(draggedShipId, cell.x, cell.y)) {
-        this.gameState.moveShipTo(draggedShipId, cell.x, cell.y);
+      if (this.shipState.canMoveShipTo(draggedShipId, cell.x, cell.y)) {
+        this.shipState.moveShipTo(draggedShipId, cell.x, cell.y);
       }
       return;
     }
 
     const shipType = event.dataTransfer?.getData('application/x-ship-type') as ShipType;
     if (shipType) {
-      this.gameState.placeShipAt(cell.x, cell.y, shipType);
+      this.shipState.placeShipAt(cell.x, cell.y, shipType);
     }
   }
 
   onTrayShipDragStart(event: DragEvent, type: ShipType): void {
-    if (this.gameState.isPlayerReady()) return;
-    this.gameState.selectedShipToPlace.set(type);
+    if (this.matchState.isPlayerReady()) return;
+    this.shipState.selectedShipToPlace.set(type);
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'copyMove';
       event.dataTransfer.setData('application/x-ship-type', type);
@@ -287,44 +295,50 @@ export class GameComponent implements OnDestroy {
   }
 
   selectShipType(type: ShipType): void {
-    if (this.gameState.selectedShipToPlace() === type) {
-      this.gameState.selectedShipToPlace.set(null);
-      this.gameState.setHoveredCell(null);
+    if (this.shipState.selectedShipToPlace() === type) {
+      this.shipState.selectedShipToPlace.set(null);
+      this.shipState.setHoveredCell(null);
     } else {
-      this.gameState.selectedShipToPlace.set(type);
-      this.gameState.setHoveredCell(null);
+      this.shipState.selectedShipToPlace.set(type);
+      this.shipState.setHoveredCell(null);
     }
   }
 
   onEnemyCellClick(cell: BoardCell): void {
-    if (!this.gameState.isItMyTurn() || this.gameState.matchStatus() !== 'IN_PROGRESS') return;
+    if (
+      !this.matchState.isItMyTurn() ||
+      this.moveState.isFiring() ||
+      this.matchState.matchStatus() !== 'IN_PROGRESS'
+    ) {
+      return;
+    }
     if (cell.isHit || cell.isMiss || cell.isSunk) return;
 
-    const isDrone = this.gameState.selectedMoveType() !== 'STANDARD';
+    const isDrone = this.moveState.selectedMoveType() !== 'STANDARD';
     if (isDrone) {
-      const hovered = this.gameState.hoveredEnemyCell();
+      const hovered = this.moveState.hoveredEnemyCell();
       const isAlreadyAiming = hovered && hovered.x === cell.x && hovered.y === cell.y;
       if (!isAlreadyAiming) {
-        this.gameState.setHoveredEnemyCell({ x: cell.x, y: cell.y });
+        this.moveState.setHoveredEnemyCell({ x: cell.x, y: cell.y });
         return;
       }
     }
 
-    this.gameState.fireAt(cell.x, cell.y);
+    this.moveState.fireAt(cell.x, cell.y);
   }
 
   selectWeapon(type: MoveType): void {
-    if (this.gameState.selectedMoveType() === type && type !== 'STANDARD') {
-      this.gameState.selectedMoveType.set('STANDARD');
-      this.gameState.setHoveredEnemyCell(null);
+    if (this.moveState.selectedMoveType() === type && type !== 'STANDARD') {
+      this.moveState.selectedMoveType.set('STANDARD');
+      this.moveState.setHoveredEnemyCell(null);
     } else {
-      this.gameState.selectedMoveType.set(type);
-      this.gameState.setHoveredEnemyCell(null);
+      this.moveState.selectedMoveType.set(type);
+      this.moveState.setHoveredEnemyCell(null);
     }
   }
 
   async copyToken(): Promise<void> {
-    const token = this.gameState.inviteToken();
+    const token = this.matchState.inviteToken();
     if (token) {
       const ok = await copyToClipboard(token);
       if (ok) {
@@ -357,7 +371,7 @@ export class GameComponent implements OnDestroy {
   }
 
   async copyRoomCode(): Promise<void> {
-    const token = this.gameState.inviteToken();
+    const token = this.matchState.inviteToken();
     if (!token) return;
     const ok = await copyToClipboard(token);
     if (ok) {
@@ -374,7 +388,7 @@ export class GameComponent implements OnDestroy {
   }
 
   requestRematch(): void {
-    const token = this.gameState.inviteToken();
+    const token = this.matchState.inviteToken();
     if (!token) return;
 
     this.myRematchRequested.set(true);
@@ -395,11 +409,11 @@ export class GameComponent implements OnDestroy {
   }
 
   exitMatch(): void {
-    this.gameState.reset();
+    this.gameFlow.reset();
     this.router.navigate(['/lobby']);
   }
 
   ngOnDestroy(): void {
-    this.gameState.clearSubscriptions();
+    this.gameFlow.clearSubscriptions();
   }
 }

@@ -69,12 +69,24 @@ export class LobbyComponent implements OnDestroy {
       },
     });
 
-    this.matchService.findGame().subscribe({
-      error: (err) => {
-        this.toast.error('Failed to join matchmaking queue.');
+    // Wait for WebSocket connection to be fully active before joining queue
+    this.wsService
+      .connect({ 'X-User-Id': userId })
+      .then(() => {
+        if (!this.isSearching()) return;
+
+        this.matchService.findGame().subscribe({
+          error: (err) => {
+            this.toast.error('Failed to join matchmaking queue.');
+            this.cancelMatchmaking();
+          },
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to connect to matchmaking socket:', err);
+        this.toast.error('Failed to connect to matchmaking service.');
         this.cancelMatchmaking();
-      },
-    });
+      });
   }
 
   cancelMatchmaking(): void {
@@ -82,6 +94,7 @@ export class LobbyComponent implements OnDestroy {
     this.queuePosition.set(null);
     this.matchmakingSub?.unsubscribe();
     this.matchmakingSub = null;
+    this.wsService.disconnect();
   }
 
   createPrivateMatch(): void {

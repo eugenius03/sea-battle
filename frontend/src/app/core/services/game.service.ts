@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
-import { GameInfoResponse, Orientation, ShipRequest, ShipResponse } from '@core/models/game.model';
-import { MoveRequest, MoveResponse } from '@core/models/move.model';
+import { FireResponse, GameInfoResponse, Orientation, ShipRequest, ShipResponse } from '@core/models/game.model';
+import { MoveRequest } from '@core/models/move.model';
 
 @Injectable({
   providedIn: 'root',
@@ -55,8 +55,8 @@ export class GameService {
     );
   }
 
-  fire(inviteToken: string, moveRequest: MoveRequest): Observable<MoveResponse[]> {
-    return this.http.post<MoveResponse[]>(`${this.baseUrl}/${inviteToken}/fire`, moveRequest, {
+  fire(inviteToken: string, moveRequest: MoveRequest): Observable<FireResponse> {
+    return this.http.post<FireResponse>(`${this.baseUrl}/${inviteToken}/fire`, moveRequest, {
       withCredentials: true,
     });
   }

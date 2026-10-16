@@ -41,7 +41,12 @@ export interface GameInfoResponse {
   matchStatus: MatchStatus;
   matchPlayerId: string;
   droneUsage: Record<MoveType, number>;
-  isItMyTurn: boolean;
+  currentTurnPlayerId: string | null;
+}
+
+export interface FireResponse {
+  moveResponses: MoveResponse[];
+  currentTurnPlayerId: string | null;
 }
 
 export interface BoardCell {
@@ -61,4 +66,5 @@ export interface BoardCell {
   isDragOver?: boolean;
   isPlacementValid?: boolean;
   isPlacementInvalid?: boolean;
+  isRecentMove?: boolean;
 }

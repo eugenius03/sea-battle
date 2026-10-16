@@ -1,0 +1,292 @@
+<div class="max-w-4xl 2xl:max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full animate-fade-in">
+  <!-- Back Button & Page Title -->
+  <div class="flex items-center justify-between mb-6">
+    <a
+      routerLink="/lobby"
+      class="inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider bg-white text-black border-2 border-black shadow-[2px_2px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] transition-transform"
+    >
+      <app-icon name="pixel-bracket-left" [size]="16"></app-icon>
+      <span>Back to Lobby</span>
+    </a>
+  </div>
+
+  @if (loading()) {
+    <div class="border-2 border-black bg-white p-12 text-center shadow-[4px_4px_0px_#000]">
+      <app-icon name="spinner" [size]="32" class="animate-spin text-black mb-3"></app-icon>
+      <p class="font-extrabold uppercase tracking-wider text-sm text-neutral-600">Loading Profile...</p>
+    </div>
+  } @else if (user()) {
+    <!-- Profile Header Card -->
+    <header class="border-2 border-black bg-white p-6 sm:p-8 shadow-[4px_4px_0px_#000] mb-6">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div class="flex items-center gap-4 min-w-0">
+          <!-- Pixel Avatar Box -->
+          <div
+            class="w-16 h-16 sm:w-20 sm:h-20 bg-black text-white flex items-center justify-center font-black text-3xl sm:text-4xl uppercase border-2 border-black shadow-[3px_3px_0px_#000] shrink-0"
+          >
+            {{ username().charAt(0) }}
+          </div>
+
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
+              <h1 class="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black truncate">
+                {{ username() }}
+              </h1>
+
+              <!-- Badges -->
+              @if (isGuest()) {
+                <div
+                  class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-neutral-200 text-black border-2 border-black font-extrabold text-xs uppercase tracking-wider shadow-[2px_2px_0px_#000] shrink-0"
+                >
+                  <app-icon name="user" [size]="13"></app-icon>
+                  <span>GUEST</span>
+                </div>
+              } @else if (emailVerified()) {
+                <div
+                  class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border-2 border-black font-extrabold text-xs uppercase tracking-wider shadow-[2px_2px_0px_#000] shrink-0"
+                >
+                  <app-icon name="check" [size]="13" class="text-emerald-700"></app-icon>
+                  <span>VERIFIED</span>
+                </div>
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-neutral-600 font-medium">
+              <span>Member since {{ memberSince() }}</span>
+              @if (isMe() && email()) {
+                <span class="inline-flex items-center gap-1 text-neutral-500">
+                  <app-icon name="mail" [size]="13"></app-icon>
+                  {{ email() }}
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Last 10 Matches (Top Right on desktop, stacked below on tablet/mobile) -->
+        <div class="flex flex-col items-start lg:items-end gap-1.5 shrink-0">
+          <div class="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-neutral-500">
+            <app-icon name="swords" [size]="14" class="text-black"></app-icon>
+            <span>LAST 10 MATCHES</span>
+          </div>
+          <div class="flex items-center gap-1 sm:gap-1.5 p-1 bg-neutral-50 border-2 border-black shadow-[2px_2px_0px_#000] max-w-full overflow-x-auto sm:overflow-visible">
+            @for (slot of recentFormSlots(); track $index) {
+              @if (slot === 'W') {
+                <div
+                  class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-emerald-500 text-white font-black text-xs sm:text-sm border border-black shadow-[1px_1px_0px_#000] select-none pointer-events-none shrink-0"
+                  title="Win"
+                >
+                  W
+                </div>
+              } @else if (slot === 'L') {
+                <div
+                  class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-rose-500 text-white font-black text-xs sm:text-sm border border-black shadow-[1px_1px_0px_#000] select-none pointer-events-none shrink-0"
+                  title="Loss"
+                >
+                  L
+                </div>
+              } @else {
+                <div
+                  class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-neutral-100 text-neutral-400 font-bold text-xs border border-dashed border-neutral-300 select-none pointer-events-none shrink-0"
+                >
+                  -
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Combat Stats Bento Grid -->
+    @if (stats(); as s) {
+      <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <!-- Matches & Record -->
+        <div class="border-2 border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000] flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Battles</span>
+            <app-icon name="pixel-ship" [size]="18" class="text-black"></app-icon>
+          </div>
+          <div>
+            <div class="text-2xl sm:text-3xl font-black text-black tracking-tight mb-1">
+              {{ s.matchesPlayed }}
+            </div>
+            <div class="text-xs font-bold text-neutral-600">
+              <span class="text-emerald-700 font-extrabold">{{ s.wins }}W</span>
+              <span class="mx-1">/</span>
+              <span class="text-rose-700 font-extrabold">{{ s.losses }}L</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Win Rate -->
+        <div class="border-2 border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000] flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Win Rate</span>
+            <app-icon name="award" [size]="18" class="text-black"></app-icon>
+          </div>
+          <div>
+            <div class="text-2xl sm:text-3xl font-black text-black tracking-tight mb-1">
+              {{ s.winRate }}%
+            </div>
+            <div class="w-full bg-neutral-200 h-2 border border-black overflow-hidden">
+              <div class="bg-black h-full" [style.width.%]="s.winRate"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Win Streak -->
+        <div class="border-2 border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000] flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Win Streak</span>
+            <app-icon name="flame" [size]="18" class="text-amber-500"></app-icon>
+          </div>
+          <div>
+            <div class="text-2xl sm:text-3xl font-black text-black tracking-tight mb-1">
+              {{ s.currentWinStreak }}
+            </div>
+            <div class="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+              Consecutive
+            </div>
+          </div>
+        </div>
+
+        <!-- Accuracy -->
+        <div class="border-2 border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000] flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Accuracy</span>
+            <app-icon name="crosshair" [size]="18" class="text-black"></app-icon>
+          </div>
+          <div>
+            <div class="text-2xl sm:text-3xl font-black text-black tracking-tight mb-1">
+              {{ s.accuracy }}%
+            </div>
+            <div class="text-xs font-bold text-neutral-600">
+              <span class="text-emerald-700">{{ s.hits }} hits</span>
+              <span class="mx-1">/</span>
+              <span class="text-neutral-500">{{ s.shotsFired }} shots</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Match History Section -->
+    <section class="border-2 border-black bg-white p-5 sm:p-6 shadow-[4px_4px_0px_#000]">
+      <div class="flex items-center justify-between gap-3 mb-5 pb-3 border-b-2 border-black">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="p-1.5 bg-black text-white shadow-[1px_1px_0px_#000] shrink-0">
+            <app-icon name="radar" [size]="16" class="text-white"></app-icon>
+          </div>
+          <h2 class="text-base sm:text-lg font-black uppercase tracking-tight text-black truncate">
+            Match History
+          </h2>
+        </div>
+
+        @if (showPagination()) {
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 hidden sm:inline">
+              Page {{ historyPage() + 1 }}
+            </span>
+            <div class="flex items-center gap-1.5">
+              <app-button
+                variant="secondary"
+                size="sm"
+                className="!text-xs !py-1 !px-2.5"
+                [disabled]="historyPage() === 0 || historyLoading()"
+                (clicked)="onPrevPage()"
+                title="Previous page"
+              >
+                &larr; Prev
+              </app-button>
+              <app-button
+                variant="secondary"
+                size="sm"
+                className="!text-xs !py-1 !px-2.5"
+                [disabled]="!hasNextPage() || historyLoading()"
+                (clicked)="onNextPage()"
+                title="Next page"
+              >
+                Next &rarr;
+              </app-button>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (historyLoading()) {
+        <div class="p-8 text-center">
+          <app-icon name="spinner" [size]="24" class="animate-spin text-black mb-2"></app-icon>
+          <p class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Loading Matches...</p>
+        </div>
+      } @else if (matchHistory().length === 0) {
+        <div class="p-8 text-center text-neutral-500 font-bold uppercase tracking-wider text-sm">
+          No matches recorded yet.
+        </div>
+      } @else {
+        <div class="space-y-3">
+          @for (m of matchHistory(); track m.id) {
+            <div
+              class="border-2 border-black p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white shadow-[2px_2px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] transition-transform"
+            >
+              <div class="flex items-center gap-3">
+                <span
+                  class="w-20 inline-flex items-center justify-center py-1 text-white font-black text-xs uppercase tracking-wider border-2 border-black shadow-[1px_1px_0px_#000]"
+                  [class.bg-emerald-500]="m.result === 'WON'"
+                  [class.bg-rose-500]="m.result !== 'WON'"
+                >
+                  {{ m.result === 'WON' ? 'VICTORY' : 'DEFEAT' }}
+                </span>
+
+                <div class="text-xs font-bold text-neutral-600">
+                  <span>{{ formatDate(m.playedAt) }}</span>
+                  <span class="mx-1.5 text-neutral-400">&bull;</span>
+                  <span>{{ formatDuration(m.durationSeconds) }}</span>
+                </div>
+              </div>
+
+              <app-button
+                variant="secondary"
+                size="sm"
+                className="self-end sm:self-auto !text-xs !py-1 !px-2.5"
+                (clicked)="watchReplay(m.id)"
+              >
+                <div class="flex items-center gap-1.5">
+                  <app-icon name="crosshair" [size]="14"></app-icon>
+                  <span>Replay</span>
+                </div>
+              </app-button>
+            </div>
+          }
+        </div>
+
+        @if (showPagination()) {
+          <!-- Pagination Controls -->
+          <div class="flex items-center justify-between mt-6 pt-4 border-t-2 border-black">
+            <app-button
+              variant="secondary"
+              size="sm"
+              [disabled]="historyPage() === 0 || historyLoading()"
+              (clicked)="onPrevPage()"
+            >
+              &larr; Prev
+            </app-button>
+
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600">
+              Page {{ historyPage() + 1 }}
+            </span>
+
+            <app-button
+              variant="secondary"
+              size="sm"
+              [disabled]="!hasNextPage() || historyLoading()"
+              (clicked)="onNextPage()"
+            >
+              Next &rarr;
+            </app-button>
+          </div>
+        }
+      }
+    </section>
+  }
+</div>

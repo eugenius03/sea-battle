@@ -20,12 +20,22 @@ body {
   color: var(--color-text);
   min-height: 100vh;
   overflow-x: hidden;
+  touch-action: manipulation;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 html {
   font-size: 16px;
+  touch-action: manipulation;
+}
+
+button,
+a,
+input,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (min-width: 1920px) {

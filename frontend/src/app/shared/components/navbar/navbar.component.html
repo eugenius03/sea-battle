@@ -15,7 +15,11 @@
 
     <div class="flex items-center gap-2 sm:gap-3">
       @if (authState.isAuthenticated()) {
-        <div class="flex items-center gap-2 bg-neutral-100 border-2 border-black px-2.5 py-1">
+        <a
+          routerLink="/profile/me"
+          title="View Profile"
+          class="flex items-center gap-2 bg-neutral-100 border-2 border-black px-2.5 py-1 hover:translate-x-[1px] hover:translate-y-[1px] shadow-[2px_2px_0px_#000] transition-transform cursor-pointer"
+        >
           <div class="w-5 h-5 bg-black flex items-center justify-center">
             <span class="text-xs font-bold text-white uppercase">{{
               authState.username()?.charAt(0)
@@ -24,7 +28,7 @@
           <span class="text-xs font-bold text-black uppercase hidden sm:block">
             {{ authState.username() }}
           </span>
-        </div>
+        </a>
 
         <app-button
           variant="secondary"

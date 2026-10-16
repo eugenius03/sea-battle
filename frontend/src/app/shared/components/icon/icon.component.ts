@@ -30,7 +30,9 @@ export type IconName =
   | 'spinner'
   | 'qrcode'
   | 'mail'
-  | 'warning';
+  | 'warning'
+  | 'play'
+  | 'pause';
 
 @Component({
   selector: 'app-icon',

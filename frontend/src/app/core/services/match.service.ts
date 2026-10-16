@@ -1,8 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
-import { MatchResponse } from '@core/models/match.model';
+import { MatchDetailsResponse, MatchHistoryResponse, MatchResponse } from '@core/models/match.model';
 
 @Injectable({
   providedIn: 'root',
@@ -36,5 +36,22 @@ export class MatchService {
 
   findGame(): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/find`, {}, { withCredentials: true });
+  }
+
+  getMatchHistory(username: string, page = 0, size = 10): Observable<MatchHistoryResponse[]> {
+    const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+    return this.http.get<MatchHistoryResponse[]>(
+      `${this.baseUrl}/history/${encodeURIComponent(username)}`,
+      {
+        params,
+        withCredentials: true,
+      },
+    );
+  }
+
+  getMatch(inviteToken: string): Observable<MatchDetailsResponse> {
+    return this.http.get<MatchDetailsResponse>(`${this.baseUrl}/${encodeURIComponent(inviteToken)}`, {
+      withCredentials: true,
+    });
   }
 }

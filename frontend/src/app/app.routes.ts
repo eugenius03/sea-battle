@@ -23,9 +23,22 @@ export const routes: Routes = [
     loadComponent: () => import('@features/lobby/lobby.component').then((m) => m.LobbyComponent),
   },
   {
+    path: 'profile/me',
+    canActivate: [authGuard],
+    loadComponent: () => import('@features/profile/profile.component').then((m) => m.ProfileComponent),
+  },
+  {
+    path: 'profile/:username',
+    loadComponent: () => import('@features/profile/profile.component').then((m) => m.ProfileComponent),
+  },
+  {
     path: 'game/:inviteToken',
     canActivate: [authGuard],
     loadComponent: () => import('@features/game/game.component').then((m) => m.GameComponent),
+  },
+  {
+    path: 'replay/:inviteToken',
+    loadComponent: () => import('@features/replay/replay.component').then((m) => m.ReplayComponent),
   },
   {
     path: '**',

@@ -13,6 +13,18 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
-    provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      withViewTransitions({
+        // Browsers abort view transitions in hidden documents (background tab / occluded window),
+        // which would otherwise fail the navigation itself, e.g. rematch redirect.
+        onViewTransitionCreated: ({ transition }) => {
+          if (document.hidden) {
+            transition.skipTransition();
+          }
+        },
+      }),
+    ),
   ],
 };
