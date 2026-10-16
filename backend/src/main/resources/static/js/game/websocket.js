@@ -153,5 +153,6 @@ function onMoveMessage(message) {
         renderMoveResponses(m.moveResponses, false);
     }
 
-    applyTurn(m.isItMyTurn);
+    applyTurn(m.currentTurnPlayerId != null
+        && String(m.currentTurnPlayerId) === String(state.myMatchPlayerId));
 }

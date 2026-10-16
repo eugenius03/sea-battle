@@ -96,8 +96,10 @@ export function renderGameState(gameInfo) {
         }
     }
 
-    const isItMyTurn = gameInfo.isItMyTurn;
-    if (isItMyTurn !== undefined) applyTurn(isItMyTurn);
+    if (gameInfo.currentTurnPlayerId !== undefined) {
+        applyTurn(gameInfo.currentTurnPlayerId != null
+            && String(gameInfo.currentTurnPlayerId) === String(state.myMatchPlayerId));
+    }
 
     if (gameInfo.droneUsage) {
         state.attackDroneUsesLeft = gameInfo.droneUsage['ATTACK_DRONE'] ?? 0;

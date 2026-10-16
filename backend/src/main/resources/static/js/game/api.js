@@ -1,8 +1,12 @@
 import {setState, state} from './state.js';
 import {$, readShipId, showMessage} from './utils.js';
-import {checkAllShipsPlaced, lockEnemyBoard, lockPlayerBoard, renderMoveResponses} from './ui.js';
+import {applyTurn, checkAllShipsPlaced, lockEnemyBoard, lockPlayerBoard, renderMoveResponses} from './ui.js';
 import {clearShipFromBoard, setPlayerBoardDraggable, visualizeShipOnBoard} from './board.js';
 import {renderGameState, renderPlayerShips} from './renderer.js';
+
+function isMyTurn(currentTurnPlayerId) {
+    return currentTurnPlayerId != null && String(currentTurnPlayerId) === String(state.myMatchPlayerId);
+}
 
 export async function fireSurveillanceDrone(x, y) {
     try {
@@ -17,7 +21,8 @@ export async function fireSurveillanceDrone(x, y) {
             return;
         }
 
-        const moves = await response.json();
+        const {moveResponses: moves, currentTurnPlayerId} = await response.json();
+        applyTurn(isMyTurn(currentTurnPlayerId));
 
         state.surveillanceDroneUsesLeft--;
         const badge = $('surveillanceDroneUsesLeft');
@@ -53,7 +58,8 @@ export async function fireAttackDrone(x, y) {
             return;
         }
 
-        const moves = await response.json();
+        const {moveResponses: moves, currentTurnPlayerId} = await response.json();
+        applyTurn(isMyTurn(currentTurnPlayerId));
 
         state.attackDroneUsesLeft--;
         const badge = $('attackDroneUsesLeft');
@@ -173,7 +179,8 @@ export async function handleEnemyCellClick(e) {
             return;
         }
 
-        const moves = await response.json();
+        const {moveResponses: moves, currentTurnPlayerId} = await response.json();
+        applyTurn(isMyTurn(currentTurnPlayerId));
         const {hasMiss, hasFinished, hasSunk} = renderMoveResponses(moves, true);
 
         if (hasFinished) {

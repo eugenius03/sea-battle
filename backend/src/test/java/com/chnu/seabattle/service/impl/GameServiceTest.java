@@ -2,6 +2,7 @@ package com.chnu.seabattle.service.impl;
 
 import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.converter.ShipConverter;
+import com.chnu.seabattle.dto.game.FireResponse;
 import com.chnu.seabattle.dto.move.MoveRequest;
 import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.dto.ship.ShipRequest;
@@ -270,9 +271,10 @@ class GameServiceTest {
         @Test
         @DisplayName("Should successfully fire and hit a ship")
         void shouldSuccessfullyFireAndHitShip() {
-            List<Move> result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
+            FireResponse result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
 
-            assertEquals(MoveResult.HIT, result.getFirst().getMoveResult());
+            assertEquals(MoveResult.HIT, result.moveResponses().getFirst().moveResult());
+            assertEquals(player1.getId(), result.currentTurnPlayerId());
             verify(moveService).create(any(Move.class));
             assertEquals(1, player2.getShips().getFirst().getHits());
             assertFalse(player2.getShips().getFirst().isSunk());
@@ -281,11 +283,12 @@ class GameServiceTest {
         @Test
         @DisplayName("Should successfully fire and miss")
         void shouldSuccessfullyFireAndMiss() {
-            List<Move> result = gameService.executeMove(player1, new MoveRequest(0, 0, MoveType.STANDARD));
+            FireResponse result = gameService.executeMove(player1, new MoveRequest(0, 0, MoveType.STANDARD));
 
-            assertEquals(MoveResult.MISS, result.getFirst().getMoveResult());
+            assertEquals(MoveResult.MISS, result.moveResponses().getFirst().moveResult());
             verify(moveService).create(any(Move.class));
             assertEquals(player2.getId(), match.getCurrentPlayerTurnId());
+            assertEquals(player2.getId(), result.currentTurnPlayerId());
         }
 
         @Test
@@ -293,9 +296,9 @@ class GameServiceTest {
         void shouldSuccessfullyFireAndSinkShip() {
             player2.getShips().getFirst().setHits(2);
 
-            List<Move> result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
+            FireResponse result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
 
-            assertEquals(MoveResult.FINISHED, result.getFirst().getMoveResult());
+            assertEquals(MoveResult.FINISHED, result.moveResponses().getFirst().moveResult());
             verify(moveService, atLeastOnce()).create(any(Move.class));
             assertEquals(3, player2.getShips().getFirst().getHits());
             assertTrue(player2.getShips().getFirst().isSunk());
@@ -330,9 +333,9 @@ class GameServiceTest {
                     .startX(0).startY(0).orientation(Orientation.HORIZONTAL)
                     .hits(0).isSunk(false).build());
 
-            List<Move> result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
+            FireResponse result = gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
 
-            assertTrue(result.stream().anyMatch(m -> MoveResult.SUNK.equals(m.getMoveResult())));
+            assertTrue(result.moveResponses().stream().anyMatch(m -> MoveResult.SUNK.equals(m.moveResult())));
             assertEquals(MatchStatus.IN_PROGRESS, match.getStatus());
         }
 
@@ -407,9 +410,9 @@ class GameServiceTest {
                     .startX(3).startY(3).orientation(Orientation.VERTICAL)
                     .hits(0).isSunk(false).build());
 
-            List<Move> result = gameService.executeMove(player1, new MoveRequest(3, 4, MoveType.STANDARD));
+            FireResponse result = gameService.executeMove(player1, new MoveRequest(3, 4, MoveType.STANDARD));
 
-            assertEquals(MoveResult.HIT, result.getFirst().getMoveResult());
+            assertEquals(MoveResult.HIT, result.moveResponses().getFirst().moveResult());
             assertEquals(1, player2.getShips().getFirst().getHits());
         }
     }

@@ -5,6 +5,7 @@ import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.constants.NumericalConstants;
 import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.converter.ShipConverter;
+import com.chnu.seabattle.dto.game.FireResponse;
 import com.chnu.seabattle.dto.game.GameInfoResponse;
 import com.chnu.seabattle.dto.move.MoveRequest;
 import com.chnu.seabattle.dto.move.MoveResponse;
@@ -239,7 +240,7 @@ public class GameService {
     }
 
     @Transactional
-    public List<Move> executeMove(MatchPlayer shooter, MoveRequest moveRequest) {
+    public FireResponse executeMove(MatchPlayer shooter, MoveRequest moveRequest) {
         Match match = matchService.findByInviteTokenForUpdate(shooter.getMatch().getInviteToken())
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
 
@@ -275,12 +276,12 @@ public class GameService {
         List<Move> result = strategy.execute(match, shooter.getId(), moveRequest);
         UUID opponentId = MatchUtils.getOpponentPlayerId(match, shooter.getId());
 
-        boolean isItOpponentsTurn = opponentId.equals(match.getCurrentPlayerTurnId());
+        List<MoveResponse> moveResponses = result.stream().map(moveConverter::toResponse).toList();
 
         webSocketService.sendOpponentMoveMessage(
                 match.getInviteToken(), opponentId,
-                result.stream().map(moveConverter::toResponse).toList(),
-                isItOpponentsTurn
+                moveResponses,
+                match.getCurrentPlayerTurnId()
         );
 
         log.info("Player {} fired at [{}, {}] in match {} using moveType {}",
@@ -298,7 +299,7 @@ public class GameService {
             log.info("Match {} FINISHED. Winner: {}", match.getInviteToken(), shooter.getId());
             match.getPlayers().forEach(p -> userService.evictStats(p.getUserId()));
         }
-        return result;
+        return new FireResponse(moveResponses, match.getCurrentPlayerTurnId());
     }
 
     @Transactional
@@ -343,7 +344,6 @@ public class GameService {
                     .playerShips(playerShips)
                     .matchStatus(match.getStatus())
                     .matchPlayerId(matchPlayer.getId())
-                    .isItMyTurn(false)
                     .droneUsage(initialDroneUsage)
                     .build();
         }
@@ -364,10 +364,6 @@ public class GameService {
                         }
                 ));
 
-        boolean isItMyTurn = Optional.ofNullable(match.getCurrentPlayerTurnId())
-                .map(playerId -> playerId.equals(matchPlayer.getId()))
-                .orElse(false);
-
         List<MoveResponse> playerMoves = allMoves.stream()
                 .filter(m -> m.getShooterId().equals(matchPlayer.getId()))
                 .map(moveConverter::toResponse)
@@ -384,7 +380,7 @@ public class GameService {
                 .playerMoves(playerMoves)
                 .opponentMoves(opponentMoves)
                 .droneUsage(uses)
-                .isItMyTurn(isItMyTurn)
+                .currentTurnPlayerId(match.getCurrentPlayerTurnId())
                 .build();
     }
 }

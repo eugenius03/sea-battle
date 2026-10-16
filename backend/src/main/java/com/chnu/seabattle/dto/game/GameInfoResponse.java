@@ -4,7 +4,6 @@ import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.dto.ship.ShipResponse;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.entity.MoveType;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 import java.util.List;
@@ -19,9 +18,7 @@ public record GameInfoResponse(
         MatchStatus matchStatus,
         UUID matchPlayerId,
         Map<MoveType, Long> droneUsage,
-
-        @JsonProperty("isItMyTurn")
-        boolean isItMyTurn
+        UUID currentTurnPlayerId
 ) {
 
 }

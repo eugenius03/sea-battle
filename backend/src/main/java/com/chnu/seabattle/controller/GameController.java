@@ -1,11 +1,10 @@
 package com.chnu.seabattle.controller;
 
 import com.chnu.seabattle.constants.ErrorConstants;
-import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.converter.ShipConverter;
 import com.chnu.seabattle.dto.game.GameInfoResponse;
 import com.chnu.seabattle.dto.move.MoveRequest;
-import com.chnu.seabattle.dto.move.MoveResponse;
+import com.chnu.seabattle.dto.game.FireResponse;
 import com.chnu.seabattle.dto.ship.ShipRequest;
 import com.chnu.seabattle.dto.ship.ShipResponse;
 import com.chnu.seabattle.entity.Match;
@@ -38,7 +37,6 @@ public class GameController {
     private final GameService gameService;
     private final MatchPlayerService matchPlayerService;
     private final UserService userService;
-    private final MoveConverter moveConverter;
     private final ShipConverter shipConverter;
 
     private MatchPlayer resolveMatchPlayer(String inviteToken) {
@@ -84,14 +82,12 @@ public class GameController {
     }
 
     @PostMapping("/{inviteToken}/fire")
-    public List<MoveResponse> fire(
+    public FireResponse fire(
             @PathVariable String inviteToken,
             @Valid @RequestBody MoveRequest moveRequest
     ) {
         MatchPlayer shooter = resolveMatchPlayer(inviteToken);
-        return gameService.executeMove(shooter, moveRequest).stream()
-                .map(moveConverter::toResponse)
-                .toList();
+        return gameService.executeMove(shooter, moveRequest);
     }
 
     @GetMapping("{inviteToken}/info")

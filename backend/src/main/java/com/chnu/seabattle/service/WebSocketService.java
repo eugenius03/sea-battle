@@ -98,13 +98,13 @@ public class WebSocketService {
     }
 
     public void sendOpponentMoveMessage(String inviteToken, UUID recipientMatchPlayerId,
-                                        List<MoveResponse> moveResponses, boolean isItMyTurn
+                                        List<MoveResponse> moveResponses, UUID currentTurnPlayerId
     ) {
         MoveMessage payload = new MoveMessage(
                 recipientMatchPlayerId,
                 moveResponses,
                 Instant.now(),
-                isItMyTurn
+                currentTurnPlayerId
         );
 
         messagingTemplate.convertAndSendToUser(
