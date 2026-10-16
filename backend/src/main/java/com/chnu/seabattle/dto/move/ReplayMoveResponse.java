@@ -12,6 +12,7 @@ public record ReplayMoveResponse(
         int targetX,
         int targetY,
         MoveType moveType,
-        MoveResult moveResult
+        MoveResult moveResult,
+        boolean isMoveOrigin
 ) {
 }

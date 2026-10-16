@@ -114,7 +114,7 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         ).toList();
     }
 
-    @Cacheable(value = "matches", key = "#inviteToken")
+    @Cacheable(value = "match-replays", key = "#inviteToken")
     @Transactional(readOnly = true)
     public MatchResponse getMatch(String inviteToken) {
 
@@ -127,6 +127,8 @@ public class MatchService extends AbstractBaseService<Match, Long> {
 
         List<MatchParticipantResponse> participants = match.getPlayers().stream().map(player ->
                         MatchParticipantResponse.builder()
+                                .playerId(player.getId())
+                                .userId(player.getUserId())
                                 .ships(player.getShips().stream().map(shipConverter::toResponse).toList())
                                 .isWinner(player.getId().equals(match.getWinnerId()))
                                 .username(userRepository.findById(player.getUserId()).orElseThrow(
