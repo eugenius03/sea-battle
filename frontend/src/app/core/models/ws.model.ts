@@ -13,21 +13,17 @@ export type PresenceEventType =
 export interface PresenceMessage {
   matchPlayerId?: string;
   presenceEventType: PresenceEventType;
-  at: string;
   inviteToken?: string;
 }
 
 export interface MoveMessage {
-  recipientMatchPlayerId: string;
   moveResponses: MoveResponse[];
-  at: string;
   currentTurnPlayerId: string | null;
 }
 
 export interface MatchStatusMessage {
   inviteToken: string;
   matchStatus: MatchStatus;
-  at: string;
   currentTurnPlayerId: string;
   winnerShips?: ShipResponse[];
 }

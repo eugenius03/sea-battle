@@ -3,7 +3,7 @@ import { GameFlowService } from './game-flow.service';
 import { MatchState } from './match.state';
 import { MoveState } from './move.state';
 import { ShipState } from './ship.state';
-import { of, Subject } from 'rxjs';
+import { of } from 'rxjs';
 
 describe('GameFlowService', () => {
   let flow: GameFlowService;
@@ -15,7 +15,8 @@ describe('GameFlowService', () => {
   let reconnectedSubject: ReturnType<typeof setupGameTestBed>['reconnectedSubject'];
 
   beforeEach(() => {
-    ({ flow, moves, match, ships, mockGameService, presenceSubject, reconnectedSubject } = setupGameTestBed());
+    ({ flow, moves, match, ships, mockGameService, presenceSubject, reconnectedSubject } =
+      setupGameTestBed());
   });
 
   it('should transition matchStatus from WAITING to PLANNING when opponent connects', () => {
@@ -25,7 +26,6 @@ describe('GameFlowService', () => {
     presenceSubject.next({
       presenceEventType: 'OPPONENT_CONNECTED',
       matchPlayerId: 'p2',
-      at: new Date().toISOString(),
     });
 
     expect(match.isOpponentConnected()).toBe(true);

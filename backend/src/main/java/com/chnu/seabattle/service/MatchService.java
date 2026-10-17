@@ -7,6 +7,10 @@ import com.chnu.seabattle.dto.match.MatchHistoryResponse;
 import com.chnu.seabattle.dto.match.MatchInviteResponse;
 import com.chnu.seabattle.dto.match.MatchParticipantResponse;
 import com.chnu.seabattle.dto.match.MatchResponse;
+import com.chnu.seabattle.dto.ws.MatchStatusMessage;
+import com.chnu.seabattle.dto.ws.PresenceEventType;
+import com.chnu.seabattle.dto.ws.PresenceMessage;
+import com.chnu.seabattle.dto.ws.RematchMessage;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
@@ -21,6 +25,7 @@ import com.chnu.seabattle.util.MatchUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,7 +45,7 @@ public class MatchService extends AbstractBaseService<Match, Long> {
 
     private final MatchRepository matchRepository;
     private final MatchPlayerService matchPlayerService;
-    private final WebSocketService webSocketService;
+    private final ApplicationEventPublisher eventPublisher;
     private final ShipConverter shipConverter;
     private final MoveConverter moveConverter;
     private final UserRepository userRepository;
@@ -190,8 +195,7 @@ public class MatchService extends AbstractBaseService<Match, Long> {
 
         requester.setWantsRematch(true);
 
-        webSocketService.sendRematchRequested(inviteToken, requester.getId());
-
+        eventPublisher.publishEvent(new PresenceMessage(inviteToken, requester.getId(), PresenceEventType.REMATCH_REQUESTED));
         if (!opponent.isWantsRematch()) {
             return Optional.empty();
         }
@@ -204,7 +208,7 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         Match joinedMatch = doJoinMatch(newMatch, opponent.getUserId(), newMatch.getInviteToken());
 
 
-        webSocketService.sendRematchAgreed(inviteToken, joinedMatch.getInviteToken());
+        eventPublisher.publishEvent(new RematchMessage(inviteToken, requester.getId(), PresenceEventType.REMATCH_AGREED, joinedMatch.getInviteToken()));
         log.info("Players {} and {} agreed on rematch new match {} created",
                 requester.getUserId(), opponent.getUserId(), newMatch.getInviteToken()
         );
@@ -238,8 +242,9 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         if (match.getPlayers().size() == 2) {
             match.setStatus(MatchStatus.PLANNING);
             UUID opponentId = MatchUtils.getOpponentPlayerId(match, matchPlayer.getId());
-            webSocketService.handleOpponentConnected(inviteToken, opponentId);
-            webSocketService.updateMatchStatus(inviteToken, MatchStatus.PLANNING, null, null);
+
+            eventPublisher.publishEvent(new PresenceMessage(inviteToken, opponentId, PresenceEventType.OPPONENT_CONNECTED));
+            eventPublisher.publishEvent(new MatchStatusMessage(inviteToken, MatchStatus.PLANNING, null, null));
         }
 
         log.info("Player {} joined match {}", userId, inviteToken);

@@ -285,7 +285,11 @@
                   : 'All your ships were sunk. Opponent fleet revealed.'
               }}
             </span>
-            @if (matchState.rematchRequestedByOpponent() && !myRematchRequested()) {
+            @if (
+              matchState.rematchRequestedByOpponent() &&
+              !myRematchRequested() &&
+              !showResultModal()
+            ) {
               <span
                 class="inline-flex items-center gap-1 text-xs font-black uppercase px-2 py-0.5 bg-amber-300 border-2 border-black animate-pulse shadow-[1px_1px_0px_#000]"
               >

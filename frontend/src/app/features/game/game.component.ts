@@ -1,14 +1,4 @@
-import {
-  Component,
-  computed,
-  effect,
-  HostListener,
-  inject,
-  input,
-  OnDestroy,
-  signal,
-  untracked,
-} from '@angular/core';
+import { Component, computed, effect, HostListener, inject, input, OnDestroy, signal, untracked } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { BoardViewState } from '@core/state/board-view.state';
@@ -395,7 +385,7 @@ export class GameComponent implements OnDestroy {
     this.matchService.rematch(token).subscribe({
       next: (res) => {
         if (res && res.inviteToken) {
-          this.toast.success('Rematch accepted! Starting new game.');
+          // The REMATCH_AGREED message (shown as a toast) reaches both players, so only navigate here.
           this.router.navigate(['/game', res.inviteToken]);
         } else {
           this.toast.info('Rematch requested.');

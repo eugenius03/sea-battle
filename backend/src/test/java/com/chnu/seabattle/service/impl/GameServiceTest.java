@@ -6,6 +6,10 @@ import com.chnu.seabattle.dto.game.FireResponse;
 import com.chnu.seabattle.dto.move.MoveRequest;
 import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.dto.ship.ShipRequest;
+import com.chnu.seabattle.dto.ws.MatchStatusMessage;
+import com.chnu.seabattle.dto.ws.MoveMessage;
+import com.chnu.seabattle.dto.ws.PresenceEventType;
+import com.chnu.seabattle.dto.ws.PresenceMessage;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
@@ -23,7 +27,6 @@ import com.chnu.seabattle.service.MatchPlayerService;
 import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.MoveService;
 import com.chnu.seabattle.service.UserService;
-import com.chnu.seabattle.service.WebSocketService;
 import com.chnu.seabattle.service.strategy.MoveStrategy;
 import com.chnu.seabattle.service.strategy.StandardAttackStrategy;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,12 +34,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,6 +54,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -70,7 +75,7 @@ class GameServiceTest {
     @Mock
     private ShipConverter shipConverter;
     @Mock
-    private WebSocketService webSocketService;
+    private ApplicationEventPublisher eventPublisher;
     @Mock
     private UserService userService;
     @Mock
@@ -237,6 +242,36 @@ class GameServiceTest {
                             match.getCurrentPlayerTurnId().equals(playerId2)
             );
         }
+
+        @Test
+        @DisplayName("Publishes OPPONENT_READY to the opponent's presence topic")
+        void publishesOpponentReady() {
+            gameService.markReady(player1);
+
+            ArgumentCaptor<PresenceMessage> captor = ArgumentCaptor.forClass(PresenceMessage.class);
+            verify(eventPublisher).publishEvent(captor.capture());
+            assertEquals(PresenceEventType.OPPONENT_READY, captor.getValue().presenceEventType());
+            assertEquals(playerId2, captor.getValue().matchPlayerId());
+            assertEquals(INVITE_TOKEN, captor.getValue().inviteToken());
+        }
+
+        @Test
+        @DisplayName("Publishes IN_PROGRESS status when both players are ready")
+        void publishesInProgressWhenBothReady() {
+            player2.setReady(true);
+
+            gameService.markReady(player1);
+
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(eventPublisher, atLeastOnce()).publishEvent(captor.capture());
+            MatchStatusMessage status = captor.getAllValues().stream()
+                    .filter(MatchStatusMessage.class::isInstance)
+                    .map(MatchStatusMessage.class::cast)
+                    .findFirst().orElseThrow();
+            assertEquals(MatchStatus.IN_PROGRESS, status.matchStatus());
+            assertEquals(match.getCurrentPlayerTurnId(), status.currentTurnPlayerId());
+            assertEquals(INVITE_TOKEN, status.inviteToken());
+        }
     }
 
     @Nested
@@ -314,6 +349,49 @@ class GameServiceTest {
             assertEquals(MatchStatus.FINISHED, match.getStatus());
             assertEquals(playerId1, match.getWinnerId());
             assertNotNull(match.getFinishedAt());
+        }
+
+        @Test
+        @DisplayName("Publishes the move to the opponent only, with the server-decided turn")
+        void publishesMoveToOpponent() {
+            gameService.executeMove(player1, new MoveRequest(0, 0, MoveType.STANDARD));
+
+            ArgumentCaptor<MoveMessage> captor = ArgumentCaptor.forClass(MoveMessage.class);
+            verify(eventPublisher).publishEvent(captor.capture());
+            MoveMessage message = captor.getValue();
+            assertEquals(playerId2, message.recipientMatchPlayerId());
+            assertEquals(INVITE_TOKEN, message.inviteToken());
+            assertEquals(playerId2, message.currentTurnPlayerId());
+            assertEquals(1, message.moveResponses().size());
+        }
+
+        @Test
+        @DisplayName("Publishes FINISHED status with the winner's ships when the game ends")
+        void publishesFinishedStatusWhenGameEnds() {
+            player2.getShips().getFirst().setHits(2);
+
+            gameService.executeMove(player1, new MoveRequest(5, 5, MoveType.STANDARD));
+
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(eventPublisher, atLeastOnce()).publishEvent(captor.capture());
+            MatchStatusMessage status = captor.getAllValues().stream()
+                    .filter(MatchStatusMessage.class::isInstance)
+                    .map(MatchStatusMessage.class::cast)
+                    .findFirst().orElseThrow();
+            assertEquals(MatchStatus.FINISHED, status.matchStatus());
+            assertEquals(INVITE_TOKEN, status.inviteToken());
+        }
+
+        @Test
+        @DisplayName("Publishes nothing when the move is rejected")
+        void publishesNothingWhenMoveRejected() {
+            match.setCurrentPlayerTurnId(playerId2);
+            MoveRequest request = new MoveRequest(0, 0, MoveType.STANDARD);
+
+            assertThrows(GameRuleViolationException.class,
+                    () -> gameService.executeMove(player1, request));
+
+            verify(eventPublisher, never()).publishEvent(any(Object.class));
         }
 
         @Test
@@ -502,6 +580,19 @@ class GameServiceTest {
 
             assertTrue(player1.isConnected());
             assertNotNull(player1.getLastSeenAt());
+        }
+
+        @Test
+        @DisplayName("Publishes RECONNECTED presence for the reconnecting player")
+        void publishesReconnected() {
+            player1.setConnected(false);
+
+            gameService.handleReconnect(match, player1);
+
+            ArgumentCaptor<PresenceMessage> captor = ArgumentCaptor.forClass(PresenceMessage.class);
+            verify(eventPublisher).publishEvent(captor.capture());
+            assertEquals(PresenceEventType.RECONNECTED, captor.getValue().presenceEventType());
+            assertEquals(playerId1, captor.getValue().matchPlayerId());
         }
     }
 }

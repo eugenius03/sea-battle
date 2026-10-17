@@ -11,6 +11,10 @@ import com.chnu.seabattle.dto.move.MoveRequest;
 import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.dto.ship.ShipRequest;
 import com.chnu.seabattle.dto.ship.ShipResponse;
+import com.chnu.seabattle.dto.ws.MatchStatusMessage;
+import com.chnu.seabattle.dto.ws.MoveMessage;
+import com.chnu.seabattle.dto.ws.PresenceEventType;
+import com.chnu.seabattle.dto.ws.PresenceMessage;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
@@ -28,6 +32,7 @@ import com.chnu.seabattle.util.BoardUtils;
 import com.chnu.seabattle.util.MatchUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +43,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -55,7 +59,7 @@ public class GameService {
     private final ShipRepository shipRepository;
     private final MoveConverter moveConverter;
     private final ShipConverter shipConverter;
-    private final WebSocketService webSocketService;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final Map<MoveType, MoveStrategy> strategies;
     private final MoveService moveService;
@@ -230,13 +234,13 @@ public class GameService {
             MatchPlayer randomPlayer = match.getPlayers().get(random.nextInt(match.getPlayers().size()));
             match.setCurrentPlayerTurnId(randomPlayer.getId());
 
-            webSocketService.updateMatchStatus(match.getInviteToken(), MatchStatus.IN_PROGRESS, match.getCurrentPlayerTurnId(), null);
+            eventPublisher.publishEvent(new MatchStatusMessage(match.getInviteToken(), MatchStatus.IN_PROGRESS, match.getCurrentPlayerTurnId(), null));
             log.info("All players ready. Match {} is now IN_PROGRESS. First turn: {}", match.getInviteToken(), match.getCurrentPlayerTurnId());
         }
 
         UUID opponentId = MatchUtils.getOpponentPlayerId(match, player.getId());
 
-        webSocketService.sendPlayerReadyMessage(match.getInviteToken(), opponentId);
+        eventPublisher.publishEvent(new PresenceMessage((match.getInviteToken()), opponentId, PresenceEventType.OPPONENT_READY));
     }
 
     @Transactional
@@ -278,11 +282,7 @@ public class GameService {
 
         List<MoveResponse> moveResponses = result.stream().map(moveConverter::toResponse).toList();
 
-        webSocketService.sendOpponentMoveMessage(
-                match.getInviteToken(), opponentId,
-                moveResponses,
-                match.getCurrentPlayerTurnId()
-        );
+        eventPublisher.publishEvent(new MoveMessage(opponentId, match.getInviteToken(), moveResponses, match.getCurrentPlayerTurnId()));
 
         log.info("Player {} fired at [{}, {}] in match {} using moveType {}",
                 shooter.getId(), moveRequest.x(), moveRequest.y(), match.getInviteToken(), moveRequest.moveType()
@@ -293,9 +293,7 @@ public class GameService {
                     .map(shipConverter::toResponse)
                     .toList();
 
-            webSocketService.updateMatchStatus(
-                    match.getInviteToken(), MatchStatus.FINISHED,
-                    match.getCurrentPlayerTurnId(), winnerShips);
+            eventPublisher.publishEvent(new MatchStatusMessage(match.getInviteToken(), MatchStatus.FINISHED, match.getCurrentPlayerTurnId(), winnerShips));
             log.info("Match {} FINISHED. Winner: {}", match.getInviteToken(), shooter.getId());
             match.getPlayers().forEach(p -> userService.evictStats(p.getUserId()));
         }
@@ -322,7 +320,7 @@ public class GameService {
         player.setConnected(true);
         player.setLastSeenAt(Instant.now());
         log.info("Player {} reconnected to match {}", player.getId(), match.getInviteToken());
-        webSocketService.handleReconnect(match.getInviteToken(), player.getId());
+        eventPublisher.publishEvent(new PresenceMessage(match.getInviteToken(), player.getId(), PresenceEventType.RECONNECTED));
     }
 
     @Transactional(readOnly = true)

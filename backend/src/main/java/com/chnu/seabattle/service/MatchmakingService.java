@@ -1,8 +1,10 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.dto.ws.MatchmakingStatusResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.repository.redis.MatchmakingQueueRedisRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
@@ -14,7 +16,7 @@ public class MatchmakingService {
 
     private final MatchmakingQueueRedisRepository queueRepository;
     private final MatchService matchService;
-    private final WebSocketService webSocketService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public void joinQueue(UUID userId) {
         String opponentIdStr = queueRepository.pairOrEnqueue(userId, System.currentTimeMillis());
@@ -24,7 +26,7 @@ public class MatchmakingService {
             notifyMatchFound(userId, opponentId);
         } else {
             Long position = queueRepository.getPosition(userId);
-            webSocketService.sendQueuePosition(userId.toString(), position != null ? position : 1L);
+            eventPublisher.publishEvent(new MatchmakingStatusResponse(userId.toString(), position != null ? position : 1L, null));
         }
     }
 
@@ -36,8 +38,9 @@ public class MatchmakingService {
     private void notifyMatchFound(UUID player1Id, UUID player2Id) {
         Match match = matchService.createMatch(player1Id, player2Id);
         String inviteToken = match.getInviteToken();
-        webSocketService.sendMatchFound(player1Id.toString(), inviteToken);
-        webSocketService.sendMatchFound(player2Id.toString(), inviteToken);
+        eventPublisher.publishEvent(new MatchmakingStatusResponse(player1Id.toString(), null, inviteToken));
+        eventPublisher.publishEvent(new MatchmakingStatusResponse(player2Id.toString(), null, inviteToken));
+
         updateQueuePositions();
     }
 
@@ -45,7 +48,7 @@ public class MatchmakingService {
         Set<String> waitingPlayers = queueRepository.getWaitingPlayers();
         long position = 1;
         for (String waitingUserId : waitingPlayers) {
-            webSocketService.sendQueuePosition(waitingUserId, position++);
+            eventPublisher.publishEvent(new MatchmakingStatusResponse(waitingUserId, position++, null));
         }
     }
 }

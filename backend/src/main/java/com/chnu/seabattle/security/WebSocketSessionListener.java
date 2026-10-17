@@ -1,10 +1,12 @@
 package com.chnu.seabattle.security;
 
+import com.chnu.seabattle.dto.ws.PresenceEventType;
+import com.chnu.seabattle.dto.ws.PresenceMessage;
 import com.chnu.seabattle.service.GameService;
 import com.chnu.seabattle.service.MatchmakingService;
-import com.chnu.seabattle.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
@@ -15,9 +17,9 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class WebSocketEventListener {
+public class WebSocketSessionListener {
 
-    private final WebSocketService webSocketService;
+    private final ApplicationEventPublisher eventPublisher;
     private final GameService gameService;
     private final MatchmakingService matchmakingService;
 
@@ -31,7 +33,7 @@ public class WebSocketEventListener {
 
             if (inviteToken != null && matchPlayerId != null) {
                 log.info("User disconnected from match: inviteToken={}, matchPlayerId={}", inviteToken, matchPlayerId);
-                webSocketService.handleDisconnect(inviteToken, matchPlayerId);
+                eventPublisher.publishEvent(new PresenceMessage(inviteToken, matchPlayerId, PresenceEventType.DISCONNECTED));
                 gameService.handleDisconnect(inviteToken, matchPlayerId);
             } else {
                 String userIdStr = (String) headerAccessor.getSessionAttributes().get("userId");
