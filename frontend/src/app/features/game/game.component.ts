@@ -115,55 +115,56 @@ export class GameComponent implements OnDestroy {
 
   onPlacementCellClick(cell: BoardCell): void {
     if (this.matchState.isPlayerReady()) return;
+    if (this.tryDropDraggedShip(cell)) return;
+    if (this.tryClickPlacedShip(cell)) return;
+    if (this.tryMoveSelectedShip(cell)) return;
+    this.placeSelectedShip(cell);
+  }
 
+  private tryDropDraggedShip(cell: BoardCell): boolean {
     const draggedId = this.shipState.draggedShipId();
-    if (draggedId != null) {
-      if (this.shipState.canMoveShipTo(draggedId, cell.x, cell.y)) {
-        this.shipState.moveShipTo(draggedId, cell.x, cell.y);
-      }
+    if (draggedId == null) return false;
+    if (this.shipState.canMoveShipTo(draggedId, cell.x, cell.y)) {
+      this.shipState.moveShipTo(draggedId, cell.x, cell.y);
+    }
+    this.shipState.resetPlacementInteraction();
+    return true;
+  }
+
+  private tryClickPlacedShip(cell: BoardCell): boolean {
+    if (!cell.hasShip || !cell.shipId) return false;
+    if (this.shipState.selectedPlacedShipId() === cell.shipId) {
+      this.shipState.rotateShip(cell.shipId);
       this.shipState.resetPlacementInteraction();
-      return;
+    } else {
+      this.shipState.selectPlacedShip(cell.shipId);
+      this.shipState.setHoveredCell(null);
     }
+    return true;
+  }
 
-    if (cell.hasShip && cell.shipId) {
-      if (this.shipState.selectedPlacedShipId() === cell.shipId) {
-        this.shipState.rotateShip(cell.shipId);
-        this.shipState.resetPlacementInteraction();
-      } else {
-        this.shipState.selectPlacedShip(cell.shipId);
-        this.shipState.setHoveredCell(null);
-      }
-      return;
-    }
-
+  private tryMoveSelectedShip(cell: BoardCell): boolean {
     const selectedPlacedId = this.shipState.selectedPlacedShipId();
-    if (selectedPlacedId != null) {
-      if (this.shipState.canMoveShipTo(selectedPlacedId, cell.x, cell.y)) {
-        this.shipState.moveShipTo(selectedPlacedId, cell.x, cell.y);
-        this.shipState.resetPlacementInteraction();
-        return;
-      } else {
-        this.shipState.resetPlacementInteraction();
-        return;
-      }
+    if (selectedPlacedId == null) return false;
+    if (this.shipState.canMoveShipTo(selectedPlacedId, cell.x, cell.y)) {
+      this.shipState.moveShipTo(selectedPlacedId, cell.x, cell.y);
     }
+    this.shipState.resetPlacementInteraction();
+    return true;
+  }
 
-    if (this.shipState.selectedShipToPlace()) {
-      const hovered = this.shipState.hoveredCell();
-      const isSameCell = hovered?.x === cell.x && hovered.y === cell.y;
+  private placeSelectedShip(cell: BoardCell): void {
+    if (!this.shipState.selectedShipToPlace()) return;
 
-      if (isSameCell || cell.isPlacementValid) {
-        if (cell.isPlacementInvalid && isSameCell) {
-          this.shipState.setHoveredCell(null);
-          return;
-        }
+    const hovered = this.shipState.hoveredCell();
+    const isSameCell = hovered?.x === cell.x && hovered.y === cell.y;
 
-        this.shipState.placeShipAt(hovered ? hovered.x : cell.x, hovered ? hovered.y : cell.y);
-        return;
-      }
-
+    if (!isSameCell && !cell.isPlacementValid) {
       this.shipState.setHoveredCell({ x: cell.x, y: cell.y });
-      return;
+    } else if (cell.isPlacementInvalid && isSameCell) {
+      this.shipState.setHoveredCell(null);
+    } else {
+      this.shipState.placeShipAt(hovered?.x ?? cell.x, hovered?.y ?? cell.y);
     }
   }
 
@@ -187,20 +188,20 @@ export class GameComponent implements OnDestroy {
     }
   }
 
-  onCellMouseEnter(cell: BoardCell, isEnemy: boolean): void {
-    if (isEnemy) {
-      this.moveState.setHoveredEnemyCell({ x: cell.x, y: cell.y });
-    } else {
-      this.shipState.setHoveredCell({ x: cell.x, y: cell.y });
-    }
+  onOwnCellMouseEnter(cell: BoardCell): void {
+    this.shipState.setHoveredCell({ x: cell.x, y: cell.y });
   }
 
-  onCellMouseLeave(isEnemy: boolean): void {
-    if (isEnemy) {
-      this.moveState.setHoveredEnemyCell(null);
-    } else {
-      this.shipState.setHoveredCell(null);
-    }
+  onOwnCellMouseLeave(): void {
+    this.shipState.setHoveredCell(null);
+  }
+
+  onEnemyCellMouseEnter(cell: BoardCell): void {
+    this.moveState.setHoveredEnemyCell({ x: cell.x, y: cell.y });
+  }
+
+  onEnemyCellMouseLeave(): void {
+    this.moveState.setHoveredEnemyCell(null);
   }
 
   onMainClick(event: Event): void {

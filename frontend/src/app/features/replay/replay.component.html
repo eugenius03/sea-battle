@@ -146,7 +146,9 @@
           <span>{{ nextTurnLabel() }}</span>
         </div>
 
+        <label for="replay-scrubber" class="sr-only">Replay position</label>
         <input
+          id="replay-scrubber"
           type="range"
           min="0"
           [max]="totalMoves()"

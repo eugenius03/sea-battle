@@ -38,48 +38,105 @@ function buildShipCellMap(ships: ShipResponse[]): Map<string, number> {
   return map;
 }
 
+const DIRECTIONS = [
+  { dx: -1, dy: 0 },
+  { dx: 1, dy: 0 },
+  { dx: 0, dy: -1 },
+  { dx: 0, dy: 1 },
+];
+
 function computeSunkEnemyCells(moves: MoveResponse[]): Set<string> {
   const sunkCells = new Set<string>();
-  const hitMap = new Map<string, string>();
+  const hitKeys = new Set<string>();
   const sunkOrigins: { x: number; y: number }[] = [];
 
   for (const move of moves) {
-    const key = `${move.targetX},${move.targetY}`;
-    if (move.moveResult === 'HIT' || move.moveResult === 'SUNK' || move.moveResult === 'FINISHED') {
-      hitMap.set(key, move.moveResult);
-    }
+    if (isHitResult(move.moveResult)) hitKeys.add(cellKey(move.targetX, move.targetY));
     if (move.moveResult === 'SUNK' || move.moveResult === 'FINISHED') {
       sunkOrigins.push({ x: move.targetX, y: move.targetY });
     }
   }
 
   for (const origin of sunkOrigins) {
-    sunkCells.add(`${origin.x},${origin.y}`);
-
-    for (let x = origin.x - 1; x >= 0; x--) {
-      const k = `${x},${origin.y}`;
-      if (hitMap.has(k)) sunkCells.add(k);
-      else break;
-    }
-    for (let x = origin.x + 1; x < GRID_SIZE; x++) {
-      const k = `${x},${origin.y}`;
-      if (hitMap.has(k)) sunkCells.add(k);
-      else break;
-    }
-
-    for (let y = origin.y - 1; y >= 0; y--) {
-      const k = `${origin.x},${y}`;
-      if (hitMap.has(k)) sunkCells.add(k);
-      else break;
-    }
-    for (let y = origin.y + 1; y < GRID_SIZE; y++) {
-      const k = `${origin.x},${y}`;
-      if (hitMap.has(k)) sunkCells.add(k);
-      else break;
+    sunkCells.add(cellKey(origin.x, origin.y));
+    for (const { dx, dy } of DIRECTIONS) {
+      let x = origin.x + dx;
+      let y = origin.y + dy;
+      while (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE && hitKeys.has(cellKey(x, y))) {
+        sunkCells.add(cellKey(x, y));
+        x += dx;
+        y += dy;
+      }
     }
   }
 
   return sunkCells;
+}
+
+function ownShipsSurvive(ships: ShipResponse[], oppMoves: MoveResponse[]): boolean {
+  const sunkCells = computeSunkPlayerCells(ships, oppMoves);
+  const totalShipCells = ships.reduce(
+    (sum, s) => sum + (SHIP_DEFINITIONS[s.shipType]?.size ?? 1),
+    0,
+  );
+  return sunkCells.size < totalShipCells;
+}
+
+function applyOpponentMoves(cell: BoardCell, oppMoves: MoveResponse[]): void {
+  for (const move of oppMoves) {
+    if (move.targetX !== cell.x || move.targetY !== cell.y) continue;
+    if (isHitResult(move.moveResult)) {
+      if (cell.hasShip) cell.isHit = true;
+      else cell.isMiss = true;
+    } else if (move.moveResult === 'MISS') {
+      cell.isMiss = true;
+    } else if (move.moveResult === 'SURVEILLANCE') {
+      cell.isSurveillance = true;
+    }
+  }
+}
+
+function applyPlayerMoves(cell: BoardCell, myMoves: MoveResponse[]): void {
+  for (const move of myMoves) {
+    if (move.targetX !== cell.x || move.targetY !== cell.y) continue;
+    if (isHitResult(move.moveResult)) {
+      cell.isHit = true;
+    } else if (move.moveResult === 'MISS') {
+      cell.isMiss = true;
+    } else if (move.moveResult === 'SURVEILLANCE') {
+      cell.isSurveillance = true;
+    }
+  }
+}
+
+function applyPlacementPreview(
+  cell: BoardCell,
+  dragKey: string | null,
+  preview: { keys: Set<string>; valid: boolean } | null,
+): void {
+  if (dragKey === cell.key) cell.isDragOver = true;
+  if (preview?.keys.has(cell.key)) {
+    if (preview.valid) cell.isPlacementValid = true;
+    else cell.isPlacementInvalid = true;
+  }
+}
+
+function applyDronePreview(
+  cell: BoardCell,
+  hovered: { x: number; y: number } | null,
+  moveType: 'SURVEILLANCE_DRONE' | 'ATTACK_DRONE',
+): void {
+  if (!hovered || Math.abs(cell.x - hovered.x) > 1 || Math.abs(cell.y - hovered.y) > 1) return;
+  cell.isDronePreview = true;
+  cell.dronePreviewType = moveType;
+  if (cell.x === hovered.x && cell.y === hovered.y) cell.isDroneCenter = true;
+}
+
+function markSunk(cell: BoardCell, sunkKeys: Set<string>): void {
+  if (sunkKeys.has(cell.key)) {
+    cell.isHit = true;
+    cell.isSunk = true;
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -108,19 +165,7 @@ export class BoardViewState {
     }
 
     const myShips = this.ships.playerShips();
-    if (myShips.length > 0) {
-      const sunkCells = computeSunkPlayerCells(myShips, oppMoves);
-      let totalShipCells = 0;
-      for (const s of myShips) {
-        totalShipCells += SHIP_DEFINITIONS[s.shipType]?.size ?? 1;
-      }
-      if (sunkCells.size >= totalShipCells) {
-        return false;
-      }
-      return true;
-    }
-
-    return false;
+    return myShips.length > 0 && ownShipsSurvive(myShips, oppMoves);
   });
 
   readonly playerCells = computed<BoardCell[]>(() => {
@@ -135,52 +180,17 @@ export class BoardViewState {
 
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
-        const key = `${x},${y}`;
-        const cell: BoardCell = { x, y, key };
+        const cell: BoardCell = { x, y, key: cellKey(x, y) };
 
-        const shipId = shipCellMap.get(key);
+        const shipId = shipCellMap.get(cell.key);
         if (shipId !== undefined) {
           cell.hasShip = true;
           cell.shipId = shipId;
         }
 
-        for (const move of oppMoves) {
-          if (move.targetX === x && move.targetY === y) {
-            if (
-              move.moveResult === 'HIT' ||
-              move.moveResult === 'SUNK' ||
-              move.moveResult === 'FINISHED'
-            ) {
-              if (cell.hasShip) {
-                cell.isHit = true;
-              } else {
-                cell.isMiss = true;
-              }
-            } else if (move.moveResult === 'MISS') {
-              cell.isMiss = true;
-            } else if (move.moveResult === 'SURVEILLANCE') {
-              cell.isSurveillance = true;
-            }
-          }
-        }
-
-        if (sunkShipCellKeys.has(key)) {
-          cell.isHit = true;
-          cell.isSunk = true;
-        }
-
-        if (dragKey === key) {
-          cell.isDragOver = true;
-        }
-
-        if (preview?.keys.has(key)) {
-          if (preview.valid) {
-            cell.isPlacementValid = true;
-          } else {
-            cell.isPlacementInvalid = true;
-          }
-        }
-
+        applyOpponentMoves(cell, oppMoves);
+        markSunk(cell, sunkShipCellKeys);
+        applyPlacementPreview(cell, dragKey, preview);
         cells.push(cell);
       }
     }
@@ -199,59 +209,30 @@ export class BoardViewState {
         : [];
     const hovered = this.moves.hoveredEnemyCell();
     const moveType = this.moves.selectedMoveType();
-    const isDrone =
+    const droneType =
       (moveType === 'SURVEILLANCE_DRONE' || moveType === 'ATTACK_DRONE') &&
-      this.match.matchStatus() === 'IN_PROGRESS';
+      this.match.matchStatus() === 'IN_PROGRESS'
+        ? moveType
+        : null;
 
     const sunkEnemyCellKeys = computeSunkEnemyCells(myMoves);
     const winnerCellMap = buildShipCellMap(winners);
 
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
-        const key = `${x},${y}`;
-        const cell: BoardCell = { x, y, key };
+        const cell: BoardCell = { x, y, key: cellKey(x, y) };
 
-        for (const move of myMoves) {
-          if (move.targetX === x && move.targetY === y) {
-            if (
-              move.moveResult === 'HIT' ||
-              move.moveResult === 'SUNK' ||
-              move.moveResult === 'FINISHED'
-            ) {
-              cell.isHit = true;
-            } else if (move.moveResult === 'MISS') {
-              cell.isMiss = true;
-            } else if (move.moveResult === 'SURVEILLANCE') {
-              cell.isSurveillance = true;
-            }
-          }
-        }
+        applyPlayerMoves(cell, myMoves);
+        markSunk(cell, sunkEnemyCellKeys);
 
-        if (sunkEnemyCellKeys.has(key)) {
-          cell.isHit = true;
-          cell.isSunk = true;
-        }
-
-        const winnerShipId = winnerCellMap.get(key);
+        const winnerShipId = winnerCellMap.get(cell.key);
         if (winnerShipId !== undefined) {
           cell.hasShip = true;
           cell.shipId = winnerShipId;
         }
 
-        if (isDrone && hovered) {
-          if (Math.abs(x - hovered.x) <= 1 && Math.abs(y - hovered.y) <= 1) {
-            cell.isDronePreview = true;
-            cell.dronePreviewType = moveType as 'SURVEILLANCE_DRONE' | 'ATTACK_DRONE';
-            if (x === hovered.x && y === hovered.y) {
-              cell.isDroneCenter = true;
-            }
-          }
-        }
-
-        if (cell.isHit || cell.isMiss || cell.isSunk) {
-          cell.isInactive = true;
-        }
-
+        if (droneType) applyDronePreview(cell, hovered, droneType);
+        if (cell.isHit || cell.isMiss || cell.isSunk) cell.isInactive = true;
         cells.push(cell);
       }
     }

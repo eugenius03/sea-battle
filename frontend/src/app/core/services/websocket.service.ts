@@ -100,9 +100,7 @@ export class WebSocketService {
 
   disconnect(): void {
     if (this.client) {
-      try {
-        this.client.deactivate();
-      } catch {}
+      this.client.deactivate().catch(() => undefined);
       this.client = null;
       this.isConnected.set(false);
       this.connectionPromise = null;
@@ -144,9 +142,7 @@ export class WebSocketService {
             return;
           }
 
-          if (!entry.stompSub) {
-            entry.stompSub = this.client.subscribe(destination, callback);
-          }
+          entry.stompSub ??= this.client.subscribe(destination, callback);
         })
         .catch((err) => {
           console.warn('WebSocket connection not established:', err);

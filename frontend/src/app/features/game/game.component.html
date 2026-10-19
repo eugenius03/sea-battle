@@ -67,8 +67,8 @@
           [hasShipToPlace]="!!shipState.selectedShipToPlace()"
           (cellClick)="onPlacementCellClick($event)"
           (cellDblClick)="onPlacementCellDblClick($event)"
-          (cellMouseEnter)="onCellMouseEnter($event, false)"
-          (cellMouseLeave)="onCellMouseLeave(false)"
+          (cellMouseEnter)="onOwnCellMouseEnter($event)"
+          (cellMouseLeave)="onOwnCellMouseLeave()"
           (cellDragStart)="onCellDragStart($event.event, $event.cell)"
           (cellDragOver)="onCellDragOver($event.event, $event.cell)"
           (cellDragLeave)="onCellDragLeave($event)"
@@ -551,8 +551,8 @@
             [isLocked]="matchState.matchStatus() === 'FINISHED' || !matchState.isItMyTurn()"
             [isTurn]="matchState.matchStatus() === 'IN_PROGRESS' && matchState.isItMyTurn()"
             (cellClick)="onEnemyCellClick($event)"
-            (cellMouseEnter)="onCellMouseEnter($event, true)"
-            (cellMouseLeave)="onCellMouseLeave(true)"
+            (cellMouseEnter)="onEnemyCellMouseEnter($event)"
+            (cellMouseLeave)="onEnemyCellMouseLeave()"
             class="w-full flex justify-center"
           ></app-board>
         </div>

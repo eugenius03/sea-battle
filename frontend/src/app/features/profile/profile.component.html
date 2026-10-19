@@ -111,6 +111,7 @@
           @if (email()) {
             <span class="font-mono text-sm font-bold text-black break-all">{{ email() }}</span>
           } @else {
+            <label for="profile-email" class="sr-only">Email address</label>
             <input
               id="profile-email"
               name="profile-email"

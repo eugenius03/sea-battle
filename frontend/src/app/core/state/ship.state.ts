@@ -5,11 +5,17 @@ import {
   SHIP_DEFINITIONS,
   ShipRequest,
   ShipResponse,
-  ShipType
+  ShipType,
 } from '@core/models/game.model';
 import { GameService } from '@core/services/game.service';
 import { MatchState } from '@core/state/match.state';
-import { cellKey, getOccupiedCells, isInBounds, isValidPlacement, resolveOrientation } from '@shared/utils/board.util';
+import {
+  cellKey,
+  getOccupiedCells,
+  isInBounds,
+  isValidPlacement,
+  resolveOrientation,
+} from '@shared/utils/board.util';
 
 export interface PlacementPreview {
   keys: Set<string>;
