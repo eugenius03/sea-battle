@@ -68,21 +68,18 @@ describe('AuthComponent', () => {
   it('should validate optional email correctly', () => {
     component.onModeChange('register');
 
-    // Empty email is valid because it is optional
     component.email = '';
     expect(component.isEmailInvalid).toBe(false);
 
     component.email = '   ';
     expect(component.isEmailInvalid).toBe(false);
 
-    // Invalid format
     component.email = 'not-an-email';
     expect(component.isEmailInvalid).toBe(true);
 
     component.email = 'user@domain';
     expect(component.isEmailInvalid).toBe(true);
 
-    // Valid format
     component.email = 'commander@navy.mil';
     expect(component.isEmailInvalid).toBe(false);
   });

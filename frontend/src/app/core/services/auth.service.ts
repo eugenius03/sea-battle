@@ -30,10 +30,13 @@ export class AuthService {
   }
 
   guestLogin(nickname: string): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/guest`, nickname, {
-      headers: { 'Content-Type': 'text/plain' },
-      withCredentials: true,
-    });
+    return this.http.post<void>(
+      `${this.baseUrl}/guest`,
+      { username: nickname },
+      {
+        withCredentials: true,
+      },
+    );
   }
 
   logout(): Observable<void> {
@@ -53,6 +56,34 @@ export class AuthService {
       {
         withCredentials: true,
       },
+    );
+  }
+
+  setEmail(email: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/email`, { email }, { withCredentials: true });
+  }
+
+  verifyEmail(token: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/verify-email`,
+      { token },
+      { withCredentials: true },
+    );
+  }
+
+  requestPasswordReset(email: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/password-reset`,
+      { email },
+      { withCredentials: true },
+    );
+  }
+
+  confirmPasswordReset(token: string, password: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/password-reset/confirm`,
+      { token, password },
+      { withCredentials: true },
     );
   }
 }

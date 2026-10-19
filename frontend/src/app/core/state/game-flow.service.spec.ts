@@ -41,7 +41,6 @@ describe('GameFlowService', () => {
 
     expect(match.inviteToken()).toBe('token-2');
     expect(match.rematchAgreedToken()).toBeNull();
-    // Initially after reset, before getGameInfo resolves with FINISHED, winnerPlayerId is null
     expect(match.winnerPlayerId()).toBeNull();
   });
 
@@ -149,7 +148,6 @@ describe('GameFlowService', () => {
 
       expect(mockGameService.getGameInfo).toHaveBeenCalledWith('reconnect-token');
 
-      // Now simulate a missed opponent move while offline
       mockGameService.getGameInfo = vi.fn().mockReturnValue(
         of({
           playerShips: [],
@@ -164,7 +162,6 @@ describe('GameFlowService', () => {
         }),
       );
 
-      // WebSocket recovers and fires reconnected$
       reconnectedSubject.next();
 
       expect(mockGameService.getGameInfo).toHaveBeenCalledWith('reconnect-token');

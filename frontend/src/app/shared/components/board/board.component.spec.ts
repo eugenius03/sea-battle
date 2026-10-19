@@ -91,22 +91,18 @@ describe('BoardComponent', () => {
     let clickEmitted = false;
     component.cellClick.subscribe(() => (clickEmitted = true));
 
-    // Touch down at (10, 10)
     component.onTouchStart({
       touches: [{ clientX: 10, clientY: 10 } as Touch],
     } as unknown as TouchEvent);
 
-    // Scroll drag moved > 8px to (10, 60)
     component.onTouchMove({
       touches: [{ clientX: 10, clientY: 60 } as Touch],
     } as unknown as TouchEvent);
 
     expect(leaveEmitted).toBe(true);
 
-    // End scroll
     component.onTouchEnd();
 
-    // Delayed accidental synthetic click right after scroll should be suppressed
     component.onCellClick(component.cells[0]);
     expect(clickEmitted).toBe(false);
   });

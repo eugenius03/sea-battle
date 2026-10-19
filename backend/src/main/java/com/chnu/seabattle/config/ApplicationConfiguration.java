@@ -62,6 +62,7 @@ public class ApplicationConfiguration {
                 "/css/**", "/js/**", "/img/**",
                 "/api/auth/login", "/api/auth/register", "/api/auth/refresh",
                 "/api/auth/logout", "/api/auth/guest",
+                "/api/auth/verify-email", "/api/auth/password-reset", "/api/auth/password-reset/confirm",
                 "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**",
                 "/ws/**",
                 "/login", "/register", "/logout" // UI routes

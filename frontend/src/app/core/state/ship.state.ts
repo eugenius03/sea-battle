@@ -5,24 +5,17 @@ import {
   SHIP_DEFINITIONS,
   ShipRequest,
   ShipResponse,
-  ShipType,
+  ShipType
 } from '@core/models/game.model';
 import { GameService } from '@core/services/game.service';
 import { MatchState } from '@core/state/match.state';
-import {
-  cellKey,
-  getOccupiedCells,
-  isInBounds,
-  isValidPlacement,
-  resolveOrientation,
-} from '@shared/utils/board.util';
+import { cellKey, getOccupiedCells, isInBounds, isValidPlacement, resolveOrientation } from '@shared/utils/board.util';
 
 export interface PlacementPreview {
   keys: Set<string>;
   valid: boolean;
 }
 
-/** The player's fleet and ship-placement UI state. Reads MatchState; knows nothing about moves. */
 @Injectable({ providedIn: 'root' })
 export class ShipState {
   private readonly gameService = inject(GameService);
@@ -70,7 +63,6 @@ export class ShipState {
       this.match.matchStatus() === 'FINISHED',
   );
 
-  /** Cells the hovered/dragged/selected ship would occupy, or null when nothing is previewed. */
   readonly placementPreview = computed<PlacementPreview | null>(() => {
     const hovered = this.hoveredCell();
     if (this.isPlacementLocked() || !hovered) return null;

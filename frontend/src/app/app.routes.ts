@@ -13,6 +13,21 @@ export const routes: Routes = [
     loadComponent: () => import('@features/auth/auth.component').then((m) => m.AuthComponent),
   },
   {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('@features/auth/forgot-password.component').then((m) => m.ForgotPasswordComponent),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('@features/auth/reset-password.component').then((m) => m.ResetPasswordComponent),
+  },
+  {
+    path: 'verify-email',
+    loadComponent: () =>
+      import('@features/auth/verify-email.component').then((m) => m.VerifyEmailComponent),
+  },
+  {
     path: 'unavailable',
     loadComponent: () =>
       import('@features/unavailable/unavailable.component').then((m) => m.UnavailableComponent),
@@ -25,11 +40,13 @@ export const routes: Routes = [
   {
     path: 'profile/me',
     canActivate: [authGuard],
-    loadComponent: () => import('@features/profile/profile.component').then((m) => m.ProfileComponent),
+    loadComponent: () =>
+      import('@features/profile/profile.component').then((m) => m.ProfileComponent),
   },
   {
     path: 'profile/:username',
-    loadComponent: () => import('@features/profile/profile.component').then((m) => m.ProfileComponent),
+    loadComponent: () =>
+      import('@features/profile/profile.component').then((m) => m.ProfileComponent),
   },
   {
     path: 'game/:inviteToken',

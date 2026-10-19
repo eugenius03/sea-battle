@@ -1,5 +1,4 @@
 <div class="max-w-4xl 2xl:max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 w-full animate-fade-in">
-  <!-- Back Button & Page Title -->
   <div class="flex items-center justify-between mb-6">
     <a
       routerLink="/lobby"
@@ -16,11 +15,9 @@
       <p class="font-extrabold uppercase tracking-wider text-sm text-neutral-600">Loading Profile...</p>
     </div>
   } @else if (user()) {
-    <!-- Profile Header Card -->
     <header class="border-2 border-black bg-white p-6 sm:p-8 shadow-[4px_4px_0px_#000] mb-6">
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div class="flex items-center gap-4 min-w-0">
-          <!-- Pixel Avatar Box -->
           <div
             class="w-16 h-16 sm:w-20 sm:h-20 bg-black text-white flex items-center justify-center font-black text-3xl sm:text-4xl uppercase border-2 border-black shadow-[3px_3px_0px_#000] shrink-0"
           >
@@ -33,7 +30,6 @@
                 {{ username() }}
               </h1>
 
-              <!-- Badges -->
               @if (isGuest()) {
                 <div
                   class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-neutral-200 text-black border-2 border-black font-extrabold text-xs uppercase tracking-wider shadow-[2px_2px_0px_#000] shrink-0"
@@ -63,7 +59,6 @@
           </div>
         </div>
 
-        <!-- Last 10 Matches (Top Right on desktop, stacked below on tablet/mobile) -->
         <div class="flex flex-col items-start lg:items-end gap-1.5 shrink-0">
           <div class="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-neutral-500">
             <app-icon name="swords" [size]="14" class="text-black"></app-icon>
@@ -98,10 +93,56 @@
       </div>
     </header>
 
-    <!-- Combat Stats Bento Grid -->
+    @if (canManageEmail() && !emailVerified()) {
+      <section class="border-2 border-black bg-white p-5 sm:p-6 shadow-[4px_4px_0px_#000] mb-6">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="p-1.5 bg-black text-white shadow-[1px_1px_0px_#000] shrink-0">
+            <app-icon name="mail" [size]="16" class="text-white"></app-icon>
+          </div>
+          <h2 class="text-base sm:text-lg font-black uppercase tracking-tight text-black">
+            {{ email() ? 'Verify your email' : 'Add an email' }}
+          </h2>
+        </div>
+        <p class="text-xs sm:text-sm font-medium text-neutral-600 mb-4">
+          A verified email lets you reset your password and keep access to your account.
+        </p>
+
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          @if (email()) {
+            <span class="font-mono text-sm font-bold text-black break-all">{{ email() }}</span>
+          } @else {
+            <input
+              id="profile-email"
+              name="profile-email"
+              type="email"
+              [(ngModel)]="emailInput"
+              placeholder="commander@navy.mil"
+              class="flex-1 min-w-0 px-3 py-2 bg-neutral-50 border-2 border-black text-black font-mono text-sm placeholder:text-neutral-400 focus:outline-none focus:bg-white"
+              autocomplete="email"
+              spellcheck="false"
+            />
+          }
+          <app-button
+            variant="primary"
+            size="md"
+            [disabled]="emailSending() || emailCooldown() > 0 || (!email() && !emailInput.trim())"
+            [loading]="emailSending()"
+            (clicked)="sendVerificationEmail()"
+          >
+            {{
+              emailCooldown() > 0
+                ? 'Wait ' + emailCooldown() + 's'
+                : email()
+                  ? 'Resend verification'
+                  : 'Send verification'
+            }}
+          </app-button>
+        </div>
+      </section>
+    }
+
     @if (stats(); as s) {
       <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-        <!-- Matches & Record -->
         <div class="border-2 border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000] flex flex-col justify-between">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Battles</span>
@@ -119,7 +160,6 @@
           </div>
         </div>
 
-        <!-- Win Rate -->
         <div class="border-2 border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000] flex flex-col justify-between">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Win Rate</span>
@@ -135,7 +175,6 @@
           </div>
         </div>
 
-        <!-- Win Streak -->
         <div class="border-2 border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000] flex flex-col justify-between">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Win Streak</span>
@@ -151,7 +190,6 @@
           </div>
         </div>
 
-        <!-- Accuracy -->
         <div class="border-2 border-black bg-white p-4 sm:p-5 shadow-[4px_4px_0px_#000] flex flex-col justify-between">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-500">Accuracy</span>
@@ -171,7 +209,6 @@
       </section>
     }
 
-    <!-- Match History Section -->
     <section class="border-2 border-black bg-white p-5 sm:p-6 shadow-[4px_4px_0px_#000]">
       <div class="flex items-center justify-between gap-3 mb-5 pb-3 border-b-2 border-black">
         <div class="flex items-center gap-2 min-w-0">
@@ -261,7 +298,6 @@
         </div>
 
         @if (showPagination()) {
-          <!-- Pagination Controls -->
           <div class="flex items-center justify-between mt-6 pt-4 border-t-2 border-black">
             <app-button
               variant="secondary"

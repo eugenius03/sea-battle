@@ -11,7 +11,7 @@ export interface MatchInviteResponse {
 export type MatchResponse = MatchInviteResponse;
 
 export interface MatchHistoryResponse {
-  id: string; // inviteToken
+  id: string;
   result: MatchResult;
   playedAt: string;
   durationSeconds: number;

@@ -40,7 +40,6 @@ export function getShipCells(ship: ShipResponse): Coord[] {
   return getOccupiedCells(ship.shipType, ship.startX, ship.startY, ship.orientation);
 }
 
-/** Cells within one step (incl. diagonals) of the given cells, clipped to the grid. */
 export function getHaloCells(cells: Coord[]): Coord[] {
   const seen = new Set<string>();
   const halo: Coord[] = [];
@@ -69,7 +68,6 @@ export function isShipWithinBounds(
   return getOccupiedCells(type, startX, startY, orientation).every((c) => isInBounds(c.x, c.y));
 }
 
-/** Mirrors backend BoardUtils.isValidPlacement: in bounds and not touching any other ship. */
 export function isValidPlacement(
   ships: ShipResponse[],
   type: ShipType,
@@ -92,7 +90,6 @@ export function isValidPlacement(
   return true;
 }
 
-/** If the ship overflows the grid in its orientation, flip it when the flipped placement is valid. */
 export function resolveOrientation(
   ships: ShipResponse[],
   type: ShipType,

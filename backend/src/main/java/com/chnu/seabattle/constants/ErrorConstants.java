@@ -18,6 +18,7 @@ public final class ErrorConstants {
     public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
     public static final String REFRESH_TOKEN_EXPIRED = "Refresh token expired";
     public static final String INVALID_TOKEN = "Invalid token";
+    public static final String ACTION_NOT_ALLOWED = "Action not allowed";
     public static final String USER_NOT_AUTHENTICATED = "User is not authenticated";
     public static final String SHORT_PASSWORD = "Your password is too short";
 

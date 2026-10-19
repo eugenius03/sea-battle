@@ -1,7 +1,9 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthState } from '@core/state/auth.state';
+import { AuthService } from '@core/services/auth.service';
 import { UserService } from '@core/services/user.service';
 import { MatchService } from '@core/services/match.service';
 import { ToastService } from '@shared/components/toast/toast.service';
@@ -9,11 +11,12 @@ import { ButtonComponent } from '@shared/components/button/button.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { PlayerCombatStats, PublicUserResponse, UserResponse } from '@core/models/auth.model';
 import { MatchHistoryResponse } from '@core/models/match.model';
+import { retryAfterSeconds } from '@core/utils/http-error.util';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterLink, ButtonComponent, IconComponent],
+  imports: [CommonModule, FormsModule, RouterLink, ButtonComponent, IconComponent],
   templateUrl: './profile.component.html',
 })
 export class ProfileComponent implements OnInit {
@@ -22,6 +25,8 @@ export class ProfileComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly matchService = inject(MatchService);
   private readonly toast = inject(ToastService);
+  private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly authState = inject(AuthState);
 
   readonly loading = signal<boolean>(true);
@@ -29,7 +34,6 @@ export class ProfileComponent implements OnInit {
   readonly username = signal<string>('');
   readonly isMe = signal<boolean>(false);
 
-  // Match History & Recent Form
   readonly historyLoading = signal<boolean>(false);
   readonly matchHistory = signal<MatchHistoryResponse[]>([]);
   readonly historyPage = signal<number>(0);
@@ -45,7 +49,6 @@ export class ProfileComponent implements OnInit {
     return this.hasNextPage();
   });
 
-  // Recent Form (Last 10 matches) - static, uninteractable
   readonly recentForm = signal<('W' | 'L')[]>([]);
 
   readonly stats = computed<PlayerCombatStats | null>(() => this.user()?.stats ?? null);
@@ -77,7 +80,6 @@ export class ProfileComponent implements OnInit {
     }
   });
 
-  // Always exactly 10 slots for the Recent Form strip (W, L, or '-' if fewer than 10 games played)
   readonly recentFormSlots = computed<('W' | 'L' | '-')[]>(() => {
     const form = this.recentForm();
     const slots: ('W' | 'L' | '-')[] = [];
@@ -87,7 +89,15 @@ export class ProfileComponent implements OnInit {
     return slots;
   });
 
+  emailInput = '';
+  readonly emailSending = signal<boolean>(false);
+  readonly emailCooldown = signal<number>(0);
+  private emailCooldownTimer: ReturnType<typeof setInterval> | null = null;
+
+  readonly canManageEmail = computed<boolean>(() => this.isMe() && !this.isGuest());
+
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => this.stopEmailCooldown());
     this.route.paramMap.subscribe((params) => {
       const urlSegment = this.route.snapshot.url[0]?.path;
       const paramUser = params.get('username');
@@ -97,7 +107,7 @@ export class ProfileComponent implements OnInit {
         this.loadMeProfile();
       } else {
         const currentUsername = this.authState.username();
-        if (currentUsername && currentUsername.toLowerCase() === paramUser.toLowerCase()) {
+        if (currentUsername?.toLowerCase() === paramUser.toLowerCase()) {
           this.isMe.set(true);
           this.loadMeProfile();
         } else {
@@ -107,6 +117,50 @@ export class ProfileComponent implements OnInit {
         }
       }
     });
+  }
+
+  sendVerificationEmail(): void {
+    const target = (this.email() ?? this.emailInput).trim();
+    if (!target || this.emailSending() || this.emailCooldown() > 0) {
+      return;
+    }
+
+    this.emailSending.set(true);
+    this.authService.setEmail(target).subscribe({
+      next: () => {
+        this.emailSending.set(false);
+        this.user.update((u) => (u ? ({ ...u, email: target } as UserResponse) : u));
+        this.emailInput = '';
+        this.toast.success(`Verification email sent to ${target}. Check your inbox.`);
+        this.startEmailCooldown(30);
+      },
+      error: (err) => {
+        this.emailSending.set(false);
+        const wait = retryAfterSeconds(err);
+        if (wait) {
+          this.startEmailCooldown(wait);
+        }
+        this.toast.error(err.error?.message || 'Could not send the verification email.');
+      },
+    });
+  }
+
+  private startEmailCooldown(seconds: number): void {
+    this.stopEmailCooldown();
+    this.emailCooldown.set(seconds);
+    this.emailCooldownTimer = setInterval(() => {
+      this.emailCooldown.update((value) => value - 1);
+      if (this.emailCooldown() <= 0) {
+        this.stopEmailCooldown();
+      }
+    }, 1000);
+  }
+
+  private stopEmailCooldown(): void {
+    if (this.emailCooldownTimer) {
+      clearInterval(this.emailCooldownTimer);
+      this.emailCooldownTimer = null;
+    }
   }
 
   private loadMeProfile(): void {
@@ -150,7 +204,6 @@ export class ProfileComponent implements OnInit {
         this.hasNextPage.set(matches.length === this.PAGE_SIZE);
 
         if (isInitial) {
-          // Populate the 10 Recent Form blocks from the newest matches
           const formValues: ('W' | 'L')[] = matches
             .slice(0, 10)
             .map((m) => (m.result === 'WON' ? 'W' : 'L'));

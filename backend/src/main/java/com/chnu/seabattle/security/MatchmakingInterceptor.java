@@ -1,6 +1,7 @@
 package com.chnu.seabattle.security;
 
 import com.chnu.seabattle.constants.ErrorConstants;
+import com.chnu.seabattle.enums.SessionType;
 import com.chnu.seabattle.exception.BadRequestException;
 import com.chnu.seabattle.repository.UserRepository;
 import lombok.NonNull;

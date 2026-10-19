@@ -12,19 +12,16 @@ describe('qr-code.util', () => {
     it('should correctly position finder patterns', () => {
       const { grid, size } = createQrMatrix('http://localhost:4200/game/XYZ');
 
-      // Top-left finder pattern 7x7 outer border should have black modules
       expect(grid[0][0]).toBe(1);
       expect(grid[0][6]).toBe(1);
       expect(grid[6][0]).toBe(1);
       expect(grid[6][6]).toBe(1);
 
-      // Top-right finder pattern
       expect(grid[0][size - 7]).toBe(1);
       expect(grid[0][size - 1]).toBe(1);
       expect(grid[6][size - 7]).toBe(1);
       expect(grid[6][size - 1]).toBe(1);
 
-      // Bottom-left finder pattern
       expect(grid[size - 7][0]).toBe(1);
       expect(grid[size - 7][6]).toBe(1);
       expect(grid[size - 1][0]).toBe(1);

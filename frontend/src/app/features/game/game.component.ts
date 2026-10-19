@@ -1,4 +1,14 @@
-import { Component, computed, effect, HostListener, inject, input, OnDestroy, signal, untracked } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  HostListener,
+  inject,
+  input,
+  OnDestroy,
+  signal,
+  untracked,
+} from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { BoardViewState } from '@core/state/board-view.state';
@@ -140,7 +150,7 @@ export class GameComponent implements OnDestroy {
 
     if (this.shipState.selectedShipToPlace()) {
       const hovered = this.shipState.hoveredCell();
-      const isSameCell = hovered && hovered.x === cell.x && hovered.y === cell.y;
+      const isSameCell = hovered?.x === cell.x && hovered.y === cell.y;
 
       if (isSameCell || cell.isPlacementValid) {
         if (cell.isPlacementInvalid && isSameCell) {
@@ -307,7 +317,7 @@ export class GameComponent implements OnDestroy {
     const isDrone = this.moveState.selectedMoveType() !== 'STANDARD';
     if (isDrone) {
       const hovered = this.moveState.hoveredEnemyCell();
-      const isAlreadyAiming = hovered && hovered.x === cell.x && hovered.y === cell.y;
+      const isAlreadyAiming = hovered?.x === cell.x && hovered.y === cell.y;
       if (!isAlreadyAiming) {
         this.moveState.setHoveredEnemyCell({ x: cell.x, y: cell.y });
         return;
@@ -384,7 +394,7 @@ export class GameComponent implements OnDestroy {
     this.myRematchRequested.set(true);
     this.matchService.rematch(token).subscribe({
       next: (res) => {
-        if (res && res.inviteToken) {
+        if (res?.inviteToken) {
           // The REMATCH_AGREED message (shown as a toast) reaches both players, so only navigate here.
           this.router.navigate(['/game', res.inviteToken]);
         } else {

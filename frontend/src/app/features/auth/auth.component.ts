@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthState } from '@core/state/auth.state';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { ButtonComponent } from '@shared/components/button/button.component';
@@ -18,7 +18,7 @@ type AuthMode = 'login' | 'register';
 @Component({
   selector: 'app-auth',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, SegmentedControlComponent, IconComponent],
+  imports: [FormsModule, RouterLink, ButtonComponent, SegmentedControlComponent, IconComponent],
   templateUrl: './auth.component.html',
 })
 export class AuthComponent implements OnInit {

@@ -8,10 +8,6 @@ import { MoveState } from '@core/state/move.state';
 import { ShipState } from '@core/state/ship.state';
 import { Subscription } from 'rxjs';
 
-/**
- * Orchestrates a match: loads it, wires WebSocket topics into the stores, and resets them together.
- * Holds no game state of its own (like backend GameService over ShipService / MoveService).
- */
 @Injectable({ providedIn: 'root' })
 export class GameFlowService {
   private readonly gameService = inject(GameService);
@@ -98,9 +94,6 @@ export class GameFlowService {
             break;
         }
       }),
-    );
-
-    this.subscriptions.push(
       this.wsService.watchMatchStatus(inviteToken, matchPlayerId).subscribe((statusMsg) => {
         this.match.matchStatus.set(statusMsg.matchStatus);
         if (statusMsg.currentTurnPlayerId) {
@@ -115,18 +108,12 @@ export class GameFlowService {
           this.match.winnerShips.set(statusMsg.winnerShips);
         }
       }),
-    );
-
-    this.subscriptions.push(
       this.wsService.watchMatchMoves(inviteToken, matchPlayerId).subscribe((moveMsg) => {
         if (moveMsg.moveResponses && moveMsg.moveResponses.length > 0) {
           this.moves.appendOpponentMoves(moveMsg.moveResponses);
         }
         this.match.currentTurnPlayerId.set(moveMsg.currentTurnPlayerId);
       }),
-    );
-
-    this.subscriptions.push(
       this.wsService.reconnected$.subscribe(() => {
         const token = this.match.inviteToken();
         if (token) {

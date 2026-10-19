@@ -69,7 +69,6 @@ export class LobbyComponent implements OnDestroy {
       },
     });
 
-    // Wait for WebSocket connection to be fully active before joining queue
     this.wsService
       .connect({ 'X-User-Id': userId })
       .then(() => {

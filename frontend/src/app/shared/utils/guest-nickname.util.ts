@@ -19,13 +19,6 @@ export function getGuestNouns(): readonly string[] {
   return data.nouns;
 }
 
-/**
- * Generates a thematic guest nickname by combining a nautical adjective
- * and a naval noun. Strictly does not generate any numbers.
- *
- * @param options Configuration options such as word separator (default: '_')
- * @returns Generated nickname (e.g., "Silent_Corsair", "Iron_Admiral")
- */
 export function generateGuestNickname(options: GuestNicknameOptions = {}): string {
   const separator = options.separator ?? '_';
   const adjectives = data.adjectives;

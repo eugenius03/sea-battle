@@ -24,7 +24,7 @@ export class WebSocketService {
   private connectionPromise: Promise<void> | null = null;
   private hasInitiallyConnected = false;
 
-  private activeSubscriptions = new Map<number, ActiveSubscriptionEntry>();
+  private readonly activeSubscriptions = new Map<number, ActiveSubscriptionEntry>();
   private nextSubId = 1;
 
   connect(headers: Record<string, string> = {}): Promise<void> {
@@ -52,7 +52,6 @@ export class WebSocketService {
         onConnect: () => {
           this.isConnected.set(true);
 
-          // Resubscribe all active subscriptions on every connect / reconnect
           for (const sub of this.activeSubscriptions.values()) {
             if (sub.stompSub) {
               try {
@@ -77,7 +76,7 @@ export class WebSocketService {
           console.error('STOMP protocol error:', frame.headers['message']);
           this.isConnected.set(false);
           this.connectionPromise = null;
-          reject(frame);
+          reject(new Error(frame.headers['message'] ?? 'STOMP protocol error'));
         },
         onWebSocketClose: () => {
           this.isConnected.set(false);
@@ -141,7 +140,7 @@ export class WebSocketService {
 
       this.connect(headers)
         .then(() => {
-          if (isUnsubscribed || !this.client || !this.client.connected) {
+          if (isUnsubscribed || !this.client?.connected) {
             return;
           }
 

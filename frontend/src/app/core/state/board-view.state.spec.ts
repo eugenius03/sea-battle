@@ -207,7 +207,6 @@ describe('BoardViewState', () => {
     ships.playerShips.set([
       { id: 10, shipType: 'SINGLE_DECK', startX: 2, startY: 3, orientation: 'HORIZONTAL' },
     ]);
-    // Backend sends player's ships in winnerShips
     match.winnerShips.set([
       { id: 10, shipType: 'SINGLE_DECK', startX: 2, startY: 3, orientation: 'HORIZONTAL' },
     ]);

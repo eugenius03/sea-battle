@@ -2,6 +2,7 @@ package com.chnu.seabattle.security;
 
 import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.MatchPlayer;
+import com.chnu.seabattle.enums.SessionType;
 import com.chnu.seabattle.exception.BadRequestException;
 import com.chnu.seabattle.service.MatchPlayerService;
 import lombok.RequiredArgsConstructor;

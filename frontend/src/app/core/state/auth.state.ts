@@ -14,7 +14,6 @@ export class AuthState {
 
   readonly user = signal<UserResponse | null>(null);
   readonly isLoading = signal<boolean>(false);
-  /** True when the last session check failed for a reason other than 401/403 (e.g. backend down). */
   readonly backendUnavailable = signal<boolean>(false);
   readonly isAuthenticated = computed(() => this.user() !== null);
   readonly username = computed(() => this.user()?.username ?? '');

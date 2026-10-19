@@ -12,7 +12,6 @@ const initialDroneUsage = (): Record<MoveType, number> => ({
   ATTACK_DRONE: MAX_ATTACK_DRONE_USAGES,
 });
 
-/** Shots fired and received, move selection and drone usage. Reads/updates MatchState; knows nothing about ships. */
 @Injectable({ providedIn: 'root' })
 export class MoveState {
   private readonly gameService = inject(GameService);
@@ -23,7 +22,6 @@ export class MoveState {
   readonly hoveredEnemyCell = signal<{ x: number; y: number } | null>(null);
   readonly selectedMoveType = signal<MoveType>('STANDARD');
   readonly droneUsage = signal<Record<MoveType, number>>(initialDroneUsage());
-  /** True while a shot is awaiting the server's response; blocks a second shot from the same turn. */
   readonly isFiring = signal<boolean>(false);
 
   readonly surveillanceRemaining = computed(

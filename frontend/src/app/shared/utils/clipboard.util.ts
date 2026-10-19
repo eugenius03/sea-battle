@@ -1,6 +1,3 @@
-/**
- * Copies text to clipboard with fallback for non-secure HTTP contexts (e.g. mobile access over local Wi-Fi IP).
- */
 export async function copyToClipboard(text: string): Promise<boolean> {
   if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
     try {
@@ -41,7 +38,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     textArea.setSelectionRange(0, 999999);
 
     const successful = document.execCommand('copy');
-    document.body.removeChild(textArea);
+    textArea.remove();
     return successful;
   } catch (err) {
     console.warn('Fallback clipboard copy failed:', err);

@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
+  computed,
   HostListener,
+  inject,
   OnDestroy,
   OnInit,
-  computed,
-  inject,
   signal,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -19,13 +19,13 @@ import { MatchService } from '@core/services/match.service';
 import { BoardComponent } from '@shared/components/board/board.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import {
-  ReplayStep,
-  ShooterIds,
   buildReplayBoardCells,
   describeStep,
   groupReplaySteps,
   isShipSunk,
+  ReplayStep,
   resolveShooterIds,
+  ShooterIds,
 } from './replay.engine';
 
 @Component({
@@ -49,7 +49,6 @@ export class ReplayComponent implements OnInit, OnDestroy {
 
   private playTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Player ordering: place focused user on the left
   readonly player1 = computed<MatchParticipantResponse | null>(() => {
     const players = this.match()?.players ?? [];
     if (players.length === 0) return null;
@@ -67,7 +66,6 @@ export class ReplayComponent implements OnInit, OnDestroy {
     return p1?.playerId === players[0].playerId ? players[1] : players[0];
   });
 
-  // Replay steps grouped by player turn (1 step per shot or drone action)
   readonly replaySteps = computed<ReplayStep[]>(() => {
     const raw = this.match()?.moves ?? [];
     const p1Ships = this.player1()?.ships ?? [];
@@ -81,13 +79,14 @@ export class ReplayComponent implements OnInit, OnDestroy {
 
   readonly totalMoves = computed<number>(() => this.replaySteps().length);
 
-  // Robustly resolve shooter IDs even if missing from cache
   readonly resolvedShooterIds = computed<ShooterIds>(() =>
     resolveShooterIds(this.player1(), this.player2(), this.match()?.moves ?? []),
   );
 
   readonly activeMoves = computed<ReplayMoveResponse[]>(() => {
-    return this.replaySteps().slice(0, this.currentStep()).flatMap((s) => s.allMoves);
+    return this.replaySteps()
+      .slice(0, this.currentStep())
+      .flatMap((s) => s.allMoves);
   });
 
   readonly lastStep = computed<ReplayStep | null>(() => {
@@ -105,8 +104,8 @@ export class ReplayComponent implements OnInit, OnDestroy {
     const { p1ShooterId } = this.resolvedShooterIds();
     const shooterName =
       step?.primaryMove.shooterId === p1ShooterId
-        ? this.player1()?.username ?? 'Player 1'
-        : this.player2()?.username ?? 'Player 2';
+        ? (this.player1()?.username ?? 'Player 1')
+        : (this.player2()?.username ?? 'Player 2');
     return describeStep(step, shooterName);
   });
 
@@ -131,13 +130,12 @@ export class ReplayComponent implements OnInit, OnDestroy {
     const { p1ShooterId } = this.resolvedShooterIds();
     const shooterName =
       next.shooterId === p1ShooterId
-        ? this.player1()?.username ?? 'Player 1'
-        : this.player2()?.username ?? 'Player 2';
+        ? (this.player1()?.username ?? 'Player 1')
+        : (this.player2()?.username ?? 'Player 2');
 
     return `${shooterName}'s Turn`;
   });
 
-  // Calculate alive ships
   readonly p1AliveCount = computed<number>(() => {
     const p1 = this.player1();
     if (!p1) return 0;
@@ -154,7 +152,6 @@ export class ReplayComponent implements OnInit, OnDestroy {
     return p2.ships.filter((s) => !isShipSunk(s, incoming)).length;
   });
 
-  // Board Cells for Player 1 (attacked by Player 2)
   readonly player1Cells = computed<BoardCell[]>(() => {
     const p1 = this.player1();
     if (!p1) return [];
@@ -162,7 +159,6 @@ export class ReplayComponent implements OnInit, OnDestroy {
     return buildReplayBoardCells(p1, this.activeMoves(), this.lastStep(), p2ShooterId);
   });
 
-  // Board Cells for Player 2 (attacked by Player 1)
   readonly player2Cells = computed<BoardCell[]>(() => {
     const p2 = this.player2();
     if (!p2) return [];
@@ -170,7 +166,6 @@ export class ReplayComponent implements OnInit, OnDestroy {
     return buildReplayBoardCells(p2, this.activeMoves(), this.lastStep(), p1ShooterId);
   });
 
-  // Turn status on each board (glows if player is currently shooting)
   readonly isP1Turn = computed<boolean>(() => {
     const next = this.nextMove();
     if (!next) return false;
@@ -203,9 +198,7 @@ export class ReplayComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.error.set(
-          err.status === 404
-            ? 'Match not found or expired.'
-            : 'Failed to load match replay.',
+          err.status === 404 ? 'Match not found or expired.' : 'Failed to load match replay.',
         );
         this.loading.set(false);
       },
@@ -321,8 +314,8 @@ export class ReplayComponent implements OnInit, OnDestroy {
     this.pausePlayback();
     const target = event.target as HTMLInputElement;
     if (target) {
-      const val = parseInt(target.value, 10);
-      if (!isNaN(val)) {
+      const val = Number.parseInt(target.value, 10);
+      if (!Number.isNaN(val)) {
         this.currentStep.set(Math.max(0, Math.min(this.totalMoves(), val)));
       }
     }

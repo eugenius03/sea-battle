@@ -123,6 +123,14 @@
             autocomplete="current-password"
           />
         </div>
+        @if (mode() === 'login') {
+          <a
+            routerLink="/forgot-password"
+            class="inline-block text-[11px] font-bold uppercase tracking-wider text-neutral-600 underline hover:text-black"
+          >
+            Forgot password?
+          </a>
+        }
       </div>
 
       <app-button

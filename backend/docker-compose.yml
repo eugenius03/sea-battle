@@ -25,6 +25,9 @@ services:
       - postgres
       - redis
     pull_policy: build
+    env_file:
+      - path: ../.env
+        required: false
     environment:
       SPRING_PROFILES_ACTIVE: prod
       PORT: 8080

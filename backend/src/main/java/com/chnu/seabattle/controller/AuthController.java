@@ -1,9 +1,15 @@
 package com.chnu.seabattle.controller;
 
+import com.chnu.seabattle.constants.ErrorConstants;
+import com.chnu.seabattle.dto.auth.EmailRequest;
+import com.chnu.seabattle.dto.auth.GuestRequest;
+import com.chnu.seabattle.dto.auth.PasswordResetConfirmRequest;
+import com.chnu.seabattle.dto.auth.TokenRequest;
 import com.chnu.seabattle.dto.auth.UserLoginRequest;
 import com.chnu.seabattle.dto.auth.UserRegistrationRequest;
 import com.chnu.seabattle.entity.User;
 import com.chnu.seabattle.enums.TokenType;
+import com.chnu.seabattle.exception.UnauthorizedException;
 import com.chnu.seabattle.service.AuthService;
 import com.chnu.seabattle.service.JwtService;
 import com.chnu.seabattle.service.RefreshTokenService;
@@ -12,7 +18,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -45,8 +50,8 @@ public class AuthController {
     }
 
     @PostMapping("/guest")
-    public void guest(@NotBlank @RequestBody String username, HttpServletResponse response) {
-        User user = authService.createGuest(username);
+    public void guest(@Valid @RequestBody GuestRequest request, HttpServletResponse response) {
+        User user = authService.createGuest(request.username());
         UserDetails userDetails = userService.toUserDetails(user);
         response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createCookie(userDetails, TokenType.ACCESS).toString());
         response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createCookie(userDetails, TokenType.REFRESH).toString());
@@ -80,13 +85,36 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public void refresh(
-            @CookieValue("refreshToken") String refreshToken,
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
             HttpServletResponse response
     ) {
+        if (refreshToken == null) {
+            throw new UnauthorizedException(ErrorConstants.INVALID_TOKEN);
+        }
         UserDetails userDetails = refreshTokenService.validateAndRotateRefreshToken(refreshToken);
 
         log.info("Refreshed access token for user: {}", userDetails.getUsername());
         response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createCookie(userDetails, TokenType.ACCESS).toString());
         response.addHeader(HttpHeaders.SET_COOKIE, jwtService.createCookie(userDetails, TokenType.REFRESH).toString());
+    }
+
+    @PostMapping("/email")
+    public void requestEmail(@Valid @RequestBody EmailRequest request) {
+        userService.requestEmailVerification(userService.getAuthenticatedUser(), request.email());
+    }
+
+    @PostMapping("/verify-email")
+    public void verifyEmail(@Valid @RequestBody TokenRequest request) {
+        userService.verifyEmail(request.token());
+    }
+
+    @PostMapping("/password-reset")
+    public void requestPasswordReset(@Valid @RequestBody EmailRequest request) {
+        userService.requestResetPassword(request.email());
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public void confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        userService.resetPassword(request.token(), request.password());
     }
 }

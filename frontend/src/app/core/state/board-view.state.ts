@@ -4,7 +4,7 @@ import { MoveResponse } from '@core/models/move.model';
 import { MatchState } from '@core/state/match.state';
 import { MoveState } from '@core/state/move.state';
 import { ShipState } from '@core/state/ship.state';
-import { GRID_SIZE, cellKey, getShipCells, isHitResult } from '@shared/utils/board.util';
+import { cellKey, getShipCells, GRID_SIZE, isHitResult } from '@shared/utils/board.util';
 
 function computeSunkPlayerCells(ships: ShipResponse[], oppMoves: MoveResponse[]): Set<string> {
   const sunkCells = new Set<string>();
@@ -82,7 +82,6 @@ function computeSunkEnemyCells(moves: MoveResponse[]): Set<string> {
   return sunkCells;
 }
 
-/** Read-only derived view of the game for rendering: both boards and the outcome. Depends on all three stores. */
 @Injectable({ providedIn: 'root' })
 export class BoardViewState {
   private readonly match = inject(MatchState);

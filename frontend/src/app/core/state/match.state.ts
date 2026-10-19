@@ -2,16 +2,15 @@ import { computed, Injectable, signal } from '@angular/core';
 import { GameInfoResponse, ShipResponse } from '@core/models/game.model';
 import { MatchStatus } from '@core/models/match.model';
 
-/** Match lifecycle signals. Leaf store: depends on no other game store. */
 @Injectable({ providedIn: 'root' })
 export class MatchState {
   readonly inviteToken = signal<string>('');
   readonly matchPlayerId = signal<string>('');
   readonly matchStatus = signal<MatchStatus>('WAITING');
-  /** Single source of truth for whose turn it is; always written from a server-provided value. */
   readonly currentTurnPlayerId = signal<string | null>(null);
   readonly isItMyTurn = computed(
-    () => this.currentTurnPlayerId() !== null && this.currentTurnPlayerId() === this.matchPlayerId(),
+    () =>
+      this.currentTurnPlayerId() !== null && this.currentTurnPlayerId() === this.matchPlayerId(),
   );
   readonly isOpponentConnected = signal<boolean>(false);
   readonly isOpponentReady = signal<boolean>(false);
@@ -21,7 +20,6 @@ export class MatchState {
   readonly rematchRequestedByOpponent = signal<boolean>(false);
   readonly rematchAgreedToken = signal<string | null>(null);
 
-  /** Applies the match-level fields of a game info snapshot. */
   applyGameInfo(info: GameInfoResponse): void {
     const resolvedStatus =
       info.matchStatus === 'WAITING' && this.isOpponentConnected() ? 'PLANNING' : info.matchStatus;

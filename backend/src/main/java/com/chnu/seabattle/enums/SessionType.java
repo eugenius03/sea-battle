@@ -1,4 +1,4 @@
-package com.chnu.seabattle.security;
+package com.chnu.seabattle.enums;
 
 
 public enum SessionType {

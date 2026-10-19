@@ -11,7 +11,6 @@ import { MatchState } from './match.state';
 import { MoveState } from './move.state';
 import { ShipState } from './ship.state';
 
-/** Configures TestBed with mocked HTTP/WebSocket services and returns the game stores. */
 export function setupGameTestBed() {
   const presenceSubject = new Subject<PresenceMessage>();
   const statusSubject = new Subject<MatchStatusMessage>();

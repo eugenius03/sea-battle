@@ -2,7 +2,7 @@ import { setupGameTestBed } from './game.testing';
 import { BoardViewState } from './board-view.state';
 import { MatchState } from './match.state';
 import { ShipState } from './ship.state';
-import { of, Subject } from 'rxjs';
+import { of } from 'rxjs';
 
 describe('ShipState', () => {
   let view: BoardViewState;
@@ -45,9 +45,9 @@ describe('ShipState', () => {
   });
 
   it('should compute invalid hover preview when ship would exceed board boundaries in both axes', () => {
-    ships.selectedShipToPlace.set('QUADRO_DECK'); // length 4
+    ships.selectedShipToPlace.set('QUADRO_DECK');
     ships.placementOrientation.set('HORIZONTAL');
-    ships.setHoveredCell({ x: 8, y: 8 }); // 8 + 4 = 12 > 10 in both axes
+    ships.setHoveredCell({ x: 8, y: 8 });
 
     const cells = view.playerCells();
     const c88 = cells.find((c) => c.x === 8 && c.y === 8);
@@ -55,9 +55,9 @@ describe('ShipState', () => {
   });
 
   it('should auto-rotate horizontal ship to vertical along the right border when it fits vertically', () => {
-    ships.selectedShipToPlace.set('QUADRO_DECK'); // length 4
+    ships.selectedShipToPlace.set('QUADRO_DECK');
     ships.placementOrientation.set('HORIZONTAL');
-    ships.setHoveredCell({ x: 8, y: 0 }); // 8 + 4 = 12 > 10 horizontally, but fits vertically (0..3)
+    ships.setHoveredCell({ x: 8, y: 0 });
 
     const cells = view.playerCells();
     const c80 = cells.find((c) => c.x === 8 && c.y === 0);
@@ -67,9 +67,9 @@ describe('ShipState', () => {
   });
 
   it('should auto-rotate vertical ship to horizontal along the bottom border when it fits horizontally', () => {
-    ships.selectedShipToPlace.set('QUADRO_DECK'); // length 4
+    ships.selectedShipToPlace.set('QUADRO_DECK');
     ships.placementOrientation.set('VERTICAL');
-    ships.setHoveredCell({ x: 0, y: 8 }); // 8 + 4 = 12 > 10 vertically, but fits horizontally (0..3)
+    ships.setHoveredCell({ x: 0, y: 8 });
 
     const cells = view.playerCells();
     const c08 = cells.find((c) => c.x === 0 && c.y === 8);
@@ -101,13 +101,10 @@ describe('ShipState', () => {
       { id: 10, shipType: 'TRIPLE_DECK', startX: 0, startY: 0, orientation: 'HORIZONTAL' },
     ]);
 
-    // Move to (5, 5) is valid
     expect(ships.canMoveShipTo(10, 5, 5)).toBe(true);
 
-    // Move to right edge (8, 2) auto-rotates to vertical and is valid
     expect(ships.canMoveShipTo(10, 8, 2)).toBe(true);
 
-    // Invalid: out of bounds even with auto-rotation (8, 9)
     expect(ships.canMoveShipTo(10, 8, 9)).toBe(false);
   });
 

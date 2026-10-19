@@ -18,12 +18,10 @@
       </a>
     </div>
   } @else if (match(); as m) {
-    <!-- Compact Unified Header Bar -->
     <header
       class="replay-header border-2 border-black bg-white p-2 sm:p-2.5 lg:p-2 shadow-[3px_3px_0px_#000] mb-2 sm:mb-2.5 md:mb-2"
     >
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <!-- Left: Back Button + Replay Badge + Winner + Metadata -->
         <div class="flex flex-wrap items-center gap-2">
           @if (focusUsername(); as focus) {
             <a
@@ -73,7 +71,6 @@
           </div>
         </div>
 
-        <!-- Right: Current Move Pill -->
         <div class="flex items-center gap-2 shrink-0">
           <span
             class="replay-move-label text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 hidden md:inline"
@@ -88,11 +85,9 @@
       </div>
     </header>
 
-    <!-- Arena Dual Boards (Locked & Non-Interactive on Hover) -->
     <div
       class="replay-boards-row flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-6 lg:gap-8 xl:gap-12 w-full mb-2 sm:mb-2.5 md:mb-2"
     >
-      <!-- Player 1 Board (Left) -->
       @if (player1(); as p1) {
         <div class="w-full flex flex-col items-center pointer-events-none select-none">
           <app-board
@@ -116,7 +111,6 @@
         </div>
       }
 
-      <!-- Player 2 Board (Right) -->
       @if (player2(); as p2) {
         <div class="w-full flex flex-col items-center pointer-events-none select-none">
           <app-board
@@ -141,11 +135,9 @@
       }
     </div>
 
-    <!-- Replay Playback Control Deck (Sticky on mobile like the drone menu, static on desktop) -->
     <div
       class="replay-deck border-2 border-black bg-white p-2.5 sm:p-3.5 md:p-3 shadow-[3px_3px_0px_#000] mb-0 sticky md:static bottom-2 z-20"
     >
-      <!-- Scrubbable Timeline Slider -->
       <div class="replay-timeline-group mb-2 sm:mb-2.5 md:mb-2">
         <div
           class="replay-step-info flex items-center justify-between text-xs sm:text-sm font-mono font-bold uppercase tracking-wider text-neutral-600 mb-1"
@@ -164,11 +156,8 @@
         />
       </div>
 
-      <!-- Controls Transport Bar -->
       <div class="replay-transport-bar flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3">
-        <!-- Playback Navigation Buttons -->
         <div class="replay-transport-buttons flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap justify-center">
-          <!-- Jump to Start -->
           <button
             type="button"
             (click)="jumpToStart()"
@@ -179,7 +168,6 @@
             |&lt;
           </button>
 
-          <!-- Step Backward -->
           <button
             type="button"
             (click)="stepBackward()"
@@ -190,7 +178,6 @@
             &lt; Prev
           </button>
 
-          <!-- Play / Pause -->
           <button
             type="button"
             (click)="togglePlay()"
@@ -206,7 +193,6 @@
             }
           </button>
 
-          <!-- Step Forward -->
           <button
             type="button"
             (click)="stepForward()"
@@ -217,7 +203,6 @@
             Next &gt;
           </button>
 
-          <!-- Jump to End -->
           <button
             type="button"
             (click)="jumpToEnd()"
@@ -229,7 +214,6 @@
           </button>
         </div>
 
-        <!-- Speed Selector -->
         <div
           class="replay-speed-container flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm font-mono font-black justify-center w-full sm:w-auto"
         >
@@ -250,7 +234,6 @@
         </div>
       </div>
 
-      <!-- Keyboard shortcuts legend (Desktop only) -->
       <div
         class="replay-legend hidden md:flex mt-2 pt-1.5 border-t border-neutral-200 items-center justify-between gap-2 text-xs font-mono text-neutral-500"
       >
