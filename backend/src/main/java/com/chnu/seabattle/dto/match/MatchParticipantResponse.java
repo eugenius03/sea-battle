@@ -9,7 +9,6 @@ import java.util.UUID;
 @Builder
 public record MatchParticipantResponse(
         UUID playerId,
-        UUID userId,
         String username,
         boolean isWinner,
         List<ShipResponse> ships

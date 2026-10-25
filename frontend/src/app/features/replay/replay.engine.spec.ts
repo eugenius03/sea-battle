@@ -12,7 +12,7 @@ const mv = (over: Partial<ReplayMoveResponse>): ReplayMoveResponse => ({
 });
 
 const player = (playerId: string, ships: MatchParticipantResponse['ships'] = []) =>
-  ({ playerId, userId: playerId, username: playerId, isWinner: false, ships }) as MatchParticipantResponse;
+  ({ playerId, username: playerId, isWinner: false, ships }) as MatchParticipantResponse;
 
 describe('replay.engine', () => {
   it('groupReplaySteps absorbs buffer misses after a sunk shot into one step', () => {

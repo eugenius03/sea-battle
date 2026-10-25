@@ -20,7 +20,6 @@ describe('ReplayComponent', () => {
     players: [
       {
         playerId: 'p1-id',
-        userId: 'u1-id',
         username: 'Admiral_Nelson',
         isWinner: true,
         ships: [
@@ -35,7 +34,6 @@ describe('ReplayComponent', () => {
       },
       {
         playerId: 'p2-id',
-        userId: 'u2-id',
         username: 'Captain_Hook',
         isWinner: false,
         ships: [
@@ -400,7 +398,6 @@ describe('ReplayComponent', () => {
       players: [
         {
           playerId: 'p-skipper',
-          userId: 'u-skipper',
           username: 'Silent_Skipper_5895',
           isWinner: false,
           ships: [
@@ -415,7 +412,6 @@ describe('ReplayComponent', () => {
         },
         {
           playerId: 'p-vas',
-          userId: 'u-vas',
           username: 'vas',
           isWinner: true,
           ships: [

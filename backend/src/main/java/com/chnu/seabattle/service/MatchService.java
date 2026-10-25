@@ -133,7 +133,6 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         List<MatchParticipantResponse> participants = match.getPlayers().stream().map(player ->
                         MatchParticipantResponse.builder()
                                 .playerId(player.getId())
-                                .userId(player.getUserId())
                                 .ships(player.getShips().stream().map(shipConverter::toResponse).toList())
                                 .isWinner(player.getId().equals(match.getWinnerId()))
                                 .username(userRepository.findById(player.getUserId()).orElseThrow(

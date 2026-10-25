@@ -19,7 +19,6 @@ export interface MatchHistoryResponse {
 
 export interface MatchParticipantResponse {
   playerId: string;
-  userId: string;
   username: string;
   isWinner: boolean;
   ships: ShipResponse[];
