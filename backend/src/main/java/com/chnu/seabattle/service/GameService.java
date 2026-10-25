@@ -114,34 +114,24 @@ public class GameService {
 
     private void updateOrSaveExistingShips(MatchPlayer player, List<Ship> generatedBoard) {
         List<Ship> existing = player.getShips();
+        List<Ship> unassigned = new ArrayList<>(generatedBoard);
 
-        if (existing.isEmpty()) {
-            existing.addAll(generatedBoard);
-            shipRepository.saveAll(existing);
-            return;
-        }
+        for (Ship dst : existing) {
+            Ship src = unassigned.stream()
+                    .filter(candidate -> candidate.getShipType() == dst.getShipType())
+                    .findFirst()
+                    .orElseThrow(() -> new ServerErrorException(ErrorConstants.SHIP_GENERATION_FAILED));
+            unassigned.remove(src);
 
-        for (int i = 0; i < existing.size(); i++) {
-            Ship src = generatedBoard.get(i);
-            Ship dst = existing.get(i);
-
-            dst.setShipType(src.getShipType());
             dst.setStartX(src.getStartX());
             dst.setStartY(src.getStartY());
             dst.setOrientation(src.getOrientation());
             dst.setHits(0);
             dst.setSunk(false);
-
-            if (i == existing.size() - 1 && existing.size() < generatedBoard.size()) {
-                existing.addAll(
-                        generatedBoard.stream()
-                                .skip(i + 1L)
-                                .toList()
-                );
-                shipRepository.saveAll(existing);
-                return;
-            }
         }
+
+        existing.addAll(unassigned);
+        shipRepository.saveAll(existing);
     }
 
     private List<Ship> generateValidBoardLayout(MatchPlayer player) {
@@ -224,6 +214,9 @@ public class GameService {
 
         if (player.isReady()) {
             throw new GameRuleViolationException(ErrorConstants.PLAYER_ALREADY_READY);
+        }
+        if (!BoardUtils.isValidFleet(player.getShips())) {
+            throw new GameRuleViolationException(ErrorConstants.INVALID_FLEET);
         }
 
         player.setReady(true);

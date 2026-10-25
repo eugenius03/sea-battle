@@ -53,6 +53,28 @@ public final class BoardUtils {
         );
     }
 
+    public static boolean isValidFleet(List<Ship> ships) {
+        for (ShipType type : ShipType.values()) {
+            long count = ships.stream().filter(ship -> ship.getShipType() == type).count();
+            if (count != type.allowedCount()) {
+                return false;
+            }
+        }
+        for (int i = 0; i < ships.size(); i++) {
+            Ship ship = ships.get(i);
+            if (!isWithinBounds(ship.getStartX(), ship.getStartY(), ship.getShipType(), ship.getOrientation())) {
+                return false;
+            }
+            for (int j = 0; j < i; j++) {
+                if (overlapsOrTouches(ships.get(j), ship.getStartX(), ship.getStartY(), ship.getOrientation(),
+                        ship.getShipType().getSize())) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     public static boolean overlapsOrTouches(Ship existing, int x, int y, Orientation orientation, int length) {
         Set<Cell> existingCells = getOccupiedCells(existing);
 

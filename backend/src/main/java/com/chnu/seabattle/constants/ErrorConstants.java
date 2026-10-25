@@ -39,6 +39,7 @@ public final class ErrorConstants {
     // --- Ship placement ---
     public static final String INVALID_SHIP_PLACEMENT = "Invalid ship placement: out of bounds or overlapping";
     public static final String SHIP_TYPE_LIMIT = "Ship limit reached for type: %s";
+    public static final String INVALID_FLEET = "Invalid fleet: place every ship within bounds without touching before getting ready";
 
     // --- Move strategy ---
     public static final String UNKNOWN_MOVE_TYPE = "Unknown or unimplemented move type: %s";

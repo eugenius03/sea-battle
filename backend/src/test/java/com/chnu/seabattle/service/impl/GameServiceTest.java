@@ -29,6 +29,7 @@ import com.chnu.seabattle.service.MoveService;
 import com.chnu.seabattle.service.UserService;
 import com.chnu.seabattle.service.strategy.MoveStrategy;
 import com.chnu.seabattle.service.strategy.StandardAttackStrategy;
+import com.chnu.seabattle.util.BoardUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,6 +42,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -125,6 +127,29 @@ class GameServiceTest {
         match.getPlayers().add(player2);
     }
 
+    private static void addValidFleet(MatchPlayer player) {
+        addShip(player, ShipType.QUADRO_DECK, 0, 0);
+        addShip(player, ShipType.TRIPLE_DECK, 0, 2);
+        addShip(player, ShipType.TRIPLE_DECK, 5, 2);
+        addShip(player, ShipType.DOUBLE_DECK, 0, 4);
+        addShip(player, ShipType.DOUBLE_DECK, 3, 4);
+        addShip(player, ShipType.DOUBLE_DECK, 6, 4);
+        addShip(player, ShipType.SINGLE_DECK, 0, 6);
+        addShip(player, ShipType.SINGLE_DECK, 2, 6);
+        addShip(player, ShipType.SINGLE_DECK, 4, 6);
+        addShip(player, ShipType.SINGLE_DECK, 6, 6);
+    }
+
+    private static void addShip(MatchPlayer player, ShipType type, int x, int y) {
+        player.getShips().add(Ship.builder()
+                .matchPlayer(player)
+                .shipType(type)
+                .startX(x)
+                .startY(y)
+                .orientation(Orientation.HORIZONTAL)
+                .build());
+    }
+
     @Nested
     @DisplayName("placeShip Tests")
     class PlaceShipTests {
@@ -186,8 +211,71 @@ class GameServiceTest {
     }
 
     @Nested
+    @DisplayName("generateRandomShips Tests")
+    class GenerateRandomShipsTests {
+
+        @Test
+        @DisplayName("Should keep existing ships' types and ids and produce a valid fleet for any number of manual ships")
+        void shouldKeepExistingShipTypesAndProduceValidFleet() {
+            ShipType[] order = {ShipType.DOUBLE_DECK, ShipType.QUADRO_DECK, ShipType.SINGLE_DECK, ShipType.TRIPLE_DECK,
+                    ShipType.DOUBLE_DECK, ShipType.SINGLE_DECK, ShipType.TRIPLE_DECK, ShipType.DOUBLE_DECK,
+                    ShipType.SINGLE_DECK, ShipType.SINGLE_DECK};
+
+            for (int manual = 0; manual < order.length; manual++) {
+                MatchPlayer player = new MatchPlayer();
+                player.setId(UUID.randomUUID());
+                player.setMatch(match);
+                player.setShips(new ArrayList<>());
+                for (int i = 0; i < manual; i++) {
+                    addShip(player, order[i], 0, i * 2);
+                }
+                List<Ship> placed = List.copyOf(player.getShips());
+                List<ShipType> typesBefore = placed.stream().map(Ship::getShipType).toList();
+
+                gameService.generateRandomShips(player);
+
+                assertEquals(typesBefore, placed.stream().map(Ship::getShipType).toList());
+                assertTrue(player.getShips().containsAll(placed));
+                assertTrue(BoardUtils.isValidFleet(player.getShips()));
+            }
+        }
+    }
+
+    @Nested
     @DisplayName("markReady Tests")
     class MarkReadyTests {
+
+        @BeforeEach
+        void giveValidFleet() {
+            addValidFleet(player1);
+        }
+
+        @Test
+        @DisplayName("Should reject a fleet with a ship out of bounds and leave player not ready")
+        void shouldRejectInvalidFleet() {
+            Ship doubleDeck = player1.getShips().stream()
+                    .filter(s -> s.getShipType() == ShipType.DOUBLE_DECK)
+                    .findFirst().orElseThrow();
+            doubleDeck.setStartX(9);
+            doubleDeck.setStartY(0);
+            doubleDeck.setOrientation(Orientation.HORIZONTAL);
+
+            GameRuleViolationException exception = assertThrows(GameRuleViolationException.class, () ->
+                    gameService.markReady(player1)
+            );
+
+            assertTrue(exception.getMessage().contains("Invalid fleet"));
+            assertFalse(player1.isReady());
+        }
+
+        @Test
+        @DisplayName("Should reject an incomplete fleet")
+        void shouldRejectIncompleteFleet() {
+            player1.getShips().remove(0);
+
+            assertThrows(GameRuleViolationException.class, () -> gameService.markReady(player1));
+            assertFalse(player1.isReady());
+        }
 
         @Test
         @DisplayName("Should successfully mark player as ready")
