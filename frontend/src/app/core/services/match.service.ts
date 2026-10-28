@@ -15,6 +15,10 @@ export class MatchService {
     return this.http.post<MatchResponse>(`${this.baseUrl}/create`, {}, { withCredentials: true });
   }
 
+  createBotMatch(): Observable<MatchResponse> {
+    return this.http.post<MatchResponse>(`${this.baseUrl}/bot`, {}, { withCredentials: true });
+  }
+
   joinMatch(inviteToken: string): Observable<MatchResponse> {
     return this.http.post<MatchResponse>(
       `${this.baseUrl}/join`,
@@ -50,8 +54,11 @@ export class MatchService {
   }
 
   getMatch(inviteToken: string): Observable<MatchDetailsResponse> {
-    return this.http.get<MatchDetailsResponse>(`${this.baseUrl}/${encodeURIComponent(inviteToken)}`, {
-      withCredentials: true,
-    });
+    return this.http.get<MatchDetailsResponse>(
+      `${this.baseUrl}/${encodeURIComponent(inviteToken)}`,
+      {
+        withCredentials: true,
+      },
+    );
   }
 }

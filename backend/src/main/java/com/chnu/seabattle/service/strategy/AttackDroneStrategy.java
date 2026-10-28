@@ -57,14 +57,20 @@ public class AttackDroneStrategy extends AbstractAttackStrategy {
 
         int cx = moveRequest.x();
         int cy = moveRequest.y();
+        Set<Cell> firedCells = collectFiredCells(match, shooterId);
         List<Cell> validCells = new ArrayList<>();
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 int nx = cx + dx;
                 int ny = cy + dy;
                 if (!BoardUtils.isWithinBounds(nx, ny)) continue;
-                validCells.add(new Cell(nx, ny));
+                Cell cell = new Cell(nx, ny);
+                if (firedCells.contains(cell)) continue;
+                validCells.add(cell);
             }
+        }
+        if (validCells.isEmpty()) {
+            throw new GameRuleViolationException(ErrorConstants.DUPLICATE_FIRE);
         }
         Collections.shuffle(validCells);
         int shotCount = Math.min(validCells.size(),

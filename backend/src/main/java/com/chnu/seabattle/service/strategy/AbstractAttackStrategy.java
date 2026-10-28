@@ -89,6 +89,14 @@ public abstract class AbstractAttackStrategy implements MoveStrategy {
                 .collect(Collectors.toCollection(HashSet::new));
     }
 
+    protected Set<Cell> collectFiredCells(Match match, UUID shooterId) {
+        return match.getMoves().stream()
+                .filter(m -> m.getShooterId().equals(shooterId))
+                .filter(m -> m.getMoveType() != MoveType.SURVEILLANCE_DRONE)
+                .map(m -> new Cell(m.getTargetX(), m.getTargetY()))
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
     protected List<Move> createSurroundingMissMoves(Ship sunkShip, Match match, UUID shooterId, Set<Cell> alreadyTargeted) {
         Set<Cell> shipCells = BoardUtils.getOccupiedCells(sunkShip);
 

@@ -1,11 +1,13 @@
 package com.chnu.seabattle.service;
 
+import com.chnu.seabattle.constants.BotConstants;
 import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.constants.NumericalConstants;
 import com.chnu.seabattle.converter.UserConverter;
 import com.chnu.seabattle.dto.auth.UserLoginRequest;
 import com.chnu.seabattle.dto.auth.UserRegistrationRequest;
 import com.chnu.seabattle.entity.User;
+import com.chnu.seabattle.enums.UserType;
 import com.chnu.seabattle.exception.UserAlreadyExistsException;
 import jakarta.validation.Valid;
 import lombok.NonNull;
@@ -33,7 +35,8 @@ public class AuthService {
 
     @Transactional
     public User register(@Valid UserRegistrationRequest registrationRequest) {
-        if (userService.existsByUsername(registrationRequest.username())) {
+        if (BotConstants.isReservedUsername(registrationRequest.username())
+                || userService.existsByUsername(registrationRequest.username())) {
             log.warn("Failed registration: Username {} already exists.", registrationRequest.username());
             throw new UserAlreadyExistsException(ErrorConstants.USERNAME_ALREADY_EXISTS);
         }
@@ -63,6 +66,9 @@ public class AuthService {
     @Transactional
     public User createGuest(@NonNull String username) {
         String baseName = username.trim();
+        if (BotConstants.isReservedUsername(baseName)) {
+            throw new UserAlreadyExistsException(ErrorConstants.USERNAME_ALREADY_EXISTS);
+        }
         String proposedUsername = null;
 
         for (int i = 0; i < NumericalConstants.MAX_GUEST_USERNAME_RETRIES; i++) {
@@ -83,7 +89,7 @@ public class AuthService {
         }
         User user = User.builder()
                 .username(proposedUsername)
-                .isGuest(true)
+                .userType(UserType.GUEST)
                 .build();
         return userService.create(user);
     }

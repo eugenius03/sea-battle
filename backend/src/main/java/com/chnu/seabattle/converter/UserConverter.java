@@ -14,7 +14,7 @@ public interface UserConverter {
     @Mapping(target = "passwordHash", source = "password")
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "isGuest", constant = "false")
+    @Mapping(target = "userType", constant = "REGISTERED")
     @Mapping(target = "isEmailVerified", constant = "false")
     User toEntity(UserRegistrationRequest userDto);
 
@@ -22,14 +22,14 @@ public interface UserConverter {
     @Mapping(target = "username", source = "user.username")
     @Mapping(target = "email", source = "user.email")
     @Mapping(target = "memberSince", source = "user.createdAt")
-    @Mapping(target = "isGuest", source = "user.guest")
+    @Mapping(target = "userType", source = "user.userType")
     @Mapping(target = "emailVerified", source = "user.emailVerified")
     @Mapping(target = "stats", source = "stats")
     UserResponse toDto(User user, PlayerCombatStats stats);
 
     @Mapping(target = "username", source = "user.username")
     @Mapping(target = "memberSince", source = "user.createdAt")
-    @Mapping(target = "isGuest", source = "user.guest")
+    @Mapping(target = "userType", source = "user.userType")
     @Mapping(target = "stats", source = "stats")
     PublicUserResponse toPublicDto(User user, PlayerCombatStats stats);
 }

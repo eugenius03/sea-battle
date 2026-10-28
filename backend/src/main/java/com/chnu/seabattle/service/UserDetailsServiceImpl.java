@@ -2,6 +2,7 @@ package com.chnu.seabattle.service;
 
 import com.chnu.seabattle.constants.ErrorConstants;
 import com.chnu.seabattle.entity.User;
+import com.chnu.seabattle.enums.UserType;
 import com.chnu.seabattle.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -20,11 +21,14 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException(ErrorConstants.USER_NOT_FOUND));
+        if (user.getUserType() == UserType.BOT) {
+            throw new UsernameNotFoundException(ErrorConstants.USER_NOT_FOUND);
+        }
 
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPasswordHash())
-                .authorities(user.isGuest() ? "ROLE_GUEST" : "ROLE_USER")
+                .authorities(user.getUserType() == UserType.GUEST ? "ROLE_GUEST" : "ROLE_USER")
                 .build();
     }
 

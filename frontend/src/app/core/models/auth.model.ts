@@ -10,19 +10,22 @@ export interface PlayerCombatStats {
   currentWinStreak: number;
 }
 
+export type UserType = 'REGISTERED' | 'GUEST' | 'BOT';
+
 export interface UserResponse {
   id: string;
   username: string;
   email?: string | null;
   emailVerified?: boolean;
   memberSince?: string;
-  isGuest?: boolean;
+  userType?: UserType;
   stats?: PlayerCombatStats;
 }
 
 export interface PublicUserResponse {
   username: string;
   memberSince?: string;
+  userType?: UserType;
   stats?: PlayerCombatStats;
 }
 

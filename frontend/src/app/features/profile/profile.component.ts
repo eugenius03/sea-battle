@@ -55,7 +55,7 @@ export class ProfileComponent implements OnInit {
 
   readonly isGuest = computed<boolean>(() => {
     const u = this.user();
-    return Boolean((u as UserResponse)?.isGuest);
+    return (u as UserResponse)?.userType === 'GUEST';
   });
 
   readonly email = computed<string | null>(() => {

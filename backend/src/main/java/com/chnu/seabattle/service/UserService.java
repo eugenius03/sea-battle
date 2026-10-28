@@ -7,6 +7,7 @@ import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.entity.User;
 import com.chnu.seabattle.enums.EmailTokenPurpose;
+import com.chnu.seabattle.enums.UserType;
 import com.chnu.seabattle.exception.BadRequestException;
 import com.chnu.seabattle.exception.RateLimitException;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
@@ -100,7 +101,7 @@ public class UserService extends AbstractBaseService<User, UUID> {
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPasswordHash())
-                .authorities(user.isGuest() ? "ROLE_GUEST" : "ROLE_USER")
+                .authorities(user.getUserType() == UserType.GUEST ? "ROLE_GUEST" : "ROLE_USER")
                 .build();
     }
 
@@ -144,7 +145,7 @@ public class UserService extends AbstractBaseService<User, UUID> {
 
     @Transactional
     public void requestEmailVerification(User user, String email) {
-        if (user.isGuest() || user.isEmailVerified()) {
+        if (user.getUserType() != UserType.REGISTERED || user.isEmailVerified()) {
             throw new BadRequestException(ErrorConstants.ACTION_NOT_ALLOWED);
         }
 
@@ -165,7 +166,7 @@ public class UserService extends AbstractBaseService<User, UUID> {
 
     public void requestResetPassword(String email) {
         User user = userRepository.findByEmail(email).orElse(null);
-        if (user == null || user.isGuest() || !user.isEmailVerified()) {
+        if (user == null || user.getUserType() != UserType.REGISTERED || !user.isEmailVerified()) {
             return;
         }
         if (user.getEmail() == null || user.getEmail().isEmpty()) {
@@ -197,11 +198,15 @@ public class UserService extends AbstractBaseService<User, UUID> {
     @Transactional
     public void resetPassword(String token, String password) {
         User user = consumeToken(EmailTokenPurpose.RESET_PASSWORD, token);
-        if (user.isGuest()) {
+        if (user.getUserType() != UserType.REGISTERED) {
             throw new BadRequestException(ErrorConstants.INVALID_TOKEN);
         }
         user.setPasswordHash(passwordEncoder.encode(password));
         refreshTokenService.revokeAllForUser(user.getUsername());
+    }
+
+    public boolean isBot(UUID userId) {
+        return findById(userId).map(u -> u.getUserType() == UserType.BOT).orElse(false);
     }
 
     private User consumeToken(EmailTokenPurpose purpose, String token) {

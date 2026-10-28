@@ -7,6 +7,7 @@ import com.chnu.seabattle.converter.MoveConverter;
 import com.chnu.seabattle.converter.ShipConverter;
 import com.chnu.seabattle.dto.game.FireResponse;
 import com.chnu.seabattle.dto.game.GameInfoResponse;
+import com.chnu.seabattle.dto.match.BotTurnEvent;
 import com.chnu.seabattle.dto.move.MoveRequest;
 import com.chnu.seabattle.dto.move.MoveResponse;
 import com.chnu.seabattle.dto.ship.ShipRequest;
@@ -110,6 +111,17 @@ public class GameService {
 
         return matchPlayer.getShips().stream()
                 .toList();
+    }
+
+    private void publishBotEvent(Match match) {
+        if (match.getStatus() != MatchStatus.IN_PROGRESS) {
+            return;
+        }
+        match.getPlayers().stream()
+                .filter(p -> p.getId().equals(match.getCurrentPlayerTurnId()))
+                .findFirst()
+                .filter(p -> userService.isBot(p.getUserId()))
+                .ifPresent(p -> eventPublisher.publishEvent(new BotTurnEvent(match.getInviteToken())));
     }
 
     private void updateOrSaveExistingShips(MatchPlayer player, List<Ship> generatedBoard) {
@@ -228,6 +240,7 @@ public class GameService {
             match.setCurrentPlayerTurnId(randomPlayer.getId());
 
             eventPublisher.publishEvent(new MatchStatusMessage(match.getInviteToken(), MatchStatus.IN_PROGRESS, match.getCurrentPlayerTurnId(), null));
+            publishBotEvent(match);
             log.info("All players ready. Match {} is now IN_PROGRESS. First turn: {}", match.getInviteToken(), match.getCurrentPlayerTurnId());
         }
 
@@ -276,7 +289,7 @@ public class GameService {
         List<MoveResponse> moveResponses = result.stream().map(moveConverter::toResponse).toList();
 
         eventPublisher.publishEvent(new MoveMessage(opponentId, match.getInviteToken(), moveResponses, match.getCurrentPlayerTurnId()));
-
+        publishBotEvent(match);
         log.info("Player {} fired at [{}, {}] in match {} using moveType {}",
                 shooter.getId(), moveRequest.x(), moveRequest.y(), match.getInviteToken(), moveRequest.moveType()
         );

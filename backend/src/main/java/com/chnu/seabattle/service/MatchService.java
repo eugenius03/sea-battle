@@ -16,6 +16,7 @@ import com.chnu.seabattle.entity.MatchPlayer;
 import com.chnu.seabattle.entity.MatchStatus;
 import com.chnu.seabattle.entity.Move;
 import com.chnu.seabattle.enums.MatchResult;
+import com.chnu.seabattle.enums.UserType;
 import com.chnu.seabattle.exception.BadRequestException;
 import com.chnu.seabattle.exception.GameRuleViolationException;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
@@ -95,6 +96,10 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         return update(match);
     }
 
+    public List<String> findInProgressInviteTokensOnTurnOf(UUID userId) {
+        return matchRepository.findInviteTokensByStatusAndTurnOfUser(MatchStatus.IN_PROGRESS, userId);
+    }
+
     public Optional<Match> findByInviteTokenForGame(String inviteToken) {
         return matchRepository.findByInviteTokenForGame(inviteToken);
     }
@@ -162,8 +167,46 @@ public class MatchService extends AbstractBaseService<Match, Long> {
         return doJoinMatch(match, userId, inviteToken);
     }
 
+    @Transactional(readOnly = true)
+    public boolean isBotRematch(String inviteToken, UUID userId) {
+        RematchPlayers players = resolveRematchPlayers(inviteToken, userId);
+        return userRepository.findById(players.opponent().getUserId())
+                .orElseThrow(() -> new GameRuleViolationException(ErrorConstants.PLAYER_NOT_FOUND))
+                .getUserType() == UserType.BOT;
+    }
+
     @Transactional
     public Optional<MatchInviteResponse> processRematch(String inviteToken, UUID userId) {
+        RematchPlayers players = resolveRematchPlayers(inviteToken, userId);
+        MatchPlayer requester = players.requester();
+        MatchPlayer opponent = players.opponent();
+
+        requester.setWantsRematch(true);
+
+        eventPublisher.publishEvent(new PresenceMessage(inviteToken, requester.getId(), PresenceEventType.REMATCH_REQUESTED));
+        if (!opponent.isWantsRematch()) {
+            return Optional.empty();
+        }
+
+        Match newMatch = buildMatch();
+        MatchPlayer p1 = createMatchPlayer(newMatch, requester.getUserId());
+        newMatch.getPlayers().add(p1);
+        update(newMatch);
+
+        Match joinedMatch = doJoinMatch(newMatch, opponent.getUserId(), newMatch.getInviteToken());
+
+
+        eventPublisher.publishEvent(new RematchMessage(inviteToken, requester.getId(), PresenceEventType.REMATCH_AGREED, joinedMatch.getInviteToken()));
+        log.info("Players {} and {} agreed on rematch new match {} created",
+                requester.getUserId(), opponent.getUserId(), newMatch.getInviteToken()
+        );
+        return Optional.of(new MatchInviteResponse(
+                joinedMatch.getInviteToken(),
+                requester.getUserId()
+        ));
+    }
+
+    private RematchPlayers resolveRematchPlayers(String inviteToken, UUID userId) {
         Match oldMatch = matchRepository.findByInviteToken(inviteToken)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorConstants.MATCH_NOT_FOUND));
 
@@ -192,29 +235,10 @@ public class MatchService extends AbstractBaseService<Match, Long> {
             throw new GameRuleViolationException(ErrorConstants.PLAYER_NOT_FOUND);
         }
 
-        requester.setWantsRematch(true);
+        return new RematchPlayers(requester, opponent);
+    }
 
-        eventPublisher.publishEvent(new PresenceMessage(inviteToken, requester.getId(), PresenceEventType.REMATCH_REQUESTED));
-        if (!opponent.isWantsRematch()) {
-            return Optional.empty();
-        }
-
-        Match newMatch = buildMatch();
-        MatchPlayer p1 = createMatchPlayer(newMatch, requester.getUserId());
-        newMatch.getPlayers().add(p1);
-        update(newMatch);
-
-        Match joinedMatch = doJoinMatch(newMatch, opponent.getUserId(), newMatch.getInviteToken());
-
-
-        eventPublisher.publishEvent(new RematchMessage(inviteToken, requester.getId(), PresenceEventType.REMATCH_AGREED, joinedMatch.getInviteToken()));
-        log.info("Players {} and {} agreed on rematch new match {} created",
-                requester.getUserId(), opponent.getUserId(), newMatch.getInviteToken()
-        );
-        return Optional.of(new MatchInviteResponse(
-                joinedMatch.getInviteToken(),
-                requester.getUserId()
-        ));
+    private record RematchPlayers(MatchPlayer requester, MatchPlayer opponent) {
     }
 
     private Match buildMatch() {

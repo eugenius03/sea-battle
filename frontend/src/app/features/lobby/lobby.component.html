@@ -61,7 +61,7 @@
         class="w-full"
         className="w-full"
         [loading]="isSearching()"
-        [disabled]="joiningMatch()"
+        [disabled]="joiningMatch() || creatingBotMatch()"
         (clicked)="isSearching() ? cancelMatchmaking() : startMatchmaking()"
       >
         <span class="flex items-center gap-2 justify-center">
@@ -96,12 +96,43 @@
         class="w-full"
         className="w-full"
         [loading]="creatingMatch()"
-        [disabled]="isSearching() || joiningMatch()"
+        [disabled]="isSearching() || joiningMatch() || creatingBotMatch()"
         (clicked)="createPrivateMatch()"
       >
         <span class="flex items-center gap-2 justify-center">
           <app-icon name="plus" [size]="18"></app-icon>
           CREATE ROOM
+        </span>
+      </app-button>
+    </section>
+
+    <section
+      class="md:col-span-2 border-2 border-black shadow-[4px_4px_0px_#000] p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 bg-white relative animate-fade-in"
+    >
+      <div>
+        <div class="flex items-center gap-3 mb-3">
+          <div class="p-2 bg-black text-white">
+            <app-icon name="crosshair" [size]="20"></app-icon>
+          </div>
+          <h2 class="text-xl font-bold uppercase tracking-tight text-black">Play vs Bot</h2>
+        </div>
+        <p class="text-sm text-neutral-600 leading-relaxed">
+          Practice against the computer. It starts instantly and uses drones.
+        </p>
+      </div>
+
+      <app-button
+        variant="secondary"
+        size="lg"
+        class="w-full sm:w-auto shrink-0"
+        className="w-full sm:w-auto"
+        [loading]="creatingBotMatch()"
+        [disabled]="isSearching() || creatingMatch() || joiningMatch()"
+        (clicked)="playAgainstBot()"
+      >
+        <span class="flex items-center gap-2 justify-center">
+          <app-icon name="play" [size]="18"></app-icon>
+          PLAY VS BOT
         </span>
       </app-button>
     </section>
@@ -131,7 +162,7 @@
         size="md"
         class="w-full sm:w-auto shrink-0"
         className="w-full sm:w-auto"
-        [disabled]="!inviteInput.trim() || isSearching() || creatingMatch()"
+        [disabled]="!inviteInput.trim() || isSearching() || creatingMatch() || creatingBotMatch()"
         [loading]="joiningMatch()"
         (clicked)="joinPrivateMatch()"
       >

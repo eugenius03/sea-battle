@@ -1,5 +1,7 @@
 package com.chnu.seabattle.dto.user;
 
+import com.chnu.seabattle.enums.UserType;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -9,7 +11,7 @@ public record UserResponse(
         String email,
         boolean emailVerified,
         Instant memberSince,
-        boolean isGuest,
+        UserType userType,
         PlayerCombatStats stats
 ) {
 }

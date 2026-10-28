@@ -30,6 +30,10 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     @EntityGraph(attributePaths = {"players"})
     Optional<Match> findByInviteToken(String inviteToken);
 
+    @Query("SELECT m.inviteToken FROM Match m JOIN m.players p "
+            + "WHERE m.status = :status AND p.id = m.currentPlayerTurnId AND p.userId = :userId")
+    List<String> findInviteTokensByStatusAndTurnOfUser(@Param("status") MatchStatus status, @Param("userId") UUID userId);
+
     @EntityGraph(attributePaths = {"players"})
     List<Match> findAllByPlayersUserIdAndStatusOrderByCreatedAtDesc(UUID userId, MatchStatus status, Pageable pageable);
 }

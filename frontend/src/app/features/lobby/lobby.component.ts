@@ -28,6 +28,7 @@ export class LobbyComponent implements OnDestroy {
   readonly queuePosition = signal<number | null>(null);
   readonly creatingMatch = signal<boolean>(false);
   readonly joiningMatch = signal<boolean>(false);
+  readonly creatingBotMatch = signal<boolean>(false);
 
   inviteInput = '';
   private matchmakingSub: Subscription | null = null;
@@ -106,6 +107,20 @@ export class LobbyComponent implements OnDestroy {
       error: (err) => {
         this.creatingMatch.set(false);
         this.toast.error('Failed to create private match.');
+      },
+    });
+  }
+
+  playAgainstBot(): void {
+    this.creatingBotMatch.set(true);
+    this.matchService.createBotMatch().subscribe({
+      next: (res) => {
+        this.creatingBotMatch.set(false);
+        this.router.navigate(['/game', res.inviteToken]);
+      },
+      error: () => {
+        this.creatingBotMatch.set(false);
+        this.toast.error('Failed to start a game against the bot.');
       },
     });
   }

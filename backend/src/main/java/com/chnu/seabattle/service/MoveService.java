@@ -29,6 +29,10 @@ public class MoveService extends AbstractBaseService<Move, Long> {
         return moveRepository.findByMatchIdAndShooterId(matchId, shooterId);
     }
 
+    public List<Move> findByMatchIdAndShooterIdOrderByIdAsc(Long matchId, UUID shooterId) {
+        return moveRepository.findByMatchIdAndShooterIdOrderByIdAsc(matchId, shooterId);
+    }
+
     public long countByMatchIdAndShooterIdAndMoveType(Long matchId, UUID shooterId, MoveType moveType) {
         return moveRepository.countByMatchIdAndShooterIdAndMoveType(matchId, shooterId, moveType);
     }

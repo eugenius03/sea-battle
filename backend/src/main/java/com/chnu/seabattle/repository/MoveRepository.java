@@ -17,6 +17,8 @@ public interface MoveRepository extends JpaRepository<Move, Long> {
 
     List<Move> findByMatchIdAndShooterId(Long matchId, UUID shooterId);
 
+    List<Move> findByMatchIdAndShooterIdOrderByIdAsc(Long matchId, UUID shooterId);
+
     long countByMatchIdAndShooterIdAndMoveType(Long matchId, UUID shooterId, MoveType moveType);
 
     long countByMatchIdAndShooterIdAndMoveTypeAndIsMoveOriginTrue(Long matchId, UUID shooterId, MoveType moveType);

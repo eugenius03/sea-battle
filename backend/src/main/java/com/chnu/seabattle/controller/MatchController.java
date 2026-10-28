@@ -6,8 +6,10 @@ import com.chnu.seabattle.dto.match.MatchInviteResponse;
 import com.chnu.seabattle.dto.match.MatchResponse;
 import com.chnu.seabattle.entity.Match;
 import com.chnu.seabattle.exception.ResourceNotFoundException;
+import com.chnu.seabattle.service.GameBotService;
 import com.chnu.seabattle.service.MatchService;
 import com.chnu.seabattle.service.MatchmakingService;
+import com.chnu.seabattle.service.RematchFacade;
 import com.chnu.seabattle.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -32,11 +34,21 @@ public class MatchController {
     private final MatchService matchService;
     private final UserService userService;
     private final MatchmakingService matchmakingService;
+    private final GameBotService gameBotService;
+    private final RematchFacade rematchFacade;
 
     @PostMapping("/create")
     public MatchInviteResponse createMatch() {
         UUID userId = userService.getAuthenticatedUser().getId();
         Match match = matchService.createMatch(userId);
+
+        return new MatchInviteResponse(match.getInviteToken(), userId);
+    }
+
+    @PostMapping("/bot")
+    public MatchInviteResponse createBotMatch() {
+        UUID userId = userService.getAuthenticatedUser().getId();
+        Match match = gameBotService.createBotMatch(userId);
 
         return new MatchInviteResponse(match.getInviteToken(), userId);
     }
@@ -52,7 +64,7 @@ public class MatchController {
     @PostMapping("/{inviteToken}/rematch")
     public ResponseEntity<MatchInviteResponse> rematch(@PathVariable String inviteToken) {
         UUID userId = userService.getAuthenticatedUser().getId();
-        Optional<MatchInviteResponse> rematchResponse = matchService.processRematch(inviteToken, userId);
+        Optional<MatchInviteResponse> rematchResponse = rematchFacade.rematch(inviteToken, userId);
 
         return rematchResponse
                 .map(ResponseEntity::ok)
